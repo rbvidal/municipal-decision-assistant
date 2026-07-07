@@ -3,20 +3,19 @@ package com.cognitera.platform.ai.application;
 import com.cognitera.platform.ai.api.*;
 import com.cognitera.platform.ai.model.*;
 import com.cognitera.platform.search.api.SearchFacade;
-import com.cognitera.platform.search.model.SearchFilter;
-import com.cognitera.platform.search.model.SearchMode;
-import com.cognitera.platform.search.model.SearchQuery;
-import com.cognitera.platform.search.model.SearchRequestContext;
+import com.cognitera.platform.search.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
- * Performs retrieval-augmented generation by searching the document index
- * via {@link SearchFacade} and enriching results with grounding and analysis.
+ * Single-pass, diversity-aware retrieval. NO recursive searches.
+ *
+ * <p>One question → one retrieval → one set of results.
+ * The old quota-enforced retrieval that launched targeted searches
+ * for every "missing" source role is removed.
  */
 @Service
 public class DefaultRetrievalAugmentationService implements RetrievalAugmentationService {
@@ -24,97 +23,96 @@ public class DefaultRetrievalAugmentationService implements RetrievalAugmentatio
     private static final Logger log = LoggerFactory.getLogger(DefaultRetrievalAugmentationService.class);
 
     private final SearchFacade searchFacade;
-    private final ObjectiveAnalysisService objectiveAnalysisService;
-    private final FindingHierarchyService findingHierarchyService;
-    private final SourceOrchestrationService sourceOrchestrationService;
-    private final SemanticCentralityService centralityService;
-    private final CommunicationTimelineBuilder timelineBuilder;
-    private final RetrievalOrchestrationService orchestrationService;
     private final AuthorityGroundingService authorityGroundingService;
+    private final RetrievalPlanner retrievalPlanner;
 
     public DefaultRetrievalAugmentationService(
             SearchFacade searchFacade,
-            ObjectiveAnalysisService objectiveAnalysisService,
-            FindingHierarchyService findingHierarchyService,
-            SourceOrchestrationService sourceOrchestrationService,
-            SemanticCentralityService centralityService,
-            CommunicationTimelineBuilder timelineBuilder,
-            RetrievalOrchestrationService orchestrationService,
-            AuthorityGroundingService authorityGroundingService) {
+            AuthorityGroundingService authorityGroundingService,
+            RetrievalPlanner retrievalPlanner) {
         this.searchFacade = searchFacade;
-        this.objectiveAnalysisService = objectiveAnalysisService;
-        this.findingHierarchyService = findingHierarchyService;
-        this.sourceOrchestrationService = sourceOrchestrationService;
-        this.centralityService = centralityService;
-        this.timelineBuilder = timelineBuilder;
-        this.orchestrationService = orchestrationService;
         this.authorityGroundingService = authorityGroundingService;
+        this.retrievalPlanner = retrievalPlanner;
     }
 
     @Override
     public RetrievalContext retrieve(AiRequest request) {
-        RetrievalScope scope = request.retrievalScope();
+        // ── Plan retrieval once ──
+        RetrievalPlan plan = retrievalPlanner.plan(request);
 
-        RetrievalOrchestrationService.SearchDelegate searchDelegate = (q, maxResults) -> {
-            var searchQuery = new SearchQuery(
-                    q,
-                    SearchMode.HYBRID,
-                    new SearchFilter(null, null, null, null, null, null, null, null, List.of()),
-                    new SearchRequestContext("system", null, null, null),
-                    0,
-                    Math.min(maxResults, 20));
-            var page = searchFacade.search(searchQuery);
-            return page.results().stream()
-                    .map(r -> new SourceCitation(
-                            r.chunk().documentId(),
-                            r.chunk().chunkId(),
-                            r.chunk().documentVersion(),
-                            r.citation().title() != null ? r.citation().title() : (r.chunk().title() != null ? r.chunk().title() : ""),
-                            r.chunk().position() != null ? r.chunk().position().pageNumber() : r.citation().pageNumber(),
-                            r.chunk().position() != null ? r.chunk().position().startOffset() : r.citation().startOffset(),
-                            r.chunk().position() != null ? r.chunk().position().endOffset() : r.citation().endOffset(),
-                            r.citation().excerpt() != null ? r.citation().excerpt() : r.text(),
-                            r.score(),
-                            SourceCitation.classifyTier(r.score()),
-                            SourceCitation.SourceType.FACTUAL))
-                    .toList();
-        };
+        // ── Execute single hybrid search ──
+        SearchFilter filter = new SearchFilter(
+                null, null, null, null, null, null, null, null, List.of());
+        var searchQuery = new SearchQuery(
+                request.question(),
+                SearchMode.HYBRID,
+                filter,
+                new SearchRequestContext("system", null, null, null),
+                0,
+                plan.maxResults());
+        var page = searchFacade.search(searchQuery);
 
-        List<SourceCitation> initialSources = searchDelegate.search(request.question(), 20);
+        // ── Apply diversity constraint: max N chunks per document ──
+        List<SearchResult> diverseResults = enforceDiversity(
+                page.results(), plan.maxChunksPerDocument());
 
-        SourceDossier dossier;
-        String retrievalStrategy;
+        log.info("Retrieval: {} total → {} diverse (max {}/doc) | domain={}",
+                page.results().size(), diverseResults.size(),
+                plan.maxChunksPerDocument(), plan.primaryDomain());
 
-        if (scope == RetrievalScope.AUTHORITATIVE_ONLY) {
-            dossier = new SourceDossier(Map.of(), List.of(), List.of(), 0.0, "AUTHORITATIVE_ONLY");
-            retrievalStrategy = "AUTHORITATIVE_ONLY";
-        } else {
-            SourceDossier initialDossier = sourceOrchestrationService.buildDossier(initialSources, request.question());
-            var quotaResult = orchestrationService.retrieveWithQuotas(
-                    request.question(), initialSources, initialDossier, searchDelegate);
-            dossier = quotaResult.dossier();
-            retrievalStrategy = quotaResult.strategy();
+        // ── Build citations ──
+        List<SourceCitation> sources = new ArrayList<>();
+        for (var r : diverseResults) {
+            sources.add(new SourceCitation(
+                    r.chunk().documentId(), r.chunk().chunkId(),
+                    r.chunk().documentVersion(),
+                    r.citation().title() != null ? r.citation().title() : "",
+                    r.citation().pageNumber(),
+                    r.citation().startOffset(),
+                    r.citation().endOffset(),
+                    r.citation().excerpt() != null ? r.citation().excerpt() : r.text(),
+                    r.score(),
+                    SourceCitation.classifyTier(r.score()),
+                    SourceCitation.SourceType.FACTUAL));
         }
 
-        AuthorityGroundingService.AuthorityGroundingResult authorityResult =
-                authorityGroundingService.ground(request.question());
+        // ── Authority grounding ──
+        var authorityResult = authorityGroundingService.ground(request.question());
 
-        List<AnalysisObjective> objectives = objectiveAnalysisService.classify(request.question());
-        List<AuthorityReference> centralReferences = centralityService.filterCentral(
-                authorityResult.references(), request.question(), authorityResult.concepts());
-        FindingHierarchy hierarchy = findingHierarchyService.buildHierarchy(request.question(), objectives);
-        var proceduralTimeline = timelineBuilder.build(request.question(), initialSources);
-
-        log.info("RAG retrieval: {} initial sources, dossier coverage {:.0f}%",
-                initialSources.size(), dossier.coverageScore() * 100);
+        log.info("Retrieval diversity: {} docs across {} unique titles | {} authorities",
+                sources.size(), countUniqueDocs(sources), authorityResult.references().size());
 
         return new RetrievalContext(
                 request.question(),
-                retrievalStrategy,
-                initialSources,
-                centralReferences,
-                hierarchy,
-                dossier,
-                proceduralTimeline);
+                plan.retrievalStrategy(),
+                sources,
+                authorityResult.references(),
+                null, null, null);
+    }
+
+    /**
+     * Enforces diversity: at most maxPerDoc chunks from any single document.
+     * Chunks are kept in ranking order but the maxPerDoc constraint
+     * ensures different regulations appear.
+     */
+    private List<SearchResult> enforceDiversity(List<SearchResult> results, int maxPerDoc) {
+        List<SearchResult> diverse = new ArrayList<>();
+        Map<UUID, Integer> docCounts = new LinkedHashMap<>();
+
+        for (var r : results) {
+            UUID docKey = r.chunk().documentId();
+            int count = docCounts.getOrDefault(docKey, 0);
+            if (count < maxPerDoc) {
+                diverse.add(r);
+                docCounts.put(docKey, count + 1);
+            }
+        }
+        return diverse;
+    }
+
+    private long countUniqueDocs(List<SourceCitation> sources) {
+        return sources.stream()
+                .map(s -> s.title() != null ? s.title() : s.documentId().toString())
+                .distinct().count();
     }
 }

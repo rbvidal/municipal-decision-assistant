@@ -9,21 +9,22 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
- * Simplified AI orchestration service with full pipeline profiling.
+ * Simplified AI orchestration: one question, one plan, one retrieval,
+ * one LLM call.
  *
- * <p>The pipeline flow:
+ * <p>Pipeline:
  * <ol>
- *   <li>Intent classification → route or continue</li>
- *   <li>Hybrid retrieval</li>
- *   <li>Evidence package assembly (grouped, deduplicated, limited)</li>
- *   <li>Compact prompt construction</li>
- *   <li>Single LLM inference (no auto-retry)</li>
- *   <li>Post-hoc coverage validation (metric only, not blocking)</li>
- *   <li>Grounding and audit</li>
+ *   <li>Intent classification</li>
+ *   <li>Retrieval plan (domain + strategy)</li>
+ *   <li>Single hybrid retrieval (diversity-aware)</li>
+ *   <li>Evidence package (grouped, deduplicated)</li>
+ *   <li>RuleEngine — deterministic decisions where applicable</li>
+ *   <li>Compact prompt</li>
+ *   <li>Single LLM inference (explains only)</li>
+ *   <li>Coverage validation (metric only)</li>
  * </ol>
  */
 @Service
@@ -43,6 +44,8 @@ public class AiService implements AiOrchestrationService {
     private final EvidenceCoverageValidator evidenceCoverageValidator;
     private final PipelineProfiler profiler;
     private final AiPipelineProperties props;
+    private final RuleEngine ruleEngine;
+    private final RetrievalPlanner retrievalPlanner;
 
     public AiService(
             RetrievalAugmentationService retrievalAugmentationService,
@@ -56,7 +59,9 @@ public class AiService implements AiOrchestrationService {
             IndexInspectionService indexInspectionService,
             EvidenceCoverageValidator evidenceCoverageValidator,
             PipelineProfiler profiler,
-            AiPipelineProperties props) {
+            AiPipelineProperties props,
+            RuleEngine ruleEngine,
+            RetrievalPlanner retrievalPlanner) {
         this.retrievalAugmentationService = retrievalAugmentationService;
         this.contextAssembler = contextAssembler;
         this.promptBuilder = promptBuilder;
@@ -69,86 +74,181 @@ public class AiService implements AiOrchestrationService {
         this.evidenceCoverageValidator = evidenceCoverageValidator;
         this.profiler = profiler;
         this.props = props;
+        this.ruleEngine = ruleEngine;
+        this.retrievalPlanner = retrievalPlanner;
     }
 
     @Override
     @Transactional
     public AiResponse answer(AiRequest request) {
         AiRequest normalized = normalize(request);
-        profiler.start(normalized.context().requestId() != null
-                ? normalized.context().requestId() : "unknown");
+        String reqId = normalized.context().requestId() != null
+                ? normalized.context().requestId() : UUID.randomUUID().toString();
+        profiler.start(reqId);
 
         // ── Intent ──
         QueryIntent intent = intentClassifier.classify(normalized.question());
-        profiler.record("intent-classification");
-
+        profiler.record("intent");
         if (intent == QueryIntent.INDEX_INSPECTION || intent == QueryIntent.CORPUS_DISCOVERY) {
             profiler.finish();
             return indexInspectionService.inspect(normalized);
         }
 
-        // ── Retrieval ──
+        // ── Domain ──
+        RetrievalPlan.Domain domain = retrievalPlanner.classifyDomain(normalized.question());
+        profiler.record("domain");
+
+        // ── Single retrieval ──
         RetrievalContext retrievalContext = retrievalAugmentationService.retrieve(normalized);
-        profiler.record("hybrid-retrieval");
-        log.info("Retrieved: {} sources", retrievalContext.sources().size());
+        profiler.record("retrieval");
+        log.info("Retrieved: {} sources, {} unique docs",
+                retrievalContext.sources().size(),
+                retrievalContext.sources().stream()
+                        .map(SourceCitation::title).filter(Objects::nonNull).distinct().count());
 
-        // ── Evidence package ──
+        // ── RuleEngine: deterministic decision ──
+        var ruleResult = evaluateRules(normalized.question(), retrievalContext);
+        profiler.record("rule-engine");
+
+        // ── Evidence + prompt ──
         PromptContext promptContext = contextAssembler.assemble(normalized, retrievalContext);
-        profiler.record("evidence-building");
-
-        // ── Prompt ──
         String prompt = promptBuilder.build(promptContext);
-        profiler.record("prompt-construction");
-        log.info("Prompt size: {} chars, {} evidence docs",
+        profiler.record("prompt");
+        log.info("Prompt: {} chars | {} evidence docs | domain: {}",
                 prompt.length(),
                 promptContext.evidencePackage() != null
-                        ? promptContext.evidencePackage().items().size() : 0);
+                        ? promptContext.evidencePackage().items().size() : 0,
+                domain);
 
         // ── LLM ──
         ModelCapabilities capabilities = modelProvider.capabilities(normalized.model());
         Instant inferenceStart = Instant.now();
         String rawAnswer = chatCompletionProvider.complete(prompt, capabilities);
-        profiler.record("llm-inference");
+        profiler.record("llm");
         long inferenceMs = java.time.Duration.between(inferenceStart, Instant.now()).toMillis();
-        log.info("LLM inference: {} ms", inferenceMs);
+        log.info("LLM: {} ms", inferenceMs);
 
-        // ── Coverage validation (metric only, non-blocking per Part F) ──
+        // ── Coverage (metric only) ──
         if (promptContext.evidencePackage() != null) {
-            var coverageCheck = evidenceCoverageValidator.validate(
+            var coverage = evidenceCoverageValidator.validate(
                     rawAnswer, promptContext.evidencePackage(), normalized.question());
-            profiler.record("coverage-validation");
-            log.info("Coverage: passed={}, missingDocs={}, missingNums={}",
-                    coverageCheck.passed(),
-                    coverageCheck.missingDocumentTitles(),
-                    coverageCheck.missingNumericValues());
-            // NEVER retry — coverage is a quality metric, not a gate
+            profiler.record("coverage");
+            log.info("Coverage: passed={} | missingDocs={} | missingNums={}",
+                    coverage.passed(), coverage.missingDocumentTitles(),
+                    coverage.missingNumericValues());
         }
 
-        // ── Grounding ──
+        // ── Ground ──
         ReasonedAnswer reasonedAnswer = groundingService.ground(rawAnswer, retrievalContext);
-        profiler.record("grounding");
+        profiler.record("ground");
         profiler.finish();
 
-        Instant completedAt = Instant.now();
+        // ── Retrieval diagnostics (Part G) ──
+        logRetrievalDiagnostics(retrievalContext, domain);
+
+        // ── Metadata ──
         InferenceMetadata metadata = new InferenceMetadata(
                 capabilities.provider(), capabilities.model(),
-                Instant.now(), completedAt,
-                normalized.context().correlationId(),
-                normalized.context().requestId(),
+                Instant.now(), Instant.now(),
+                normalized.context().correlationId(), reqId,
                 promptBuilder.templateVersion(),
                 retrievalContext.retrievalStrategy(),
                 retrievalContext.sources().stream().map(s -> s.chunkId().toString()).toList(),
                 reasonedAnswer.confidence().overallConfidence());
 
         auditPublisher.emit(normalized.context().actorId(), normalized.context().tenantId(),
-                "MODEL_INFERENCE", normalized.context().requestId(),
+                "MODEL_INFERENCE", reqId,
                 Map.of("provider", capabilities.provider(),
                         "model", capabilities.model(),
+                        "domain", domain.name(),
                         "promptChars", Integer.toString(prompt.length()),
                         "inferenceMs", Long.toString(inferenceMs),
+                        "uniqueDocs", Long.toString(retrievalContext.sources().stream()
+                                .map(SourceCitation::title).filter(Objects::nonNull).distinct().count()),
                         "grounded", Boolean.toString(reasonedAnswer.grounded())));
 
         return new AiResponse(reasonedAnswer, metadata);
+    }
+
+    /**
+     * Evaluates deterministic rules. If a rule fires, prepend its result
+     * to the LLM answer so the UI can extract the deterministic decision.
+     */
+    private RuleEngine.RuleResult evaluateRules(String question, RetrievalContext ctx) {
+        String lower = question.toLowerCase();
+
+        // Procurement: extract amount and evaluate thresholds
+        if (retrievalPlanner.classifyDomain(question) == RetrievalPlan.Domain.PROCUREMENT) {
+            var amounts = extractAmounts(question);
+            if (!amounts.isEmpty()) {
+                double amount = amounts.getFirst();
+                // Also check evidence for threshold context
+                String evidenceContext = ctx.sources().stream()
+                        .map(s -> s.excerpt() != null ? s.excerpt() : "")
+                        .reduce("", (a, b) -> a + " " + b);
+                return ruleEngine.evaluateProcurement(amount, evidenceContext + " " + question);
+            }
+        }
+
+        // Travel: extract hours and evaluate allowance
+        if (retrievalPlanner.classifyDomain(question) == RetrievalPlan.Domain.TRAVEL) {
+            var hours = extractHours(question);
+            if (hours.isPresent()) {
+                return ruleEngine.evaluateTravelExpense(hours.get(), lower.contains("übernachtung"));
+            }
+        }
+
+        return null; // no deterministic rule applies
+    }
+
+    private List<Double> extractAmounts(String text) {
+        List<Double> amounts = new ArrayList<>();
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile(
+                "(\\d{1,3}(?:\\.\\d{3})*(?:,\\d{2})?)\\s*(?:€|Euro|EUR)",
+                java.util.regex.Pattern.CASE_INSENSITIVE).matcher(text);
+        while (m.find()) {
+            try {
+                amounts.add(Double.parseDouble(m.group(1).replace(".", "").replace(",", ".")));
+            } catch (NumberFormatException ignored) {}
+        }
+        return amounts;
+    }
+
+    private Optional<Double> extractHours(String text) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile(
+                "(\\d+)[-\\s]*(?:stündig|stunden|Stunden|h|Std)",
+                java.util.regex.Pattern.CASE_INSENSITIVE).matcher(text);
+        if (m.find()) return Optional.of(Double.parseDouble(m.group(1)));
+        return Optional.empty();
+    }
+
+    /** Logs diversity diagnostics (Part G). */
+    private void logRetrievalDiagnostics(RetrievalContext ctx, RetrievalPlan.Domain domain) {
+        var titles = ctx.sources().stream()
+                .map(s -> s.title() != null ? s.title() : "unknown")
+                .toList();
+        long unique = titles.stream().distinct().count();
+        long total = titles.size();
+        double dupRatio = total > 0 ? (double) (total - unique) / total * 100 : 0;
+        var authorities = ctx.sources().stream()
+                .map(s -> s.title())
+                .filter(Objects::nonNull)
+                .map(this::mapAuthority)
+                .distinct().count();
+
+        log.info("RETRIEVAL DIAGNOSTICS: {} unique regulations | {} total chunks | {:.0f}% duplicate | {} authorities | domain: {}",
+                unique, total, dupRatio, authorities, domain);
+    }
+
+    private String mapAuthority(String title) {
+        if (title == null) return "unknown";
+        String t = title.toLowerCase();
+        if (t.contains("bau") || t.contains("baugb") || t.contains("baunvo")) return "SenStadt";
+        if (t.contains("vergab") || t.contains("beschaffung") || t.contains("gwb") || t.contains("vgv"))
+            return "SenFin";
+        if (t.contains("tv-l") || t.contains("urlaub") || t.contains("reisekosten"))
+            return "SenInn";
+        return "Land Berlin";
     }
 
     private AiRequest normalize(AiRequest request) {

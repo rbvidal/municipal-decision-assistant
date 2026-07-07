@@ -1,104 +1,85 @@
 package com.cognitera.platform.ai.application;
 
+import com.cognitera.platform.ai.model.RetrievalPlan.Domain;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
-import java.util.function.Predicate;
 
 /**
- * Mandatory domain gate that filters retrieval results before they reach
- * the LLM. A procurement question must never receive travel-expense
- * regulations, and vice versa.
+ * Domain-first document filter. Uses the weighted DomainClassifier
+ * to determine the domain, then filters document titles to only
+ * include those matching the domain.
  *
- * <p>Domain detection follows the same rules as the reranker's domain
- * detection for consistency.
+ * <p>A procurement question must never receive travel-expense regulations.
  */
 @Component
 public class DomainGate {
 
     private static final Logger log = LoggerFactory.getLogger(DomainGate.class);
 
-    /** Detected domain with its document acceptance predicate. */
-    public enum Domain {
-        PROCUREMENT(title -> hasAny(title,
-                "vergab", "beschaffung", "gwb", "vgv", "uvgo", "berlavg", "vob", "av §",
-                "ausschreibung", "direktauftrag", "vergabeplattform", "lieferung", "rahmenvertrag")),
-        BUILDING(title -> hasAny(title,
-                "bau", "bauo", "baugb", "baunvo", "bauvorlv", "abstands", "schneller-bauen",
-                "garage", "carport", "baugenehmigung", "bebauungsplan")),
-        HR(title -> hasAny(title,
-                "tv-l", "tvö", "entgelt", "urlaub", "urlvo", "reisekosten", "brkg", "lrkg",
-                "arbeitszeit", "azvo", "homeoffice", "mobiles arbeiten", "dienstreise",
-                "it-sicherheit", "beschaffungsordnung intern", "trennungsgeld")),
-        GENERAL(title -> true); // accepts everything
+    private final DomainClassifier classifier;
 
-        private final Predicate<String> filter;
-
-        Domain(Predicate<String> filter) { this.filter = filter; }
-
-        public boolean accepts(String documentTitle) {
-            return documentTitle == null || filter.test(documentTitle.toLowerCase());
-        }
+    public DomainGate(DomainClassifier classifier) {
+        this.classifier = classifier;
     }
 
     /**
-     * Detects the administrative domain from the query text.
+     * Filters document titles to only those matching the detected domain.
      */
-    public Domain detect(String query) {
-        String lower = query.toLowerCase();
-        if (hasAny(lower, "beschaffung", "vergabe", "ausschreibung", "lieferung",
-                "rahmenvertrag", "direktauftrag", "vergabeverfahren", "beschaffen",
-                "einkauf", "lieferant", "angebot", "auftragswert", "schwellenwert",
-                "vergabevermerk", "angebotsvergleich", "verhandlungsvergabe",
-                "beschränkte ausschreibung", "öffentliche ausschreibung",
-                "vergaberecht", "gwb", "vgv", "uvgo", "vob", "berlavg")) {
-            return Domain.PROCUREMENT;
-        }
-        if (hasAny(lower, "bauantrag", "baugenehmigung", "garage", "carport",
-                "abstandsfläche", "abstandsflächen", "bebauungsplan", "baugenehmigungsverfahren",
-                "bauordnungsrecht", "bauvorlageberechtigung", "baulast",
-                "einfamilienhaus", "wohngebäude", "grenzbebauung", "geschossflächenzahl",
-                "grundflächenzahl", "geschosswohnungsbau", "baunvo", "bauvorlv",
-                "bauo", "baugb", "erschließung", "nutzungsänderung",
-                "bauvoranfrage", "vorbescheid", "teilungsgenehmigung")) {
-            return Domain.BUILDING;
-        }
-        if (hasAny(lower, "urlaub", "tv-l", "tvö", "dienstreise", "arbeitszeit",
-                "entgeltgruppe", "tarifvertrag", "personalrat", "kündigung",
-                "befristung", "teilzeit", "elternzeit", "reisekosten",
-                "trennungsgeld", "umzugskosten", "beurteilung", "beförderung",
-                "stellenausschreibung", "homeoffice", "mobiles arbeiten",
-                "dienstvereinbarung", "gehalt", "vergütung", "lohn", "eg ")) {
-            return Domain.HR;
-        }
-        return Domain.GENERAL;
+    public FilterResult filter(String query, List<String> documentTitles) {
+        Domain domain = classifier.classifySimple(query);
+        return filterByDomain(domain, documentTitles);
     }
 
-    /**
-     * Filters a list of document titles, keeping only those matching the domain.
-     * Returns the list of accepted titles.
-     */
-    public Set<String> filterDocuments(Domain domain, List<String> documentTitles) {
+    public FilterResult filterByDomain(Domain domain, List<String> documentTitles) {
         Set<String> accepted = new LinkedHashSet<>();
         Set<String> rejected = new LinkedHashSet<>();
+
         for (String title : documentTitles) {
-            if (domain.accepts(title)) {
+            if (accepts(domain, title)) {
                 accepted.add(title);
             } else {
                 rejected.add(title);
             }
         }
-        if (!rejected.isEmpty()) {
-            log.info("DomainGate [{}]: rejected {} documents: {}", domain,
-                    rejected.size(), String.join(", ", rejected));
+
+        log.info("DomainGate [{}]: {} accepted, {} rejected", domain, accepted.size(), rejected.size());
+        if (!rejected.isEmpty() && rejected.size() <= 5) {
+            log.info("DomainGate rejected: {}", String.join(", ", rejected));
         }
-        return accepted;
+
+        return new FilterResult(domain, List.copyOf(accepted), List.copyOf(rejected));
     }
 
-    private static boolean hasAny(String text, String... terms) {
+    private boolean accepts(Domain domain, String title) {
+        if (domain == Domain.GENERAL || title == null) return true;
+        String lower = title.toLowerCase();
+        return switch (domain) {
+            case PROCUREMENT -> hasAny(lower, "vergab", "beschaffung", "gwb", "vgv", "uvgo",
+                    "berlavg", "vob", "av §", "ausschreibung", "direktauftrag",
+                    "vergabeplattform", "lieferung", "rahmenvertrag", "lho", "einkauf");
+            case BUILDING -> hasAny(lower, "bau", "bauo", "baugb", "baunvo", "bauvorlv",
+                    "abstands", "schneller-bauen", "garage", "carport",
+                    "baugenehmigung", "bebauungsplan", "grundstück");
+            case HR -> hasAny(lower, "tv-l", "tvö", "entgelt", "urlaub", "urlvo",
+                    "arbeitszeit", "azvo", "homeoffice", "mobiles arbeiten",
+                    "it-sicherheit", "beschaffungsordnung intern");
+            case TRAVEL -> hasAny(lower, "reisekosten", "brkg", "lrkg", "dienstreise",
+                    "trennungsgeld", "umzug", "fahrtkosten", "kilometer");
+            case GENERAL -> true;
+        };
+    }
+
+    private boolean hasAny(String text, String... terms) {
         for (String t : terms) if (text.contains(t)) return true;
         return false;
     }
+
+    public record FilterResult(
+            Domain domain,
+            List<String> accepted,
+            List<String> rejected
+    ) {}
 }
