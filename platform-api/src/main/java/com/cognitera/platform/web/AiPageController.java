@@ -519,7 +519,7 @@ public class AiPageController {
             m.put("title", s.title());
             m.put("excerpt", s.excerpt() != null ? s.excerpt() : "");
             double score = maxScore - (i * 0.03);
-            m.put("score", String.format("%.2f", Math.max(0.40, score)));
+            m.put("score", String.format(java.util.Locale.US, "%.2f", Math.max(0.40, score)));
             String meta = metaCache.getOrDefault(s.title(), "");
             String[] parts = meta.split("\\|");
             m.put("authority", parts.length > 0 ? parts[0] : "Land Berlin");
@@ -723,7 +723,7 @@ public class AiPageController {
         sb.append("<div class=\"pd-item\"><span class=\"pd-label\">Verlässlichkeit</span><span class=\"pd-value\">")
           .append(escapeHtml(formatConfidence(confidence)))
           .append(" <span class=\"text-xs text-tertiary\">(")
-          .append(String.format("%.0f", confidence * 100)).append("%)</span></span></div>");
+          .append(String.format(java.util.Locale.US, "%.0f", confidence * 100)).append("%)</span></span></div>");
         sb.append("<div class=\"pd-item\"><span class=\"pd-label\">Bearbeitungszeit</span><span class=\"pd-value\">")
           .append(escapeHtml(formatDuration(totalMs))).append("</span></div>");
         sb.append("</div></div></details>");
