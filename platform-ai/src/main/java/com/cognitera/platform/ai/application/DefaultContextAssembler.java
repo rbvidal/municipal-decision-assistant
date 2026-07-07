@@ -10,7 +10,9 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * Assembles a prompt context by building objectives, finding hierarchy, and source dossier from the request.
+ * Assembles a prompt context including an {@link EvidencePackage} built from
+ * retrieval results. The evidence package replaces raw source lists in the
+ * prompt with structured, numbered evidence items.
  */
 @Component
 public class DefaultContextAssembler implements ContextAssembler {
@@ -18,60 +20,34 @@ public class DefaultContextAssembler implements ContextAssembler {
     private final ObjectiveAnalysisService objectiveAnalysisService;
     private final FindingHierarchyService findingHierarchyService;
     private final SourceOrchestrationService sourceOrchestrationService;
+    private final EvidencePackageBuilder evidencePackageBuilder;
 
     public DefaultContextAssembler(ObjectiveAnalysisService objectiveAnalysisService,
                                     FindingHierarchyService findingHierarchyService,
-                                    SourceOrchestrationService sourceOrchestrationService) {
+                                    SourceOrchestrationService sourceOrchestrationService,
+                                    EvidencePackageBuilder evidencePackageBuilder) {
         this.objectiveAnalysisService = objectiveAnalysisService;
         this.findingHierarchyService = findingHierarchyService;
         this.sourceOrchestrationService = sourceOrchestrationService;
+        this.evidencePackageBuilder = evidencePackageBuilder;
     }
 
-    private static final String SYSTEM_INSTRUCTION_DEFAULT = """
-            You are a document intelligence assistant.
-            Your approach is FINDING-FIRST: the primary obligations are entirely
-            independent from any supporting instruments.
+    private static final String SYSTEM_INSTRUCTION = """
+            Sie sind ein Entscheidungsassistent für die deutsche Kommunalverwaltung.
 
-            DOCTRINAL FOUNDATION — DO NOT DEVIATE FROM THESE:
-            1. The PRIMARY OBLIGATION exists independently.
-            2. A SECURITY INSTRUMENT does NOT replace the primary obligation.
-            3. A party CANNOT unilaterally decide to offset obligations against a security while the relationship is ongoing.
-            4. Offsetting requires specific conditions — it is NOT automatic.
-            5. The security secures potential claims. It is NOT prepaid obligation.
-            6. Obligations continue to accrue during the notice period regardless of security status.
-            7. The claim for unpaid obligations SURVIVES the security — the security is a cap on guarantee, not a cap on liability.
+            Ihre Aufgabe ist es, Sachbearbeiterinnen und Sachbearbeitern fundierte,
+            evidenzbasierte Entscheidungsgrundlagen zu liefern.
 
-            ANSWER STRUCTURE (follow strictly):
-            1. PRIMARY FINDING — State the continuing obligation
-            2. BREACH — State that non-performance constitutes a breach, regardless of security existence
-            3. SECURITY FUNCTION — Explain the security is guarantee only, does NOT extinguish the obligation
-            4. PRACTICAL STEPS — Demand → formal process → if needed, security accounting after relationship ends
-            5. RISKS — What could go wrong procedurally; what is NOT allowed
-            6. BOTTOM LINE — One-sentence summary
+            GRUNDREGELN:
+            - Sie arbeiten AUSSCHLIESSLICH mit den bereitgestellten Beweisstücken.
+            - Sie führen KEIN eigenes juristisches oder administratives Wissen ein.
+            - Sie erfinden KEINE Vorschriften, Paragraphen, Beträge oder Verfahren.
+            - Sie zitieren wörtlich aus den Beweisstücken.
+            - Sie benennen Widersprüche, statt sie zu verschweigen.
+            - Bei unzureichender Evidenz sagen Sie das klar und deutlich.
+            - Sie schreiben in der Sprache einer deutschen Kommunalverwaltung.
 
-            CRITICAL RULES:
-            - NEVER present security offset as the primary or automatic remedy
-            - ALWAYS foreground the continuing obligation
-            - NEVER imply a party can simply stop performing because security exists
-            - NEVER fabricate dates, deadlines, or provisions
-            - End with: "This is not professional advice."
-            """;
-
-    private static final String SYSTEM_INSTRUCTION_CORPUS = """
-            You are a document intelligence assistant.
-            You analyze questions based on the reference framework and established principles.
-
-            Your analysis should:
-            1. Identify the governing references for the question
-            2. Explain the framework (rights, duties, exceptions)
-            3. Address each sub-question the user asks
-            4. Note where additional factual information would be needed for definitive answers
-
-            CRITICAL RULES:
-            - Base your analysis on the cited references
-            - Do NOT invent facts, dates, or case references
-            - Do NOT apply a pre-set answer structure — adapt to the domain of the question
-            - End with: "This is not professional advice."
+            Sie sind KEIN Chatbot. Sie sind ein Verwaltungsassistent.
             """;
 
     @Override
@@ -81,18 +57,19 @@ public class DefaultContextAssembler implements ContextAssembler {
         SourceDossier dossier = sourceOrchestrationService.buildDossier(
                 retrievalContext.sources(), request.question());
 
-        String instruction = request.retrievalScope() == RetrievalScope.AUTHORITATIVE_ONLY
-                ? SYSTEM_INSTRUCTION_CORPUS
-                : SYSTEM_INSTRUCTION_DEFAULT;
+        // Build the evidence package from retrieval results
+        EvidencePackage evidencePackage = evidencePackageBuilder.build(
+                request.question(), retrievalContext.sources());
 
         return new PromptContext(
-                instruction,
+                SYSTEM_INSTRUCTION,
                 request.question(),
                 retrievalContext,
                 request.context().messages(),
                 objectives,
                 hierarchy,
                 dossier,
-                request.retrievalScope());
+                request.retrievalScope(),
+                evidencePackage);
     }
 }

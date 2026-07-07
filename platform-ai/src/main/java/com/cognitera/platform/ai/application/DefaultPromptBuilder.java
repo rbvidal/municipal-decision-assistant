@@ -2,132 +2,259 @@ package com.cognitera.platform.ai.application;
 
 import com.cognitera.platform.ai.api.PromptBuilder;
 import com.cognitera.platform.ai.model.*;
+import com.cognitera.platform.ai.model.EvidencePackage.Contradiction;
+import com.cognitera.platform.ai.model.EvidencePackage.CoverageStatus;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-import java.util.Locale;
-
 /**
- * Builds a German-language prompt that enforces evidence-grounded answers,
- * structured decision package output, and hallucination guard rules.
+ * Builds a German-language prompt that enforces evidence-first reasoning.
+ *
+ * <p>The LLM receives a structured {@link EvidencePackage} with numbered items,
+ * extracted numeric data, and contradiction detection. Every answer must:
+ * <ul>
+ *   <li>Reason ONLY over the provided evidence items</li>
+ *   <li>Cite specific documents, paragraphs, and numeric values</li>
+ *   <li>Report contradictions instead of inventing compromises</li>
+ *   <li>State missing evidence explicitly</li>
+ *   <li>Output a structured Decision Package in German</li>
+ * </ul>
  */
 @Component
 public class DefaultPromptBuilder implements PromptBuilder {
 
-    private static final String TEMPLATE_VERSION = "grounded-decision-v6";
+    private static final String TEMPLATE_VERSION = "evidence-reasoning-v7";
 
     @Override
     public String build(PromptContext context) {
-        var sources = context.retrievalContext().sources();
-        var authorities = context.retrievalContext().authorityReferences();
+        EvidencePackage evidence = context.evidencePackage();
         var objectives = context.objectives();
-        var hierarchy = context.findingHierarchy();
-        var dossier = context.sourceDossier();
-        boolean hasInsufficientEvidence = sources.isEmpty()
-                || (sources.size() < 2 && dossier != null && dossier.coverageScore() < 0.3);
+        boolean insufficient = evidence == null || evidence.isEmpty()
+                || evidence.coverageStatus() == CoverageStatus.INSUFFICIENT;
 
         StringBuilder prompt = new StringBuilder();
         prompt.append(context.systemInstruction()).append("\n\n");
 
-        // ═══ RETRIEVED EVIDENCE ═══
-        appendEvidenceSection(prompt, sources, authorities, hasInsufficientEvidence);
+        // ═══════════ EVIDENCE PACKAGE ═══════════
+        appendEvidencePackage(prompt, evidence, insufficient);
 
-        // ═══ USER QUESTION ═══
+        // ═══════════ USER QUESTION ═══════════
         prompt.append("FRAGE:\n").append(context.userQuestion()).append("\n\n");
 
-        // ═══ HALLUCINATION GUARD ═══
-        prompt.append("=== HALLUCINATION GUARD (STRENGSTE REGELN) ===\n");
-        prompt.append("- Sie durfen NUR die oben aufgefuhrten DOKUMENTE als Quelle verwenden.\n");
-        prompt.append("- Sie durfen KEIN eigenes juristisches Wissen einfuhren.\n");
-        prompt.append("- Sie durfen KEINE Vorschriften, Paragraphen oder Gesetze erfinden.\n");
-        prompt.append("- Sie durfen KEINE verwandten Konzepte einfuhren, die nicht in den Dokumenten stehen.\n");
-        prompt.append("- Wenn in den Dokumenten widerspruchliche Informationen stehen, benennen Sie den Widerspruch.\n");
-        prompt.append("  Erfinden Sie KEINEN Kompromiss.\n");
-        if (hasInsufficientEvidence) {
-            prompt.append("- WICHTIG: Die Dokumentenlage reicht fur eine eindeutige Entscheidung NICHT aus.\n");
-            prompt.append("  Antworten Sie dann AUSSCHLIESSLICH mit:\n");
-            prompt.append("  \"Die vorhandenen Unterlagen reichen fur eine eindeutige Entscheidung nicht aus.\"\n");
-            prompt.append("  Nennen Sie konkret, welche Informationen fehlen.\n");
-            prompt.append("  Generieren Sie KEINE Spekulation.\n");
-        } else {
-            prompt.append("- Jede rechtliche Aussage MUSS durch mindestens ein Dokument belegt sein.\n");
-            prompt.append("- Jede Empfehlung MUSS auf die einschlagige Vorschrift verweisen.\n");
-            prompt.append("- Verwenden Sie wortliche Zitate aus den Dokumenten, wo immer moglich.\n");
-            prompt.append("- Fassen Sie zusammen und erklaren Sie — aber NUR auf Basis der Dokumente.\n");
-        }
-        prompt.append("- Schreiben Sie auf DEUTSCH.\n");
-        prompt.append("- Keine Hoflichkeitsfloskeln. Keine Einleitung. Kein Schlusswort.\n\n");
+        // ═══════════ REASONING RULES ═══════════
+        appendReasoningRules(prompt, evidence, insufficient);
 
-        // ═══ OUTPUT FORMAT: DECISION PACKAGE ═══
-        prompt.append("=== AUSGABEFORMAT — STRUKTURIERTES ENTSCHEIDUNGSPAKET ===\n");
-        prompt.append("Halten Sie sich GENAU an dieses Format:\n\n");
-        prompt.append("ENTSCHEIDUNG\n");
-        prompt.append("(Eine kurze, pragnante Empfehlung — ein bis zwei Satze)\n\n");
-        prompt.append("KURZBEGRUNDUNG\n");
-        prompt.append("(Kurze Erklarung — zwei bis drei Satze, NUR aus den Dokumenten abgeleitet)\n\n");
-        prompt.append("RECHTSGRUNDLAGEN\n");
-        prompt.append("- [Vorschrift] ([Dokument], [Abschnitt/Paragraph])\n");
-        prompt.append("(Jede Rechtsgrundlage mit konkretem Dokument und Abschnitt)\n\n");
-        prompt.append("ERFORDERLICHES VERFAHREN\n");
-        prompt.append("(Das tatsachlich erforderliche Verfahren — z.B. Direktauftrag, Beschrankte Ausschreibung, Genehmigungsverfahren)\n");
-        prompt.append("ODER: Kein spezifisches Verfahren erforderlich.\n\n");
-        prompt.append("BENOTIGTE FORMULARE\n");
-        prompt.append("- [Formularname]\n");
-        prompt.append("(Liste der tatsachlich benotigten Formulare, falls in den Dokumenten genannt)\n");
-        prompt.append("ODER: Keine Formulare erforderlich.\n\n");
-        prompt.append("BENOTIGTE CHECKLISTEN\n");
-        prompt.append("- [Checklistenname]\n");
-        prompt.append("ODER: Keine Checkliste erforderlich.\n\n");
-        prompt.append("ZUSTANDIGE BEHORDE\n");
-        prompt.append("(Die tatsachlich zustandige Behorde, aus den Dokumenten abgeleitet)\n\n");
-        prompt.append("NAECHSTER SCHRITT\n");
-        prompt.append("(Eine konkrete Handlungsempfehlung)\n\n");
-        prompt.append("VERWENDETE DOKUMENTE\n");
-        prompt.append("- [Dokumenttitel]\n");
-        prompt.append("(Liste aller fur die Entscheidung verwendeten Dokumente)\n\n");
-
-        prompt.append("WICHTIG: Die ENTSCHEIDUNG muss IMMER an erster Stelle stehen.\n");
-        prompt.append("Niemals Abschnitte auslassen. Wenn keine Information vorhanden ist, schreiben Sie 'Keine Angabe in den Dokumenten.'\n");
-        prompt.append("Niemals freie Langtexte ausserhalb dieser Struktur generieren.\n");
-        prompt.append("- End with: Dies ist keine Rechtsberatung.\n");
+        // ═══════════ OUTPUT FORMAT ═══════════
+        appendOutputFormat(prompt);
 
         return prompt.toString();
     }
 
-    private void appendEvidenceSection(StringBuilder prompt,
-                                        List<SourceCitation> sources,
-                                        List<AuthorityReference> authorities,
+    // ──────── EVIDENCE PACKAGE ────────
+
+    private void appendEvidencePackage(StringBuilder prompt, EvidencePackage evidence,
                                         boolean insufficient) {
-        prompt.append("=== DOKUMENTE (AUSSCHLIESSLICHE QUELLEN) ===\n");
-        if (sources.isEmpty()) {
-            prompt.append("KEINE passenden Dokumente gefunden.\n");
-            prompt.append("Sie durfen AUSSCHLIESSLICH antworten, dass keine Informationen vorliegen.\n\n");
+        prompt.append("=== EVIDENZPAKET (AUSSCHLIESSLICHE GRUNDLAGE) ===\n");
+        prompt.append("Sie durfen NUR uber die folgenden Beweisstucke nachdenken.\n");
+        prompt.append("JEDE Aussage MUSS durch mindestens ein Beweisstuck belegt sein.\n\n");
+
+        if (evidence == null || evidence.isEmpty()) {
+            prompt.append("KEINE Beweisstucke verfugbar.\n");
+            prompt.append("Die Wissensbasis enthalt keine ausreichenden Informationen.\n\n");
+            prompt.append("WICHTIG: Antworten Sie NICHT aus Ihrem eigenen Wissen.\n");
+            prompt.append("Sagen Sie explizit, dass keine Dokumente gefunden wurden.\n\n");
             return;
         }
-        prompt.append("NUR diese Dokumente durfen verwendet werden:\n\n");
-        for (int i = 0; i < sources.size(); i++) {
-            SourceCitation s = sources.get(i);
-            prompt.append("[").append(i + 1).append("] ");
-            prompt.append(s.title() != null ? s.title() : "Unbekanntes Dokument");
-            if (s.excerpt() != null && !s.excerpt().isBlank()) {
-                String excerpt = s.excerpt();
-                if (excerpt.length() > 800) excerpt = excerpt.substring(0, 800) + "...";
-                prompt.append("\n    Text: ").append(excerpt);
+
+        // Summary stats
+        prompt.append("Dokumente durchsucht: ").append(evidence.totalDocumentsSearched()).append("\n");
+        prompt.append("Relevante Vorschriften: ").append(evidence.relevantDocumentsFound()).append("\n");
+        prompt.append("Davon ausgewertet: ").append(evidence.documentsUsed()).append("\n");
+        prompt.append("Abdeckung: ").append(coverageLabel(evidence.coverageStatus())).append("\n\n");
+
+        if (evidence.hasContradictions()) {
+            prompt.append("REGELUNGSKONFLIKTE GEFUNDEN:\n");
+            for (Contradiction c : evidence.contradictions()) {
+                prompt.append("- ").append(c.description()).append("\n");
+                prompt.append("  Dokument A: ").append(String.join("; ", c.documentA())).append("\n");
+                prompt.append("  Dokument B: ").append(String.join("; ", c.documentB())).append("\n");
+                prompt.append("  Empfehlung: ").append(c.recommendation()).append("\n\n");
             }
-            prompt.append("\n\n");
+            prompt.append("Wenn Sie Konflikte im Antworttext erwähnen:\n");
+            prompt.append("- Schreiben Sie 'REGELUNGSKONFLIKT ERKANNT'\n");
+            prompt.append("- Listen Sie beide widersprüchlichen Dokumente\n");
+            prompt.append("- Empfehlen Sie: 'Manuelle Prüfung erforderlich.'\n");
+            prompt.append("- Wählen Sie KEINE Seite aus.\n\n");
         }
 
-        if (!authorities.isEmpty()) {
-            prompt.append("Zusatzliche Referenzen:\n");
-            for (AuthorityReference a : authorities) {
-                prompt.append("- ").append(a.referenceId());
-                if (a.entryTitle() != null && !a.entryTitle().isEmpty()) {
-                    prompt.append(": ").append(a.entryTitle());
-                }
+        // Individual evidence items
+        for (EvidenceItem item : evidence.items()) {
+            appendEvidenceItem(prompt, item);
+        }
+    }
+
+    private void appendEvidenceItem(StringBuilder prompt, EvidenceItem item) {
+        prompt.append("── Beweisstück ").append(item.index()).append(" ──\n");
+        prompt.append("Dokument: ").append(item.documentTitle()).append("\n");
+        prompt.append("Behörde: ").append(item.authority()).append("\n");
+        if (item.paragraph() != null && !item.paragraph().isBlank()) {
+            prompt.append("Abschnitt: ").append(item.paragraph()).append("\n");
+        }
+        prompt.append("Relevanter Auszug:\n");
+        String excerpt = item.excerpt() != null ? item.excerpt() : "";
+        if (excerpt.length() > 1000) excerpt = excerpt.substring(0, 1000) + "...";
+        prompt.append("  \"").append(excerpt).append("\"\n");
+
+        prompt.append("Unterstützt: ").append(item.supports()).append("\n");
+        prompt.append("Verlässlichkeit: ").append(confidenceLabel(item.confidence())).append("\n");
+
+        // Structured numeric data
+        if (item.hasNumericData()) {
+            appendNumericData(prompt, item.numericExtraction());
+        }
+
+        prompt.append("\n");
+    }
+
+    private void appendNumericData(StringBuilder prompt, NumericExtraction n) {
+        prompt.append("Extrahierte Zahlenwerte (exakt, NICHT neu berechnen):\n");
+        if (!n.moneyValues().isEmpty()) {
+            for (var m : n.moneyValues()) {
+                prompt.append("  • Geldbetrag: ").append(formatGerman(m.amount()))
+                        .append(" ").append(m.currency())
+                        .append(" (").append(m.label()).append(")\n");
+            }
+        }
+        if (!n.percentages().isEmpty()) {
+            for (var p : n.percentages()) {
+                prompt.append("  • Prozentsatz: ").append(formatGerman(p.value()))
+                        .append("% (").append(p.label()).append(")\n");
+            }
+        }
+        if (!n.salaryGrades().isEmpty()) {
+            for (var sg : n.salaryGrades()) {
+                prompt.append("  • Entgeltgruppe: ").append(sg.grade());
+                if (sg.step() > 0) prompt.append(" Stufe ").append(sg.step());
+                if (sg.amount() > 0)
+                    prompt.append(" = ").append(formatGerman(sg.amount())).append(" ").append(sg.currency());
+                if (sg.effectiveDate() != null) prompt.append(" gültig ab ").append(sg.effectiveDate());
                 prompt.append("\n");
             }
-            prompt.append("\n");
         }
+        if (!n.thresholds().isEmpty()) {
+            for (var t : n.thresholds()) {
+                prompt.append("  • Grenzwert: ").append(formatGerman(t.amount()))
+                        .append(" ").append(t.currency())
+                        .append(" (").append(t.label()).append(")\n");
+            }
+        }
+        if (!n.dates().isEmpty()) {
+            for (var d : n.dates()) {
+                prompt.append("  • Datum: ").append(d.displayDate())
+                        .append(" (").append(d.label()).append(")\n");
+            }
+        }
+    }
+
+    // ──────── REASONING RULES ────────
+
+    private void appendReasoningRules(StringBuilder prompt, EvidencePackage evidence,
+                                       boolean insufficient) {
+        prompt.append("=== BEGRÜNDUNGSREGELN (STRENGSTE VORGABEN) ===\n");
+        prompt.append("1. Denken Sie NUR über die oben aufgeführten Beweisstücke nach.\n");
+        prompt.append("2. Führen Sie KEIN eigenes Wissen ein — auch nicht, wenn Sie es zu kennen glauben.\n");
+        prompt.append("3. Erfinden Sie KEINE Vorschriften, Paragraphen, Beträge oder Daten.\n");
+        prompt.append("4. Zitieren Sie wörtlich aus den Beweisstücken, wo immer möglich.\n");
+        prompt.append("5. Verwenden Sie die extrahierten Zahlenwerte DIREKT — berechnen Sie nichts neu.\n");
+        prompt.append("6. Nennen Sie bei jedem Fakt das konkrete Dokument und den Abschnitt.\n");
+
+        if (insufficient) {
+            prompt.append("\nWICHTIG — UNZUREICHENDE EVIDENZ:\n");
+            prompt.append("Die Beweislage reicht NICHT aus. Antworten Sie:\n");
+            prompt.append("\"Die Wissensbasis enthält derzeit keine ausreichenden Informationen ");
+            prompt.append("für diese Fragestellung.\"\n");
+            prompt.append("Nennen Sie konkret, welche Dokumente fehlen.\n");
+            prompt.append("Schlagen Sie vor: \"Bitte folgende Dokumente ergänzen: ...\"\n");
+        } else {
+            prompt.append("7. Wenn Beweisstücke sich widersprechen: Konflikt benennen, KEINE Seite wählen.\n");
+            prompt.append("8. Numerische Werte aus den extrahierten Daten verwenden, nicht selbst rechnen.\n");
+
+            if (evidence != null && evidence.coverageStatus() == CoverageStatus.PARTIAL) {
+                prompt.append("9. HINWEIS: Die Beweislage ist teilweise. Kennzeichnen Sie Unsicherheiten.\n");
+            }
+        }
+
+        prompt.append("\nSchreiben Sie auf DEUTSCH.\n");
+        prompt.append("Verwenden Sie die Sprache einer deutschen Kommunalverwaltung.\n");
+        prompt.append("Keine Höflichkeitsfloskeln. Keine Einleitung. Kein Schlusswort.\n\n");
+    }
+
+    // ──────── OUTPUT FORMAT ────────
+
+    private void appendOutputFormat(StringBuilder prompt) {
+        prompt.append("=== AUSGABEFORMAT — STRUKTURIERTES ENTSCHEIDUNGSPAKET ===\n");
+        prompt.append("Halten Sie sich GENAU an dieses Format:\n\n");
+
+        prompt.append("KURZANTWORT\n");
+        prompt.append("(Eine prägnante Antwort — maximal zwei Sätze. Die wichtigste Information zuerst.)\n\n");
+
+        prompt.append("ENTSCHEIDUNG\n");
+        prompt.append("(Konkrete Empfehlung — ein bis zwei Sätze)\n\n");
+
+        prompt.append("BEGRÜNDUNG\n");
+        prompt.append("(Begründung NUR aus den Beweisstücken, mit Dokument- und Abschnittszitaten)\n\n");
+
+        prompt.append("RECHTSGRUNDLAGEN\n");
+        prompt.append("- [Dokument], [Abschnitt/Paragraph] — [kurze Beschreibung]\n\n");
+
+        prompt.append("ERFORDERLICHES VERFAHREN\n");
+        prompt.append("(Konkret benanntes Verfahren, z.B. Direktauftrag, Beschränkte Ausschreibung, Baugenehmigungsverfahren)\n");
+        prompt.append("ODER: Für diese Auskunft ist kein Verwaltungsverfahren erforderlich.\n\n");
+
+        prompt.append("BENÖTIGTE FORMULARE\n");
+        prompt.append("- [Formularname]\n");
+        prompt.append("ODER: Für diesen Vorgang sind keine Formulare erforderlich.\n\n");
+
+        prompt.append("BENÖTIGTE CHECKLISTEN\n");
+        prompt.append("- [Checklistenname]\n");
+        prompt.append("ODER: Für diesen Vorgang ist keine Checkliste erforderlich.\n\n");
+
+        prompt.append("ZUSTÄNDIGE BEHÖRDE\n");
+        prompt.append("(Die tatsächlich zuständige Behörde)\n\n");
+
+        prompt.append("NÄCHSTER SCHRITT\n");
+        prompt.append("(Eine konkrete Handlungsempfehlung für den Sachbearbeiter)\n\n");
+
+        prompt.append("VERWENDETE DOKUMENTE\n");
+        prompt.append("- [Dokumenttitel]\n\n");
+
+        prompt.append("WICHTIG: KURZANTWORT und ENTSCHEIDUNG müssen IMMER an erster Stelle stehen.\n");
+        prompt.append("Niemals Abschnitte auslassen.\n");
+        prompt.append("Bei fehlenden Informationen schreiben Sie:\n");
+        prompt.append("  'Die Wissensbasis enthält derzeit keine ausreichenden Informationen.'\n");
+        prompt.append("Niemals: 'Keine Angabe.'\n");
+        prompt.append("Ende mit: Dies ist keine Rechtsberatung.\n");
+    }
+
+    // ──────── FORMATTING HELPERS ────────
+
+    private static String formatGerman(double value) {
+        return String.format(java.util.Locale.GERMANY, "%,.2f", value)
+                .replaceAll(",00$", "").replaceAll("\\.00$", "");
+    }
+
+    private static String confidenceLabel(double score) {
+        if (score >= 0.85) return "Sehr hoch (✓✓✓)";
+        if (score >= 0.70) return "Hoch (✓✓)";
+        if (score >= 0.50) return "Mittel (✓)";
+        return "Niedrig";
+    }
+
+    private static String coverageLabel(CoverageStatus status) {
+        return switch (status) {
+            case SUFFICIENT -> "Ausreichend";
+            case PARTIAL -> "Teilweise";
+            case INSUFFICIENT -> "Unzureichend";
+        };
     }
 
     @Override

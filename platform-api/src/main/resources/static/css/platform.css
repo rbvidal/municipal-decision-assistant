@@ -1117,6 +1117,110 @@ h4 { font-size: .95rem; }
 }
 .used-docs-section li { margin-bottom: 3px; }
 
+/* Kurzantwort banner (Part I) */
+.kurzantwort-banner {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--blue-700);
+    background: var(--blue-50);
+    padding: 14px 20px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    border: 1px solid var(--blue-100);
+}
+
+/* Explainable confidence (Part E) */
+.confidence-explain {
+    font-size: .82rem;
+    margin: 10px 0;
+}
+.confidence-explain summary {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.confidence-explain summary::-webkit-details-marker { display: none; }
+.conf-label { font-weight: 600; }
+.conf-label.high { color: var(--green-700); }
+.conf-label.medium { color: var(--amber-600); }
+.conf-label.low { color: var(--red-600); }
+.conf-reasons {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: .78rem;
+    color: var(--text-secondary);
+}
+.conf-reasons span { padding: 2px 0; }
+
+/* Decision trace (Part K) */
+.decision-trace {
+    background: var(--surface-primary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+}
+.decision-trace summary {
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: .84rem;
+    color: var(--text-secondary);
+}
+.decision-trace summary::-webkit-details-marker { display: none; }
+.dt-summary-text { flex: 1; }
+.dt-toggle {
+    font-size: .78rem;
+    color: var(--text-link);
+    font-weight: 550;
+    white-space: nowrap;
+}
+.decision-trace[open] .dt-toggle { display: none; }
+.dt-content { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-subtle); }
+.dt-flow { display: flex; flex-direction: column; gap: 6px; }
+.dt-step {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    font-size: .82rem;
+}
+.dt-num {
+    min-width: 24px;
+    height: 24px;
+    border-radius: 12px;
+    background: var(--blue-100);
+    color: var(--blue-700);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .72rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.dt-title { font-weight: 600; color: var(--text-primary); }
+.dt-detail { color: var(--text-secondary); font-size: .78rem; }
+
+/* Compact empty sections (Part M) */
+.compact-empty {
+    font-size: .82rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    margin: 0;
+}
+
+/* Smarter regulation cards (Part J) */
+.reg-card-highlight {
+    font-weight: 600;
+    color: var(--blue-700);
+    background: var(--blue-50);
+    padding: 1px 4px;
+    border-radius: 3px;
+}
+
 /* Responsive case workspace */
 @media (max-width: 1024px) {
     .case-workspace { grid-template-columns: 1fr; grid-template-rows: auto; }
@@ -1124,5 +1228,6 @@ h4 { font-size: .95rem; }
     .arch-arrow { transform: rotate(90deg); margin: 0; }
     .regulation-card { flex-direction: column; }
     .reg-card-actions { flex-direction: row; }
+    .dt-flow { gap: 4px; }
 }
 

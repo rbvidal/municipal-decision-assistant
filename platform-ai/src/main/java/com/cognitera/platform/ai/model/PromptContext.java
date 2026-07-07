@@ -15,7 +15,8 @@ public record PromptContext(
         List<AnalysisObjective> objectives,
         FindingHierarchy findingHierarchy,
         SourceDossier sourceDossier,
-        RetrievalScope retrievalScope
+        RetrievalScope retrievalScope,
+        EvidencePackage evidencePackage
 ) {
     public PromptContext {
         conversationHistory = conversationHistory == null ? List.of() : List.copyOf(conversationHistory);
@@ -27,10 +28,11 @@ public record PromptContext(
                 ? new SourceDossier(Map.of(), List.of(), List.of(), 0.0, "No assessment")
                 : sourceDossier;
         retrievalScope = retrievalScope == null ? RetrievalScope.HYBRID : retrievalScope;
+        evidencePackage = evidencePackage; // nullable — only present in evidence-reasoning mode
     }
 
     public PromptContext(String systemInstruction, String userQuestion,
                          RetrievalContext retrievalContext, List<AiMessage> conversationHistory) {
-        this(systemInstruction, userQuestion, retrievalContext, conversationHistory, List.of(), null, null, null);
+        this(systemInstruction, userQuestion, retrievalContext, conversationHistory, List.of(), null, null, null, null);
     }
 }

@@ -32,6 +32,7 @@ public class AiService implements AiOrchestrationService {
     private final StructuredAnswerAssembler answerAssembler;
     private final QueryIntentClassifier intentClassifier;
     private final IndexInspectionService indexInspectionService;
+    private final EvidenceCoverageValidator evidenceCoverageValidator;
 
     public AiService(
             RetrievalAugmentationService retrievalAugmentationService,
@@ -45,7 +46,8 @@ public class AiService implements AiOrchestrationService {
             ClaimValidator claimValidator,
             StructuredAnswerAssembler answerAssembler,
             QueryIntentClassifier intentClassifier,
-            IndexInspectionService indexInspectionService
+            IndexInspectionService indexInspectionService,
+            EvidenceCoverageValidator evidenceCoverageValidator
     ) {
         this.retrievalAugmentationService = retrievalAugmentationService;
         this.contextAssembler = contextAssembler;
@@ -59,6 +61,7 @@ public class AiService implements AiOrchestrationService {
         this.answerAssembler = answerAssembler;
         this.intentClassifier = intentClassifier;
         this.indexInspectionService = indexInspectionService;
+        this.evidenceCoverageValidator = evidenceCoverageValidator;
     }
 
     @Override
@@ -124,6 +127,29 @@ public class AiService implements AiOrchestrationService {
             rawAnswer = corrected.toString();
         }
 
+        // Evidence coverage validation — verify top evidence was actually used
+        var coverageCheck = evidenceCoverageValidator.validate(
+                rawAnswer, promptContext.evidencePackage(), normalized.question());
+        if (!coverageCheck.passed()) {
+            log.warn("Evidence coverage FAILED: {}", coverageCheck.recommendation());
+            if (coverageCheck.needsRetry() && retrievalContext.sources().size() > 1) {
+                log.info("Retrying with reordered evidence to prioritize: {}",
+                        coverageCheck.missingDocumentTitles());
+                // Reorder: move missing docs to front and retry once
+                var reordered = reorderEvidence(
+                        retrievalContext.sources(), coverageCheck.missingDocumentTitles());
+                var reorderedCtx = new RetrievalContext(
+                        retrievalContext.query(), retrievalContext.retrievalStrategy(),
+                        reordered, retrievalContext.authorityReferences(),
+                        retrievalContext.findingHierarchy(), retrievalContext.sourceDossier(),
+                        retrievalContext.timeline());
+                PromptContext retryCtx = contextAssembler.assemble(normalized, reorderedCtx);
+                String retryPrompt = promptBuilder.build(retryCtx);
+                rawAnswer = chatCompletionProvider.complete(retryPrompt, capabilities);
+                log.info("Retry complete with reordered evidence.");
+            }
+        }
+
         ReasonedAnswer reasonedAnswer = groundingService.ground(rawAnswer, retrievalContext);
         Instant completedAt = Instant.now();
 
@@ -180,5 +206,22 @@ public class AiService implements AiOrchestrationService {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    /** Reorders sources to prioritize documents mentioned in missingTitles. */
+    private List<SourceCitation> reorderEvidence(List<SourceCitation> sources, List<String> missingTitles) {
+        List<SourceCitation> prioritized = new java.util.ArrayList<>();
+        List<SourceCitation> rest = new java.util.ArrayList<>();
+        for (SourceCitation s : sources) {
+            boolean isMissing = missingTitles.stream().anyMatch(
+                    t -> s.title() != null && s.title().toLowerCase().contains(t.toLowerCase()));
+            if (isMissing) {
+                prioritized.add(s);
+            } else {
+                rest.add(s);
+            }
+        }
+        prioritized.addAll(rest);
+        return prioritized;
     }
 }

@@ -125,36 +125,79 @@ public class AiPageController {
             // ── BUILD RESULT HTML ──
             StringBuilder result = new StringBuilder();
 
-            // ═══════ ENTSCHEIDUNG CARD (hero, first) ═══════
+            // ═══════ DECISION HERO (Part I: Kurzantwort → Entscheidung → Confidence → Next Action) ═══════
+            String kurzantwort = dpSections.getOrDefault("KURZANTWORT", "");
+            String empfehlung = dpSections.getOrDefault("ENTSCHEIDUNG",
+                    dpSections.getOrDefault("EMPFEHLUNG", ""));
+            String begruendung = dpSections.getOrDefault("BEGRUNDUNG",
+                    dpSections.getOrDefault("KURZBEGRUNDUNG", ""));
+            String nextStep = dpSections.getOrDefault("NAECHSTER SCHRITT", "");
+            String usedDocs = dpSections.getOrDefault("VERWENDETE DOKUMENTE", "");
+
             result.append("<div class=\"decision-hero\">");
+
+            // KURZANTWORT first (Part I)
+            if (!kurzantwort.isBlank()) {
+                result.append("<div class=\"kurzantwort-banner\">")
+                    .append(escapeHtml(kurzantwort.strip())).append("</div>");
+            }
+
+            // ENTSCHEIDUNG
             result.append("<div class=\"decision-hero-header\">");
             result.append("<h2 class=\"decision-hero-title\">Entscheidung</h2>");
             result.append("<span class=\"confidence-badge ").append(confLevel).append("\">")
                 .append(escapeHtml(confLabel)).append("</span>");
             result.append("</div>");
 
-            // Recommendation
-            String empfehlung = dpSections.getOrDefault("ENTSCHEIDUNG",
-                    dpSections.getOrDefault("EMPFEHLUNG", ""));
             if (!empfehlung.isBlank()) {
                 result.append("<div class=\"decision-recommendation\">")
-                    .append(formatSectionText(empfehlung))
+                    .append(formatSectionText(empfehlung)).append("</div>");
+            } else if (!kurzantwort.isBlank()) {
+                result.append("<div class=\"decision-recommendation\">")
+                    .append("<p>").append(escapeHtml(kurzantwort.strip())).append("</p>")
                     .append("</div>");
             } else {
                 result.append("<div class=\"decision-recommendation\">")
-                    .append(formatAnswerFallback(answerText))
-                    .append("</div>");
+                    .append(formatAnswerFallback(answerText)).append("</div>");
             }
 
-            // Key metadata inline
+            // Explainable confidence (Part E)
             result.append("<div class=\"decision-meta-row\">");
-            result.append("<span>").append(escapeHtml(confLabel)).append("</span>");
-            result.append("<span>").append(sources.size()).append(" Vorschriften ausgewertet</span>");
-            result.append("<span>").append(escapeHtml(processingTimeDisplay)).append("</span>");
+            result.append("<details class=\"confidence-explain\"><summary>")
+                .append("<span class=\"conf-label ").append(confLevel).append("\">Verlässlichkeit: ")
+                .append(escapeHtml(confLabel)).append("</span></summary>");
+            result.append("<div class=\"conf-reasons\">");
+            if (!sources.isEmpty()) {
+                result.append("<span>").append(sources.size() >= 2 ? "✓" : "~")
+                    .append(" Ausreichende Dokumentenanzahl (").append(sources.size()).append(")</span>");
+                result.append("<span>").append(confidence >= 0.7 ? "✓" : "~")
+                    .append(" Hohe Übereinstimmung</span>");
+                result.append("<span>").append(sourceTitlesHaveOverlap(sources) ? "✓" : "~")
+                    .append(" Mehrere unabhängige Quellen</span>");
+                for (SourceCitation s : sources) {
+                    if (s.tier() == SourceCitation.SourceTier.PRIMARY) {
+                        result.append("<span>✓ Relevante Vorschrift: ").append(escapeHtml(
+                                s.title() != null ? s.title() : "")).append("</span>");
+                        break;
+                    }
+                }
+            } else {
+                result.append("<span>✗ Keine Dokumente gefunden</span>");
+            }
+            result.append("</div></details></div>");
+
+            // Processing summary (Part L)
+            result.append("<div class=\"decision-meta-row\">");
+            result.append("<span>").append(sources.size()).append(" Dokumente analysiert</span>");
+            long highConf = evidenceList.stream()
+                    .filter(e -> Double.parseDouble((String) e.get("score")) >= 0.60).count();
+            if (highConf > 0) {
+                result.append("<span>").append(highConf).append(" relevante Vorschriften gefunden</span>");
+            }
+            result.append("<span>Bearbeitungszeit: ").append(escapeHtml(processingTimeDisplay)).append("</span>");
             result.append("</div>");
 
-            // Quick next step
-            String nextStep = dpSections.getOrDefault("NAECHSTER SCHRITT", "");
+            // Nächster Schritt (Part I — prominent)
             if (!nextStep.isBlank()) {
                 result.append("<div class=\"decision-next-step\">")
                     .append("<strong>Nächster Schritt:</strong> ")
@@ -162,14 +205,11 @@ public class AiPageController {
             }
             result.append("</div>"); // end decision-hero
 
-            // ═══════ TWO-COLUMN LAYOUT ══════��
+            // ═══════ TWO-COLUMN LAYOUT ═══════
             result.append("<div class=\"decision-grid\">");
-
-            // LEFT COLUMN: Begründung + Rechtsgrundlagen + Verfahren
             result.append("<div class=\"decision-left\">");
 
-            // Kurzbegründung
-            String begruendung = dpSections.getOrDefault("KURZBEGRUNDUNG", "");
+            // Begründung
             if (!begruendung.isBlank()) {
                 result.append("<div class=\"decision-card\">")
                     .append("<h3 class=\"card-heading\">Begründung</h3>")
@@ -179,35 +219,32 @@ public class AiPageController {
 
             // Rechtsgrundlagen
             result.append(buildRechtsgrundlagenCard(dpSections, evidenceList));
-
             // Verfahren
             result.append(buildVerfahrenCard(dpSections, workspaceId));
-
             result.append("</div>"); // end decision-left
 
-            // RIGHT COLUMN: Formulare, Checklisten, Behörde
+            // RIGHT COLUMN
             result.append("<div class=\"decision-right\">");
-
             result.append(buildFormulareCard(dpSections));
             result.append(buildChecklistenCard(dpSections));
             result.append(buildBehoerdeCard(dpSections, workspaceId));
+            result.append("</div></div>"); // end decision-grid
 
-            result.append("</div>"); // end decision-right
-            result.append("</div>"); // end decision-grid
-
-            // ═══════ MASSGEBLICHE VORSCHRIFTEN ═══════
+            // ═══════ MASSGEBLICHE VORSCHRIFTEN (Part J: improved cards) ═══════
             if (!sources.isEmpty()) {
                 result.append(buildRegulationCardsSection(sources, evidenceList, workspaceId));
             }
 
-            // ═══════ NEXT ACTIONS ═══════
+            // ═══════ DECISION TRACE (Part K) ═══════
+            result.append(buildDecisionTrace(sources, workspaceId, totalMs, strategy));
+
+            // ═══════ NEXT ACTIONS (Part M) ═══════
             result.append(buildNextActionsSection(sources));
 
-            // ═══════ COLLAPSIBLE: BEARBEITUNGSDETAILS ═══════
+            // ═══════ COLLAPSIBLE PROCESSING DETAILS (Part L) ═══════
             result.append(buildProcessingDetailsSection(sources, strategy, totalMs, confidence));
 
             // ═══════ VERWENDETE DOKUMENTE ═══════
-            String usedDocs = dpSections.getOrDefault("VERWENDETE DOKUMENTE", "");
             if (!usedDocs.isBlank() || !sources.isEmpty()) {
                 result.append("<div class=\"used-docs-section\">")
                     .append("<h3>Verwendete Dokumente</h3><ul>");
@@ -417,11 +454,13 @@ public class AiPageController {
           .append("<div class=\"card-body\">");
         String formText = dp.getOrDefault("BENOTIGTE FORMULARE",
                             dp.getOrDefault("FORMULARE", ""));
-        if (!formText.isBlank() && !formText.toLowerCase().contains("keine formulare")
-                && !formText.toLowerCase().contains("formulare prüfen")) {
+        if (!formText.isBlank()
+                && !formText.toLowerCase().contains("keine formulare")
+                && !formText.toLowerCase().contains("formulare prüfen")
+                && !formText.toLowerCase().contains("keine angabe")) {
             sb.append(formatSectionText(formText));
         } else {
-            sb.append("<p class=\"text-secondary\">Keine Formulare erforderlich.</p>");
+            sb.append("<p class=\"compact-empty\">Für diesen Vorgang sind keine Formulare erforderlich.</p>");
         }
         sb.append("</div></div>");
         return sb.toString();
@@ -434,11 +473,13 @@ public class AiPageController {
           .append("<div class=\"card-body\">");
         String checkText = dp.getOrDefault("BENOTIGTE CHECKLISTEN",
                              dp.getOrDefault("CHECKLISTEN", ""));
-        if (!checkText.isBlank() && !checkText.toLowerCase().contains("keine checkliste")
-                && !checkText.toLowerCase().contains("checklisten prüfen")) {
+        if (!checkText.isBlank()
+                && !checkText.toLowerCase().contains("keine checkliste")
+                && !checkText.toLowerCase().contains("checklisten prüfen")
+                && !checkText.toLowerCase().contains("keine angabe")) {
             sb.append(formatSectionText(checkText));
         } else {
-            sb.append("<p class=\"text-secondary\">Keine Checkliste erforderlich.</p>");
+            sb.append("<p class=\"compact-empty\">Für diesen Vorgang ist keine Checkliste erforderlich.</p>");
         }
         sb.append("</div></div>");
         return sb.toString();
@@ -591,6 +632,73 @@ public class AiPageController {
         sb.append("<a href=\"/decision\" class=\"next-action-btn\">Neuen Vorgang beginnen</a>");
         sb.append("</div></div>");
         return sb.toString();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Decision Trace (Part K) — administrative reasoning process
+    // ═══════════════════════════════════════════════════════════
+
+    private String buildDecisionTrace(List<SourceCitation> sources, String workspaceId,
+                                        long totalMs, String strategy) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<details class=\"decision-trace\">");
+        sb.append("<summary><span class=\"dt-summary-text\">")
+          .append("Wie wurde diese Empfehlung erstellt?</span>")
+          .append("<span class=\"dt-toggle\">Ablauf anzeigen</span></summary>");
+        sb.append("<div class=\"dt-content\"><div class=\"dt-flow\">");
+
+        String wsName = workspaceId != null && WORKSPACES.containsKey(workspaceId)
+                ? WORKSPACES.get(workspaceId).name() : "Alle Fachbereiche";
+
+        traceStep(sb, 1, "Frage erkannt", "Die Anfrage wurde als Verwaltungsvorgang klassifiziert.");
+        traceStep(sb, 2, "Fachgebiet erkannt", wsName + " als zuständiger Bereich identifiziert.");
+        traceStep(sb, 3, "Dokumente durchsucht",
+                sources.size() + " Dokumente im Wissensbestand durchsucht.");
+        long highConf = sources.stream().filter(s -> s.confidenceScore() >= 0.6).count();
+        if (highConf > 0) {
+            traceStep(sb, 4, "Relevante Vorschriften gefunden",
+                    highConf + " passende Vorschriften identifiziert.");
+        } else if (!sources.isEmpty()) {
+            traceStep(sb, 4, "Vorschriften gefunden",
+                    sources.size() + " Dokumente mit teilweiser Relevanz gefunden.");
+        } else {
+            traceStep(sb, 4, "Keine Vorschriften gefunden",
+                    "Keine passenden Dokumente im Wissensbestand.");
+        }
+        long used = sources.stream().filter(s -> s.confidenceScore() >= 0.5).count();
+        if (used > 0) {
+            traceStep(sb, 5, "Dokumente ausgewertet",
+                    used + " Dokumente für die Entscheidungsfindung ausgewertet.");
+        }
+        traceStep(sb, 6, "Empfehlung erstellt",
+                "Entscheidungspaket aus den ausgewerteten Dokumenten abgeleitet. "
+                + "Bearbeitungszeit: " + formatDuration(totalMs) + ".");
+
+        sb.append("</div></div></details>");
+        return sb.toString();
+    }
+
+    private void traceStep(StringBuilder sb, int num, String title, String detail) {
+        sb.append("<div class=\"dt-step\">");
+        sb.append("<div class=\"dt-num\">").append(num).append("</div>");
+        sb.append("<div class=\"dt-info\">");
+        sb.append("<div class=\"dt-title\">").append(escapeHtml(title)).append("</div>");
+        sb.append("<div class=\"dt-detail\">").append(escapeHtml(detail)).append("</div>");
+        sb.append("</div></div>");
+    }
+
+    private boolean sourceTitlesHaveOverlap(List<SourceCitation> sources) {
+        if (sources.size() < 2) return false;
+        // Check if at least two sources have different title roots
+        var titles = sources.stream()
+                .map(s -> s.title() != null ? s.title() : "")
+                .filter(t -> !t.isBlank()).toList();
+        if (titles.size() < 2) return false;
+        // Check first word diversity
+        var firstWords = titles.stream()
+                .map(t -> t.split("\\s+")[0].toLowerCase())
+                .distinct().count();
+        return firstWords >= 2;
     }
 
     // ═══════════════════════════════════════════════════════════
