@@ -186,13 +186,15 @@ public class AiPageController {
             }
             result.append("</div></details></div>");
 
-            // Processing summary (Part L)
+            // Processing summary (Part L, H)
+            boolean isRuleEngine = "RULE_ENGINE".equals(strategy);
             result.append("<div class=\"decision-meta-row\">");
-            result.append("<span>").append(sources.size()).append(" Dokumente analysiert</span>");
-            long highConf = evidenceList.stream()
-                    .filter(e -> Double.parseDouble((String) e.get("score")) >= 0.60).count();
-            if (highConf > 0) {
-                result.append("<span>").append(highConf).append(" relevante Vorschriften gefunden</span>");
+            if (isRuleEngine) {
+                result.append("<span>Entscheidung aus strukturierter Wissensbasis</span>");
+            } else {
+                Map<String, Long> docCounts = countChunksByDocument(sources);
+                result.append("<span>").append(docCounts.size()).append(" Rechtsvorschrift").append(docCounts.size() != 1 ? "en" : "").append(" analysiert</span>");
+                result.append("<span>").append(sources.size()).append(" relevante Textstellen</span>");
             }
             result.append("<span>Bearbeitungszeit: ").append(escapeHtml(processingTimeDisplay)).append("</span>");
             result.append("</div>");
@@ -244,21 +246,20 @@ public class AiPageController {
             // ═══════ COLLAPSIBLE PROCESSING DETAILS (Part L) ═══════
             result.append(buildProcessingDetailsSection(sources, strategy, totalMs, confidence));
 
-            // ═══════ VERWENDETE DOKUMENTE ═══════
-            if (!usedDocs.isBlank() || !sources.isEmpty()) {
+            // ═══════ VERWENDETE DOKUMENTE (Part H: deduplicated by regulation) ═══════
+            if (!isRuleEngine && !sources.isEmpty()) {
+                Map<String, Long> docCounts = countChunksByDocument(sources);
                 result.append("<div class=\"used-docs-section\">")
-                    .append("<h3>Verwendete Dokumente</h3><ul>");
-                if (!usedDocs.isBlank()) {
-                    for (String line : usedDocs.split("\n")) {
-                        String t = line.strip().replaceFirst("^[-•*]\\s*", "");
-                        if (!t.isBlank()) result.append("<li>").append(escapeHtml(t)).append("</li>");
-                    }
-                } else {
-                    for (SourceCitation s : sources) {
-                        result.append("<li>").append(escapeHtml(s.title() != null ? s.title() : "Dokument")).append("</li>");
-                    }
+                    .append("<h3>Verwendete Rechtsgrundlagen</h3>");
+                for (var entry : docCounts.entrySet()) {
+                    result.append("<div class=\"used-doc-item\">")
+                        .append("<span class=\"used-doc-check\">&#10003;</span>")
+                        .append("<span class=\"used-doc-title\">").append(escapeHtml(entry.getKey())).append("</span>")
+                        .append("<span class=\"used-doc-count\">").append(entry.getValue())
+                        .append(" relevante Fundstelle").append(entry.getValue() != 1 ? "n" : "").append("</span>")
+                        .append("</div>");
                 }
-                result.append("</ul></div>");
+                result.append("</div>");
             }
 
             pageModel.addAttribute("resultHtml", result.toString());
@@ -685,6 +686,16 @@ public class AiPageController {
         sb.append("<div class=\"dt-title\">").append(escapeHtml(title)).append("</div>");
         sb.append("<div class=\"dt-detail\">").append(escapeHtml(detail)).append("</div>");
         sb.append("</div></div>");
+    }
+
+    /** Groups source citations by document title and counts chunks per document. */
+    private static Map<String, Long> countChunksByDocument(List<SourceCitation> sources) {
+        Map<String, Long> counts = new LinkedHashMap<>();
+        for (SourceCitation s : sources) {
+            String title = s.title() != null ? s.title() : "Unbekanntes Dokument";
+            counts.merge(title, 1L, Long::sum);
+        }
+        return counts;
     }
 
     private boolean sourceTitlesHaveOverlap(List<SourceCitation> sources) {
