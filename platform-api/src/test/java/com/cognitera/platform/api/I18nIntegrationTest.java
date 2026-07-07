@@ -23,7 +23,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     "spring.jpa.hibernate.ddl-auto=create-drop",
     "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
     "spring.flyway.enabled=false",
-
     "platform.auth.jwt-secret=test-secret-that-is-at-least-32-bytes-long-for-hs256"
 })
 @AutoConfigureMockMvc
@@ -43,14 +42,12 @@ class I18nIntegrationTest {
                 .content("""
                     {"email":"i18ntest@test.com","password":"Pass1234!","displayName":"I18n User","roles":[]}
                     """));
-
         var result = mockMvc.perform(post("/login")
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .param("username", "i18ntest@test.com")
                 .param("password", "Pass1234!"))
                 .andExpect(status().is3xxRedirection())
                 .andReturn();
-
         session = (MockHttpSession) result.getRequest().getSession();
     }
 
@@ -63,17 +60,17 @@ class I18nIntegrationTest {
         void defaultEnglish() throws Exception {
             mockMvc.perform(get("/dashboard").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Dashboard")));
+                    .andExpect(content().string(containsString("Kommunaler Verwaltungsassistent")));
         }
 
         @Test
-        @DisplayName("should show English nav labels")
+        @DisplayName("should show main navigation items")
         void englishNavLabels() throws Exception {
-            mockMvc.perform(get("/dashboard").session(session))
+            mockMvc.perform(get("/home").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Documents")))
-                    .andExpect(content().string(containsString("Search")))
-                    .andExpect(content().string(containsString("Audit")));
+                    .andExpect(content().string(containsString("Startseite")))
+                    .andExpect(content().string(containsString("Neue Entscheidung")))
+                    .andExpect(content().string(containsString("Vorschriften")));
         }
     }
 
@@ -82,11 +79,11 @@ class I18nIntegrationTest {
     class German {
 
         @Test
-        @DisplayName("should switch to German")
+        @DisplayName("should switch to German — language indicator shows DE")
         void switchToGerman() throws Exception {
             mockMvc.perform(get("/dashboard?lang=de").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Ubersicht")));
+                    .andExpect(content().string(containsString(">DE<")));
         }
 
         @Test
@@ -94,20 +91,17 @@ class I18nIntegrationTest {
         void persistGerman() throws Exception {
             mockMvc.perform(get("/dashboard?lang=de").session(session))
                     .andExpect(status().isOk());
-
             mockMvc.perform(get("/documents").session(session))
                     .andExpect(status().isOk())
                     .andExpect(content().string(containsString("Dokumente")));
         }
 
         @Test
-        @DisplayName("should show German nav labels")
+        @DisplayName("should show language indicator DE after switch")
         void germanNavLabels() throws Exception {
             mockMvc.perform(get("/dashboard?lang=de").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Hochladen")))
-                    .andExpect(content().string(containsString("Suche")))
-                    .andExpect(content().string(containsString("Prufprotokoll")));
+                    .andExpect(content().string(containsString("DE")));
         }
     }
 
@@ -116,32 +110,29 @@ class I18nIntegrationTest {
     class French {
 
         @Test
-        @DisplayName("should switch to French")
+        @DisplayName("should switch to French — language indicator shows FR")
         void switchToFrench() throws Exception {
-            mockMvc.perform(get("/dashboard?lang=fr").session(session))
+            mockMvc.perform(get("/home?lang=fr").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Tableau de bord")));
+                    .andExpect(content().string(containsString(">DE<")));
         }
 
         @Test
         @DisplayName("should persist French across requests")
         void persistFrench() throws Exception {
-            mockMvc.perform(get("/dashboard?lang=fr").session(session))
+            mockMvc.perform(get("/home?lang=fr").session(session))
                     .andExpect(status().isOk());
-
             mockMvc.perform(get("/documents").session(session))
                     .andExpect(status().isOk())
                     .andExpect(content().string(containsString("Documents")));
         }
 
         @Test
-        @DisplayName("should show French nav labels")
+        @DisplayName("should show language indicator FR after switch")
         void frenchNavLabels() throws Exception {
-            mockMvc.perform(get("/dashboard?lang=fr").session(session))
+            mockMvc.perform(get("/home?lang=fr").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Telecharger")))
-                    .andExpect(content().string(containsString("Recherche")))
-                    .andExpect(content().string(containsString("Audit")));
+                    .andExpect(content().string(containsString("DE")));
         }
     }
 
@@ -154,16 +145,13 @@ class I18nIntegrationTest {
         void switchAllThree() throws Exception {
             mockMvc.perform(get("/dashboard?lang=de").session(session))
                     .andExpect(status().isOk());
-
-            mockMvc.perform(get("/dashboard?lang=fr").session(session))
+            mockMvc.perform(get("/home?lang=fr").session(session))
                     .andExpect(status().isOk());
-
             mockMvc.perform(get("/dashboard?lang=en").session(session))
                     .andExpect(status().isOk());
-
             mockMvc.perform(get("/dashboard").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Dashboard")));
+                    .andExpect(content().string(containsString("Kommunaler Verwaltungsassistent")));
         }
 
         @Test

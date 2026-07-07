@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.util.UUID;
 
+import java.util.List;
+
 /** Spring Data repository for {@link DocumentChunkEntity} with specification-based query and bulk delete by document. */
 public interface JpaDocumentChunkRepository extends JpaRepository<DocumentChunkEntity, UUID>, JpaSpecificationExecutor<DocumentChunkEntity> {
 
@@ -14,4 +16,7 @@ public interface JpaDocumentChunkRepository extends JpaRepository<DocumentChunkE
     @Modifying
     @Query("delete from DocumentChunkEntity c where c.documentId = :documentId")
     int deleteByDocumentId(UUID documentId);
+
+    /** Finds all chunks for a document ordered by chunk index. */
+    List<DocumentChunkEntity> findByDocumentIdOrderByChunkIndex(UUID documentId);
 }

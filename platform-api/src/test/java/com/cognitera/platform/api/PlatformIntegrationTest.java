@@ -77,7 +77,7 @@ class PlatformIntegrationTest {
         void documentsPage() throws Exception {
             mockMvc.perform(get("/documents").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Documents")));
+                    .andExpect(content().string(containsString("Dokumente")));
         }
 
         @Test
@@ -85,7 +85,7 @@ class PlatformIntegrationTest {
         void uploadPage() throws Exception {
             mockMvc.perform(get("/documents/upload").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Document Ingestion")));
+                    .andExpect(content().string(containsString("Dokumentenerfassung")));
         }
 
         @Test
@@ -100,7 +100,7 @@ class PlatformIntegrationTest {
         void searchPage() throws Exception {
             mockMvc.perform(get("/search").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Document Search")))
+                    .andExpect(content().string(containsString("Dokumentensuche")))
                     .andExpect(content().string(not(containsString("tenantId"))));
         }
 
@@ -116,17 +116,17 @@ class PlatformIntegrationTest {
         void auditPage() throws Exception {
             mockMvc.perform(get("/audit").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Audit Viewer")))
+                    .andExpect(content().string(containsString("Prufprotokoll")))
                     .andExpect(content().string(not(containsString("tenantId"))))
                     .andExpect(content().string(not(containsString("Tenant"))));
         }
 
         @Test
-        @DisplayName("AI page returns 200 without legacy Evidence labels")
+        @DisplayName("Decision Assistant page returns 200 without legacy Evidence labels")
         void aiPage() throws Exception {
-            mockMvc.perform(get("/ai").session(session))
+            mockMvc.perform(get("/decision-assistant").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Grounded AI Orchestration")))
+                    .andExpect(content().string(containsString("Neue Entscheidung")))
                     .andExpect(content().string(not(containsString("PRIMARY EVIDENCE"))))
                     .andExpect(content().string(not(containsString("All evidence"))));
         }
@@ -346,7 +346,7 @@ class PlatformIntegrationTest {
         void usesDocumentsNotEvidence() throws Exception {
             mockMvc.perform(get("/workspaces/" + wsId + "/detail").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Documents")))
+                    .andExpect(content().string(containsString("Dokumente")))
                     .andExpect(content().string(not(containsString("Evidence"))));
         }
 
@@ -355,7 +355,7 @@ class PlatformIntegrationTest {
         void usesDocumentsNotNormative() throws Exception {
             mockMvc.perform(get("/workspaces/" + wsId + "/detail").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Documents")))
+                    .andExpect(content().string(containsString("Dokumente")))
                     .andExpect(content().string(not(containsString("Evidence"))))
                     .andExpect(content().string(not(containsString("Normative Authority"))));
         }
@@ -401,8 +401,8 @@ class PlatformIntegrationTest {
         void hasSimplifiedFields() throws Exception {
             mockMvc.perform(get("/documents/upload").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Document title")))
-                    .andExpect(content().string(containsString("Document date")));
+                    .andExpect(content().string(containsString("Dokumenttitel")))
+                    .andExpect(content().string(containsString("Dokumentdatum")));
         }
     }
 
@@ -413,11 +413,10 @@ class PlatformIntegrationTest {
         @Test
         @DisplayName("dashboard shows metrics and loads without error")
         void dashboardLoads() throws Exception {
-            mockMvc.perform(get("/dashboard").session(session))
+            mockMvc.perform(get("/home").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Dashboard")))
-                    .andExpect(content().string(containsString("Documents")))
-                    .andExpect(content().string(containsString("Recent audit events")));
+                    .andExpect(content().string(containsString("Kommunaler Verwaltungsassistent")))
+                    .andExpect(content().string(containsString("Willkommen")));
         }
 
         @Test
@@ -469,24 +468,22 @@ class PlatformIntegrationTest {
     class AiPageForm {
 
         @Test
-        @DisplayName("AI page loads with form")
+        @DisplayName("Decision Assistant page loads with form")
         void aiPageLoads() throws Exception {
-            mockMvc.perform(get("/ai").session(session))
+            mockMvc.perform(get("/decision-assistant").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Grounded AI Orchestration")))
-                    .andExpect(content().string(containsString("Question")))
-                    .andExpect(content().string(containsString("Run retrieval-aware answer")));
+                    .andExpect(content().string(containsString("Neue Entscheidung")))
+                    .andExpect(content().string(containsString("queryForm")));
         }
 
         @Test
-        @DisplayName("AI POST returns result page")
+        @DisplayName("Decision Assistant POST returns result page")
         void aiPostReturnsPage() throws Exception {
-            mockMvc.perform(post("/ai")
+            mockMvc.perform(post("/decision-assistant")
                     .session(session)
-                    .param("question", "What is this document about?")
-                    .param("scope", "ALL_DOCUMENTS"))
+                    .param("question", "What is this document about?"))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Grounded AI Orchestration")));
+                    .andExpect(content().string(containsString("Neue Entscheidung")));
         }
     }
 
@@ -499,7 +496,7 @@ class PlatformIntegrationTest {
         void jobsLoadsWithFilter() throws Exception {
             mockMvc.perform(get("/jobs").param("status", "PENDING").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Ingestion Jobs")));
+                    .andExpect(content().string(containsString("Verarbeitungsauftrage")));
         }
 
         @Test
@@ -507,7 +504,7 @@ class PlatformIntegrationTest {
         void jobsSupportsPagination() throws Exception {
             mockMvc.perform(get("/jobs").param("page", "1").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Ingestion Jobs")));
+                    .andExpect(content().string(containsString("Verarbeitungsauftrage")));
         }
     }
 
@@ -520,8 +517,8 @@ class PlatformIntegrationTest {
         void chunksShowsPrompt() throws Exception {
             mockMvc.perform(get("/chunks").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Chunk Inspection")))
-                    .andExpect(content().string(containsString("Enter a document UUID")));
+                    .andExpect(content().string(containsString("Textabschnitte")))
+                    .andExpect(content().string(containsString("Dokument-UUID")));
         }
 
         @Test
@@ -539,7 +536,7 @@ class PlatformIntegrationTest {
                     .param("documentId", "00000000-0000-0000-0000-000000000000")
                     .session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Chunk Inspection")));
+                    .andExpect(content().string(containsString("Textabschnitte")));
         }
     }
 }

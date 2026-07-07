@@ -62,8 +62,17 @@ public class OllamaChatProvider implements ChatCompletionProvider {
     public String complete(String prompt, ModelCapabilities capabilities) {
         String model = capabilities.model();
         if (model == null || model.isBlank()) {
-            return "No model configured.";
+            model = properties.getOllama().getChatModel();
+            log.info("No model in capabilities, falling back to configured default: {}", model);
         }
+        if (model == null || model.isBlank()) {
+            return "No model configured. Set OLLAMA_CHAT_MODEL or platform.ai.ollama.chat-model.";
+        }
+
+        String baseUrl = properties.getOllama().getBaseUrl();
+        String uri = baseUrl + "/api/chat";
+        String requestBody;
+
         try {
             ObjectNode root = objectMapper.createObjectNode();
             root.put("model", model);
@@ -73,29 +82,83 @@ public class OllamaChatProvider implements ChatCompletionProvider {
             message.put("role", "user");
             message.put("content", prompt);
 
+            requestBody = objectMapper.writeValueAsString(root);
+
+            log.info("Ollama request: POST {} | model={} | promptLength={} chars",
+                    uri, model, prompt.length());
+
             var request = HttpRequest.newBuilder()
-                    .uri(URI.create(properties.getOllama().getBaseUrl() + "/api/chat"))
+                    .uri(URI.create(uri))
                     .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(root)))
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                     .timeout(parseTimeout(properties.getOllama().getRequestTimeout()))
                     .build();
 
             var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            log.info("Ollama response: HTTP {} | bodyLength={}",
+                    response.statusCode(),
+                    response.body() != null ? response.body().length() : 0);
+
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                log.warn("Ollama returned HTTP {}", response.statusCode());
-                return "Provider error (HTTP " + response.statusCode() + ").";
+                String responseBody = response.body() != null ? response.body() : "";
+                log.error("Ollama request failed: HTTP {} | uri={} | model={} | response={}",
+                        response.statusCode(), uri, model,
+                        responseBody.length() > 500 ? responseBody.substring(0, 500) : responseBody);
+
+                // Diagnose 404: model not found
+                if (response.statusCode() == 404) {
+                    String diagnosis = diagnoseModelNotFound(baseUrl, model);
+                    return "Provider error (HTTP 404): Model '" + model + "' not found at " + uri
+                            + ". " + diagnosis;
+                }
+
+                return "Provider error (HTTP " + response.statusCode() + ")"
+                        + (responseBody.length() < 200 ? ": " + responseBody : ".");
             }
 
             JsonNode node = objectMapper.readTree(response.body());
             JsonNode content = node.path("message").path("content");
             if (content.isMissingNode() || !content.isTextual()) {
+                log.error("Ollama unexpected response format: {}", response.body());
                 return "Provider returned unexpected response format.";
             }
             return content.asText();
         } catch (Exception e) {
-            log.error("Ollama request failed", e);
+            log.error("Ollama request failed: uri={} | model={} | error={}", uri, model, e.getMessage(), e);
             return "Provider request failed: " + e.getMessage();
         }
+    }
+
+    /** Checks whether the model is actually known to Ollama and returns a diagnostic. */
+    private String diagnoseModelNotFound(String baseUrl, String model) {
+        try {
+            var listRequest = HttpRequest.newBuilder()
+                    .uri(URI.create(baseUrl + "/api/tags"))
+                    .GET()
+                    .timeout(Duration.ofSeconds(5))
+                    .build();
+            var listResponse = httpClient.send(listRequest, HttpResponse.BodyHandlers.ofString());
+            if (listResponse.statusCode() == 200) {
+                JsonNode node = objectMapper.readTree(listResponse.body());
+                JsonNode models = node.path("models");
+                if (models.isArray()) {
+                    var names = new java.util.ArrayList<String>();
+                    for (JsonNode m : models) {
+                        String name = m.path("name").asText();
+                        if (!name.isEmpty()) names.add(name);
+                    }
+                    if (names.isEmpty()) {
+                        return "No models are installed in Ollama. Pull one with: ollama pull " + model;
+                    }
+                    return "Available models: " + String.join(", ", names)
+                            + ". Pull the model with: ollama pull " + model;
+                }
+            }
+        } catch (Exception ignored) {
+            log.debug("Could not query /api/tags for diagnosis", ignored);
+        }
+        return "Is the model pulled? Try: ollama pull " + model;
     }
 
     private static Duration parseTimeout(String s) {

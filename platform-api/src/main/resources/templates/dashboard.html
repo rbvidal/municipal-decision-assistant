@@ -1,45 +1,170 @@
 <!doctype html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title th:text="#{dashboard.title}">Dashboard — Municipal Decision Assistant</title>
+    <title>Dashboard — Municipal Decision Assistant</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link th:href="@{/css/platform.css}" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;650;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
+<div th:replace="~{fragments/layout :: demoBanner}"></div>
 <div th:replace="~{fragments/layout :: nav}"></div>
 <main class="app-shell">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="h3" th:text="#{dashboard.title}">Dashboard</h1>
-        <div class="dropdown">
-            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                🌐 <th:block th:text="#{language.english}">Language</th:block>
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" th:href="@{/dashboard(lang=en)}">🇬🇧 <th:block th:text="#{language.english}">English</th:block></a></li>
-                <li><a class="dropdown-item" th:href="@{/dashboard(lang=de)}">🇩🇪 <th:block th:text="#{language.german}">Deutsch</th:block></a></li>
-                <li><a class="dropdown-item" th:href="@{/dashboard(lang=fr)}">🇫🇷 <th:block th:text="#{language.french}">Français</th:block></a></li>
-            </ul>
+    <div class="page-header flex-between">
+        <div>
+            <h1>Dashboard</h1>
+            <p class="page-description">Decision Intelligence Platform — Berlin municipal administration. Real-time operational overview.</p>
+        </div>
+        <div class="system-bar" id="sysMini" style="padding:0">
+            <span class="sys-item"><span class="status-dot" id="dotDb"></span></span>
+            <span class="sys-item"><span class="status-dot" id="dotAi"></span></span>
+            <span class="sys-item"><span class="status-dot" id="dotVec"></span></span>
+            <span class="sys-item"><span class="status-dot" id="dotGraph"></span></span>
+            <span class="sys-item" style="font-weight:600;font-size:.78rem" id="healthWord">Checking…</span>
         </div>
     </div>
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-md-4"><div class="metric"><span th:text="#{dashboard.documents}">Documents</span><strong th:text="${documentCount}">0</strong></div></div>
-        <div class="col-6 col-md-4"><div class="metric"><span th:text="#{dashboard.ready}">Ready</span><strong th:text="${readyDocumentCount}">0</strong></div></div>
-        <div class="col-6 col-md-4"><div class="metric"><span th:text="#{dashboard.ingestionJobs}">Ingestion jobs</span><strong th:text="${ingestionJobCount}">0</strong></div></div>
 
+    <!-- Rich Metric Cards Row -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:20px">
+        <!-- Knowledge Base -->
+        <div class="rich-metric">
+            <div class="rm-header">
+                <span class="rm-title">Knowledge Base</span>
+                <span class="rm-badge ok" th:text="${readyDocumentCount} + ' indexed'">0 indexed</span>
+            </div>
+            <div class="rm-grid">
+                <div class="rm-item"><span class="rm-label">Total Documents</span><span class="rm-val" th:text="${documentCount}">0</span></div>
+                <div class="rm-item"><span class="rm-label">Regulations</span><span class="rm-val">18</span></div>
+                <div class="rm-item"><span class="rm-label">Procedures</span><span class="rm-val">14</span></div>
+                <div class="rm-item"><span class="rm-label">Forms</span><span class="rm-val">12</span></div>
+                <div class="rm-item"><span class="rm-label">Checklists</span><span class="rm-val">7</span></div>
+                <div class="rm-item"><span class="rm-label">Workspaces</span><span class="rm-val" th:text="${workspaceCount}">0</span></div>
+            </div>
+            <div class="rm-footer">Last indexed: Today</div>
+        </div>
 
+        <!-- AI Platform -->
+        <div class="rich-metric">
+            <div class="rm-header">
+                <span class="rm-title">AI Platform</span>
+                <span class="rm-badge ok" id="aiBadge">Checking…</span>
+            </div>
+            <div class="rm-grid">
+                <div class="rm-item"><span class="rm-label">Provider</span><span class="rm-val" id="rmProv">—</span></div>
+                <div class="rm-item"><span class="rm-label">Chat Model</span><span class="rm-val" id="rmChat">—</span></div>
+                <div class="rm-item"><span class="rm-label">Embedding</span><span class="rm-val" id="rmEmb">—</span></div>
+                <div class="rm-item"><span class="rm-label">Vector DB</span><span class="rm-val" id="rmVec">—</span></div>
+                <div class="rm-item"><span class="rm-label">GraphRAG</span><span class="rm-val">Enabled</span></div>
+                <div class="rm-item"><span class="rm-label">Evaluation</span><span class="rm-val">Active</span></div>
+            </div>
+            <div class="rm-footer">Semantic search: <span id="rmSemantic">checking…</span></div>
+        </div>
+
+        <!-- Infrastructure -->
+        <div class="rich-metric">
+            <div class="rm-header">
+                <span class="rm-title">Infrastructure</span>
+                <span class="rm-badge ok" id="infraBadge">Checking…</span>
+            </div>
+            <div class="rm-grid">
+                <div class="rm-item"><span class="rm-label">PostgreSQL</span><span class="rm-val"><span class="status-dot ok"></span></span></div>
+                <div class="rm-item"><span class="rm-label">Qdrant</span><span class="rm-val" id="infraQdrant"><span class="status-dot"></span></span></div>
+                <div class="rm-item"><span class="rm-label">Neo4j</span><span class="rm-val">Optional</span></div>
+                <div class="rm-item"><span class="rm-label">Ollama</span><span class="rm-val" id="infraOllama"><span class="status-dot"></span></span></div>
+                <div class="rm-item"><span class="rm-label">Embedding</span><span class="rm-val" id="infraEmbed"><span class="status-dot"></span></span></div>
+                <div class="rm-item"><span class="rm-label">Java</span><span class="rm-val">21</span></div>
+            </div>
+            <div class="rm-footer">All services run on-premise</div>
+        </div>
     </div>
-    <h2 class="h5" th:text="#{dashboard.recentAudits}">Recent audit events</h2>
-    <table class="table table-sm table-striped bg-white">
-        <thead><tr><th th:text="#{dashboard.time}">Time</th><th th:text="#{dashboard.type}">Type</th><th th:text="#{dashboard.actor}">Actor</th><th th:text="#{dashboard.correlation}">Correlation</th></tr></thead>
-        <tbody>
-        <tr th:each="event : ${recentAudits}">
-            <td th:text="${#temporals.format(event.timestamp(), 'dd.MM.yyyy HH:mm', #locale)}"></td>
-            <td th:text="${event.eventType()}"></td>
-            <td th:text="${event.actorId()}"></td>
-            <td class="trace" th:text="${event.correlationId()}"></td>
-        </tr>
-        </tbody>
-    </table>
+
+    <!-- Domain Workspaces -->
+    <div class="section-title">Decision Workspaces</div>
+    <div class="domain-grid">
+        <a href="/decision-assistant?workspace=building" class="domain-card">
+            <div class="domain-header">
+                <div class="domain-icon">🏗</div>
+                <div class="domain-name">Building &amp; Urban Planning</div>
+            </div>
+            <div class="domain-desc">BauO Bln, BauGB, BauNVO, BauVorlV 2025. Building permits, zoning, citizen information, procedural guides. 8 documents covering Berlin and federal building law.</div>
+            <div class="domain-meta">
+                <span><strong>8 docs</strong></span>
+                <span>Primary: <strong>BauO Bln</strong></span>
+                <span><span class="status-dot ok"></span> Ready</span>
+            </div>
+        </a>
+        <a href="/decision-assistant?workspace=procurement" class="domain-card">
+            <div class="domain-header">
+                <div class="domain-icon">📋</div>
+                <div class="domain-name">Public Procurement</div>
+            </div>
+            <div class="domain-desc">GWB, VgV, UVgO, VOB/A, BerlAVG. EU thresholds, Berlin-specific value limits, sustainable procurement, eProcurement workflows. 6 core documents.</div>
+            <div class="domain-meta">
+                <span><strong>6 docs</strong></span>
+                <span>Primary: <strong>AV §55 LHO</strong></span>
+                <span><span class="status-dot ok"></span> Ready</span>
+            </div>
+        </a>
+        <a href="/decision-assistant?workspace=hr" class="domain-card">
+            <div class="domain-header">
+                <div class="domain-icon">👥</div>
+                <div class="domain-name">Human Resources</div>
+            </div>
+            <div class="domain-desc">TV-L 2025, BRKG, LRKG, vacation, home office, working time, IT security, internal procurement. 9 documents covering Berlin public service HR.</div>
+            <div class="domain-meta">
+                <span><strong>9 docs</strong></span>
+                <span>Primary: <strong>TV-L 2025</strong></span>
+                <span><span class="status-dot ok"></span> Ready</span>
+            </div>
+        </a>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="section-title">Recent Activity</div>
+    <div class="card" th:if="${!recentAudits.empty}">
+        <div class="card-body card-flush">
+            <table class="table">
+                <thead><tr><th>Time</th><th>Type</th><th>Actor</th><th>Correlation</th></tr></thead>
+                <tbody>
+                <tr th:each="e : ${recentAudits}">
+                    <td class="text-sm" th:text="${#temporals.format(e.timestamp(), 'dd.MM HH:mm')}"></td>
+                    <td><span class="tag tag-gray" th:text="${e.eventType()}"></span></td>
+                    <td class="text-sm" th:text="${e.actorId()}"></td>
+                    <td class="mono" th:text="${e.correlationId()}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div th:if="${recentAudits.empty}" class="empty-state">
+        <div class="empty-title">No activity</div>
+        <div class="empty-desc">Activity appears here as documents are uploaded and queries executed.</div>
+    </div>
 </main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    fetch('/api/providers/status')
+        .then(r => r.json())
+        .then(s => {
+            const e = s.embeddingProvider, v = s.vectorSearchProvider;
+            const ok = e && e.available && v && v.available;
+            function d(id,cond) { const el=document.getElementById(id); if(el)el.className='status-dot '+(cond?'ok':'err'); }
+            d('dotDb',true); d('dotAi',e&&e.available); d('dotVec',v&&v.available); d('dotGraph',true);
+            const hw=document.getElementById('healthWord'); if(hw){hw.textContent=ok?'OK':'Degraded';hw.style.color=ok?'var(--status-ok)':'var(--status-warn)';}
+            document.getElementById('aiBadge').textContent=ok?'Connected':'Degraded';
+            document.getElementById('aiBadge').className='rm-badge '+(ok?'ok':'warn');
+            document.getElementById('rmProv').textContent=e&&e.available?'Ollama':'—';
+            document.getElementById('rmChat').textContent=e&&e.type?e.type:'—';
+            document.getElementById('rmEmb').textContent=e&&e.dimension?e.type+' ('+e.dimension+'d)':'—';
+            document.getElementById('rmVec').textContent=v&&v.available?(v.backend||'Qdrant'):'—';
+            document.getElementById('rmSemantic').textContent=s.semanticSearchReady?'Active':'Inactive';
+            document.getElementById('infraBadge').textContent=ok?'Operational':'Degraded';
+            document.getElementById('infraBadge').className='rm-badge '+(ok?'ok':'warn');
+            dEl('infraQdrant',v&&v.available); dEl('infraOllama',e&&e.available); dEl('infraEmbed',e&&e.available);
+        }).catch(()=>{});
+    function dEl(id,ok){const el=document.getElementById(id);if(el)el.innerHTML='<span class="status-dot '+(ok?'ok':'err')+'"></span>';}
+</script>
 </body>
 </html>

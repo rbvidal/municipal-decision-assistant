@@ -1,0 +1,543 @@
+# SCCON Demonstration Knowledge Base — Document Manifest
+# Enterprise AI Platform — Municipal Decision Assistant
+# Version 1.0.0 — 2025-07-06
+
+meta:
+  project: Municipal Decision Assistant
+  convention: Smart Country Convention (SCCON) Berlin
+  version: 1.0.0
+  total_documents: 62
+  domains:
+    - procurement
+    - building
+    - hr
+    - cross-domain
+
+# ============================================================
+# DOMAIN 1: PUBLIC PROCUREMENT (Vergabe/Beschaffung)
+# ============================================================
+
+procurement_regulations:
+  - id: PROC-REG-001
+    title: GWB Teil 4 — Vergaberecht (§§ 97–184)
+    file: procurement/regulations/gwb-teil4.md
+    status: CREATED
+    priority: HIGHEST
+    indexing_order: 4
+
+  - id: PROC-REG-002
+    title: Vergabeverordnung (VgV)
+    file: procurement/regulations/vgv.md
+    status: PLANNED
+    priority: HIGHEST
+    indexing_order: 5
+
+  - id: PROC-REG-003
+    title: Unterschwellenvergabeordnung (UVgO)
+    file: procurement/regulations/uvgO.md
+    status: PLANNED
+    priority: HIGHEST
+    indexing_order: 6
+
+  - id: PROC-REG-004
+    title: VOB/A — Vergabe- und Vertragsordnung für Bauleistungen Teil A
+    file: procurement/regulations/vob-a.md
+    status: PLANNED
+    priority: HIGH
+    indexing_order: 16
+
+  - id: PROC-REG-005
+    title: VOB/B — VOB Teil B (Allgemeine Vertragsbedingungen)
+    file: procurement/regulations/vob-b.md
+    status: PLANNED
+    priority: HIGH
+    indexing_order: 17
+
+  - id: PROC-REG-006
+    title: VOB/C — VOB Teil C (Technische Vertragsbedingungen)
+    file: procurement/regulations/vob-c.md
+    status: PLANNED
+    priority: STANDARD
+    indexing_order: 38
+
+  - id: PROC-REG-007
+    title: Berliner Ausschreibungs- und Vergabegesetz (BerlAVG)
+    file: procurement/regulations/berlavg.md
+    status: PLANNED
+    priority: HIGHEST
+    indexing_order: 15
+
+  - id: PROC-REG-008
+    title: AV zu § 55 LHO Berlin
+    file: procurement/regulations/av-55-lho.md
+    status: PLANNED
+    priority: HIGHEST
+    indexing_order: 7
+
+  - id: PROC-REG-009
+    title: VwVBU — Verwaltungsvorschrift Beschaffung und Umwelt
+    file: procurement/regulations/vwvbu.md
+    status: PLANNED
+    priority: HIGH
+    indexing_order: 18
+
+  - id: PROC-REG-010
+    title: Gemeinsames Rundschreiben Vergabe 01/2024
+    file: procurement/regulations/gem-rs-2024-01.md
+    status: PLANNED
+    priority: MEDIUM
+    indexing_order: 39
+
+  - id: PROC-REG-011
+    title: EU-Richtlinie 2014/24/EU
+    file: procurement/regulations/eu-vergabe.md
+    status: PLANNED
+    priority: STANDARD
+    indexing_order: 40
+
+procurement_procedures:
+  - id: PROC-PRO-001
+    title: Vergabeverfahren oberhalb EU-Schwellenwerte
+    file: procurement/procedures/vergabeverfahren-ueberschwellig.md
+    status: PLANNED
+    priority: HIGH
+
+  - id: PROC-PRO-002
+    title: Vergabeverfahren unterhalb EU-Schwellenwerte
+    file: procurement/procedures/vergabeverfahren-unterschwellig.md
+    status: PLANNED
+    priority: HIGH
+
+  - id: PROC-PRO-003
+    title: Direktauftrag — Verfahren und Wertgrenzen
+    file: procurement/procedures/direktauftrag.md
+    status: PLANNED
+    priority: HIGH
+
+  - id: PROC-PRO-004
+    title: Freihändige Vergabe / Verhandlungsvergabe
+    file: procurement/procedures/freihandige-vergabe.md
+    status: PLANNED
+    priority: HIGH
+
+  - id: PROC-PRO-005
+    title: Beschränkte Ausschreibung
+    file: procurement/procedures/beschraenkte-ausschreibung.md
+    status: PLANNED
+    priority: HIGH
+
+  - id: PROC-PRO-006
+    title: Offene Ausschreibung (EU-weit)
+    file: procurement/procedures/offene-ausschreibung.md
+    status: PLANNED
+    priority: HIGH
+
+  - id: PROC-PRO-007
+    title: eVergabe Workflow — Vergabeplattform Berlin
+    file: procurement/procedures/eVergabe-workflow.md
+    status: PLANNED
+    priority: HIGH
+
+  - id: PROC-PRO-008
+    title: Vergabevermerk — Dokumentationspflichten
+    file: procurement/procedures/vergabevermerk.md
+    status: PLANNED
+    priority: MEDIUM
+
+# ============================================================
+# DOMAIN 2: BUILDING & URBAN PLANNING (Bauen & Stadtplanung)
+# ============================================================
+
+building_regulations:
+  - id: BLD-REG-001
+    title: Bauordnung Berlin (BauO Bln)
+    file: building/regulations/bauo-bln.md
+    status: PLANNED
+    priority: HIGHEST
+    indexing_order: 1
+
+  - id: BLD-REG-002
+    title: Baugesetzbuch (BauGB)
+    file: building/regulations/baugb.md
+    status: PLANNED
+    priority: HIGHEST
+    indexing_order: 2
+
+  - id: BLD-REG-003
+    title: Baunutzungsverordnung (BauNVO)
+    file: building/regulations/baunvo.md
+    status: PLANNED
+    priority: HIGHEST
+    indexing_order: 3
+
+  - id: BLD-REG-004
+    title: Bauvorlagenverordnung (BauVorlV) 2025 — NEU
+    file: building/regulations/bauvorlv.md
+    status: CREATED
+    priority: HIGHEST
+    indexing_order: 12
+
+  - id: BLD-REG-005
+    title: Planzeichenverordnung (PlanZV)
+    file: building/regulations/planzv.md
+    status: PLANNED
+    priority: STANDARD
+
+  - id: BLD-REG-006
+    title: Schneller-Bauen-Gesetz Berlin (Dez 2024)
+    file: building/regulations/schneller-bauen-gesetz.md
+    status: PLANNED
+    priority: HIGHEST
+    indexing_order: 13
+
+  - id: BLD-REG-007
+    title: Garagenverordnung Berlin
+    file: building/regulations/garagenverordnung.md
+    status: PLANNED
+    priority: STANDARD
+
+  - id: BLD-REG-008
+    title: Feuerungsverordnung Berlin
+    file: building/regulations/feuerungsverordnung.md
+    status: PLANNED
+    priority: STANDARD
+
+  - id: BLD-REG-009
+    title: Gebäudeenergiegesetz (GEG)
+    file: building/regulations/enev-geg.md
+    status: PLANNED
+    priority: HIGH
+
+  - id: BLD-REG-010
+    title: Bundes-Bodenschutzgesetz (BBodSchG)
+    file: building/regulations/bbodschg.md
+    status: PLANNED
+    priority: STANDARD
+
+building_zoning:
+  - id: BLD-ZON-001
+    title: Flächennutzungsplan Berlin (FNP)
+    file: building/zoning/flaechennutzungsplan-berlin.md
+    status: PLANNED
+    priority: HIGH
+
+  - id: BLD-ZON-002
+    title: Baugebiete nach BauNVO — Übersicht
+    file: building/zoning/baugebiete-uebersicht.md
+    status: PLANNED
+    priority: HIGH
+
+  - id: BLD-ZON-003
+    title: Abstandsflächen nach § 6 BauO Bln — Merkblatt
+    file: building/zoning/abstandsflaechen-berlin.md
+    status: PLANNED
+    priority: HIGH
+
+  - id: BLD-ZON-004
+    title: Bebauungsplan Muster
+    file: building/zoning/bebauungsplan-muster.md
+    status: PLANNED
+    priority: MEDIUM
+
+  - id: BLD-ZON-005
+    title: Baunutzungsverordnung — Anwendungshinweise
+    file: building/zoning/baunutzungsverordnung.md
+    status: PLANNED
+    priority: HIGH
+
+# ============================================================
+# DOMAIN 3: HR & INTERNAL ADMINISTRATION
+# ============================================================
+
+hr_travel:
+  - id: HR-TRV-001
+    title: Bundesreisekostengesetz (BRKG)
+    file: hr/travel/brkg.md
+    status: PLANNED
+    priority: HIGHEST
+    indexing_order: 9
+
+  - id: HR-TRV-002
+    title: Landesreisekostengesetz Berlin (LRKG)
+    file: hr/travel/lrkg-berlin.md
+    status: PLANNED
+    priority: HIGHEST
+
+  - id: HR-TRV-003
+    title: Reisekostenabrechnung — Verfahren
+    file: hr/travel/reisekosten-abrechnung.md
+    status: PLANNED
+    priority: MEDIUM
+
+  - id: HR-TRV-004
+    title: Reisekostenantrag — Formular
+    file: hr/travel/reisekosten-formular.md
+    status: PLANNED
+    priority: MEDIUM
+
+  - id: HR-TRV-005
+    title: Reisekostensätze 2025
+    file: hr/travel/reisekostensaetze-2025.md
+    status: PLANNED
+    priority: HIGH
+
+  - id: HR-TRV-006
+    title: Dienstreisegenehmigung — Verfahren
+    file: hr/travel/dienstreise-genehmigung.md
+    status: PLANNED
+    priority: MEDIUM
+
+hr_vacation:
+  - id: HR-VAC-001
+    title: Urlaubsverordnung Berlin (UrlVO Bln)
+    file: hr/vacation/urlaubsverordnung-berlin.md
+    status: PLANNED
+    priority: HIGHEST
+    indexing_order: 10
+
+  - id: HR-VAC-002
+    title: Urlaubsantrag — Verfahren
+    file: hr/vacation/urlaubsantrag-verfahren.md
+    status: PLANNED
+    priority: MEDIUM
+
+  - id: HR-VAC-003
+    title: Urlaubsantrag — Formular
+    file: hr/vacation/urlaubsantrag-formular.md
+    status: PLANNED
+    priority: MEDIUM
+
+  - id: HR-VAC-004
+    title: Sonderurlaubsverordnung (SUrlV)
+    file: hr/vacation/sonderurlaub-verordnung.md
+    status: PLANNED
+    priority: HIGH
+
+  - id: HR-VAC-005
+    title: Urlaubsübertragung — Regelungen
+    file: hr/vacation/urlaubsuebertragung.md
+    status: PLANNED
+    priority: MEDIUM
+
+hr_working_time:
+  - id: HR-WKT-001
+    title: Arbeitszeitverordnung Berlin (AZVO Bln)
+    file: hr/working-time/arbeitszeitverordnung-berlin.md
+    status: PLANNED
+    priority: HIGHEST
+    indexing_order: 11
+
+  - id: HR-WKT-002
+    title: Arbeitszeitgesetz (ArbZG) — Bund
+    file: hr/working-time/arbeitszeitgesetz.md
+    status: PLANNED
+    priority: HIGH
+
+  - id: HR-WKT-003
+    title: Gleitzeit — Rahmenvereinbarung
+    file: hr/working-time/gleitzeit-rahmenvereinbarung.md
+    status: PLANNED
+    priority: MEDIUM
+
+  - id: HR-WKT-004
+    title: Teilzeitantrag — Formular
+    file: hr/working-time/teilzeit-antrag.md
+    status: PLANNED
+    priority: MEDIUM
+
+  - id: HR-WKT-005
+    title: Arbeitszeitkonto — Regelungen
+    file: hr/working-time/arbeitszeitkonto.md
+    status: PLANNED
+    priority: MEDIUM
+
+hr_employment:
+  - id: HR-EMP-001
+    title: TV-L 2025 — Tarifvertrag Länder
+    file: hr/employment/tv-l-2025.md
+    status: CREATED
+    priority: HIGHEST
+    indexing_order: 8
+
+  - id: HR-EMP-002
+    title: TV-L Entgelttabellen 2025
+    file: hr/employment/tv-l-entgelttabellen-2025.md
+    status: PLANNED
+    priority: HIGHEST
+
+  - id: HR-EMP-003
+    title: Eingruppierungsrichtlinien TV-L
+    file: hr/employment/eingruppierung-richtlinien.md
+    status: PLANNED
+    priority: HIGH
+
+  - id: HR-EMP-004
+    title: Nebentätigkeitsverordnung Berlin
+    file: hr/employment/nebentaetigkeit-verordnung.md
+    status: PLANNED
+    priority: MEDIUM
+
+  - id: HR-EMP-005
+    title: Beurteilungsrichtlinien Berlin
+    file: hr/employment/beurteilungsrichtlinien.md
+    status: PLANNED
+    priority: MEDIUM
+
+# ============================================================
+# DOCUMENT INDEX (Sorted by Recommended Indexing Order)
+# ============================================================
+
+indexing_plan:
+  phase1_foundation:
+    description: Core foundational documents — index first
+    documents:
+      - { order: 1, id: BLD-REG-001, title: BauO Bln, reason: "Most-referenced Berlin regulation" }
+      - { order: 2, id: BLD-REG-002, title: BauGB, reason: "Federal building law foundation" }
+      - { order: 3, id: BLD-REG-003, title: BauNVO, reason: "Zoning backbone" }
+      - { order: 4, id: PROC-REG-001, title: GWB Teil 4, reason: "Procurement backbone" }
+      - { order: 5, id: PROC-REG-002, title: VgV, reason: "Procurement core regulation" }
+      - { order: 6, id: PROC-REG-003, title: UVgO, reason: "Sub-threshold common case" }
+      - { order: 7, id: PROC-REG-008, title: AV zu § 55 LHO, reason: "Berlin-specific thresholds" }
+      - { order: 8, id: HR-EMP-001, title: TV-L 2025, reason: "Most-referenced HR document" }
+      - { order: 9, id: HR-TRV-001, title: BRKG, reason: "Travel expense core" }
+      - { order: 10, id: HR-VAC-001, title: Urlaubsverordnung Berlin, reason: "Vacation core" }
+      - { order: 11, id: HR-WKT-001, title: Arbeitszeitverordnung Berlin, reason: "Working time core" }
+      - { order: 12, id: BLD-REG-004, title: BauVorlV 2025, reason: "Procedural core, NEW" }
+      - { order: 13, id: BLD-REG-006, title: Schneller-Bauen-Gesetz, reason: "Recent reform, NEW" }
+      - { order: 14, id: CRS-001, title: VwVfG, reason: "Cross-cutting administrative law" }
+      - { order: 15, id: PROC-REG-007, title: BerlAVG, reason: "Berlin-specific procurement" }
+
+  phase2_operational:
+    description: Operational depth — procedures, forms, manuals
+    count: 25
+    documents: []
+
+  phase3_richness:
+    description: Richness layer — FAQs, checklists, citizen info
+    count: 20
+    documents: []
+
+# ============================================================
+# DEMONSTRATION SCENARIOS — QUICK REFERENCE
+# ============================================================
+
+scenarios:
+  - id: SC-01
+    title: "Der Bauantrag"
+    domain: building
+    complexity: medium
+    query: "Welches Baugenehmigungsverfahren gilt für ein Einfamilienhaus in Berlin?"
+
+  - id: SC-02
+    title: "Die freihändige Vergabe"
+    domain: procurement
+    complexity: medium
+    query: "Kann ich diesen IT-Auftrag über 18.000€ freihändig vergeben?"
+
+  - id: SC-03
+    title: "Dienstreise nach Brüssel"
+    domain: hr
+    complexity: low
+    query: "Wie rechne ich meine Dienstreise nach Brüssel ab?"
+
+  - id: SC-04
+    title: "Die Bauantragskonferenz"
+    domain: building
+    complexity: high
+    query: "Muss für 80 Wohneinheiten eine Bauantragskonferenz durchgeführt werden?"
+
+  - id: SC-05
+    title: "Nachhaltige Beschaffung"
+    domain: procurement
+    complexity: medium
+    query: "Welche Umweltkriterien muss ich bei der Fahrzeugbeschaffung beachten?"
+
+  - id: SC-06
+    title: "Homeoffice-Antrag"
+    domain: hr
+    complexity: low
+    query: "Wie beantrage ich mobiles Arbeiten und wie viele Tage sind erlaubt?"
+
+  - id: SC-07
+    title: "Bayern oder Berlin?"
+    domain: cross-domain
+    complexity: high
+    query: "In Bayern durften wir Bauleistungen bis 50.000€ direkt vergeben. Gilt das in Berlin auch?"
+
+  - id: SC-08
+    title: "Das vergessene Formular"
+    domain: building
+    complexity: medium
+    query: "Welche Bauvorlagen fehlen in diesem Bauantrag für einen Dachgeschossausbau?"
+
+  - id: SC-09
+    title: "Urlaubstage übertragen"
+    domain: hr
+    complexity: low
+    query: "Kann ich meinen Resturlaub (12 Tage) ins nächste Jahr übertragen?"
+
+  - id: SC-10
+    title: "Die Typengenehmigung"
+    domain: building
+    complexity: high
+    query: "Können wir eine Typengenehmigung für unsere Serienhäuser beantragen?"
+
+  - id: SC-11
+    title: "IT-Sicherheitsvorfall"
+    domain: hr
+    complexity: medium
+    query: "Ich habe auf einen Phishing-Link geklickt. Was muss ich jetzt tun?"
+
+  - id: SC-12
+    title: "Unterschwellenvergabe — Dilemma"
+    domain: procurement
+    complexity: high
+    query: "Brauchen wir für 45.000€ Planungsleistungen wirklich eine EU-Ausschreibung?"
+
+  - id: SC-13
+    title: "Beschaffung ohne Genehmigung"
+    domain: hr
+    complexity: medium
+    query: "Ist eine Beschaffung über 800€ ohne vorherige Genehmigung zulässig?"
+
+  - id: SC-14
+    title: "Grenzbebauung"
+    domain: building
+    complexity: high
+    query: "Unter welchen Voraussetzungen darf an die Grundstücksgrenze gebaut werden?"
+
+  - id: SC-15
+    title: "Sonderurlaub für Pflegefall"
+    domain: hr
+    complexity: medium
+    query: "Kann ich Sonderurlaub für die Pflege meiner Mutter bekommen?"
+
+  - id: SC-16
+    title: "Der Ärger mit dem Nachbarn"
+    domain: building
+    complexity: medium
+    query: "Mein Nachbar hat einen Schuppen an der Grenze gebaut — ist das erlaubt?"
+
+  - id: SC-17
+    title: "Neue Entgelttabellen 2025"
+    domain: hr
+    complexity: low
+    query: "Was sind die neuen TV-L Entgelte ab Februar 2025 für EG 9 bis EG 12?"
+
+  - id: SC-18
+    title: "Verfahrensfrei, aber..."
+    domain: building
+    complexity: medium
+    query: "Mein Bürger will einen Carport bauen — ist das genehmigungsfrei?"
+
+  - id: SC-19
+    title: "EU-Bekanntmachung vergessen"
+    domain: procurement
+    complexity: high
+    query: "Wir haben einen 230.000€-Auftrag ohne EU-Bekanntmachung vergeben. Welche Konsequenzen drohen?"
+
+  - id: SC-20
+    title: "Die neue Mitarbeiterin"
+    domain: cross-domain
+    complexity: medium
+    query: "Ich bin neu in der Berliner Verwaltung. Was muss ich wissen?"

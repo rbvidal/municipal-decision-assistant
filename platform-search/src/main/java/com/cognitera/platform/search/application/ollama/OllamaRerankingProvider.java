@@ -37,9 +37,16 @@ public class OllamaRerankingProvider implements RerankingProvider {
         if (candidates.size() <= 1) {
             return candidates;
         }
-        int topN = Math.min(candidates.size(), 15);
-        List<RetrievalCandidate> toRerank = candidates.subList(0, topN);
-        List<RetrievalCandidate> rest = candidates.subList(topN, candidates.size());
+
+        // ── Domain-aware pre-boost ──
+        String domain = detectDomain(query.query());
+        log.info("RERANK Domain detected: '{}' for query: {}", domain,
+                query.query().length() > 60 ? query.query().substring(0, 60) + "..." : query.query());
+        List<RetrievalCandidate> boosted = applyDomainBoost(candidates, domain);
+
+        int topN = Math.min(boosted.size(), 15);
+        List<RetrievalCandidate> toRerank = boosted.subList(0, topN);
+        List<RetrievalCandidate> rest = boosted.subList(topN, boosted.size());
 
         try {
             String prompt = buildRerankPrompt(query.query(), toRerank);
@@ -61,8 +68,92 @@ public class OllamaRerankingProvider implements RerankingProvider {
             return rescored;
         } catch (Exception e) {
             log.warn("Reranking failed, returning original order: {}", e.getMessage());
-            return candidates;
+            return boosted;
         }
+    }
+
+    /** Detects the administrative domain from query terms for domain-aware boosting. */
+    private String detectDomain(String query) {
+        String lower = query.toLowerCase();
+
+        // Procurement — strongest signal
+        if (containsAny(lower, "beschaffung", "vergabe", "ausschreibung", "lieferung",
+                "rahmenvertrag", "direktauftrag", "vergabeverfahren", "beschaffen",
+                "einkauf", "lieferant", "angebot", "auftragswert", "schwellenwert",
+                "vergabevermerk", "angebotsvergleich", "verhandlungsvergabe",
+                "beschrankte ausschreibung", "offentliche ausschreibung",
+                "vergaberecht", "gwb", "vgv", "uvgo", "vob", "berlavg")) {
+            return "procurement";
+        }
+
+        // Building — strongest signal
+        if (containsAny(lower, "bauantrag", "baugenehmigung", "garage", "carport",
+                "abstandsflache", "abstandsflachen", "bebauungsplan", "baugenehmigungsverfahren",
+                "bauordnungsrecht", "bauvorlageberechtigung", "baulast",
+                "einfamilienhaus", "wohngebaude", "grenzbebauung", "geschossflachenzahl",
+                "grundflachenzahl", "geschosswohnungsbau", "baunvo", "bauvorlv",
+                "bauo", "baugb", "erschliessung", "nutzungsanderung",
+                "bauvoranfrage", "vorbescheid", "teilungsgenehmigung")) {
+            return "building";
+        }
+
+        // HR — strongest signal
+        if (containsAny(lower, "urlaub", "tv-l", "tv-l", "tvö", "dienstreise",
+                "arbeitszeit", "entgeltgruppe", "tarifvertrag", "personalrat",
+                "kundigung", "befristung", "teilzeit", "elternzeit",
+                "reisekosten", "trennungsgeld", "umzugskosten",
+                "beurteilung", "beforderung", "stellenausschreibung",
+                "homeoffice", "mobiles arbeiten", "dienstvereinbarung")) {
+            return "hr";
+        }
+
+        return "general";
+    }
+
+    private boolean containsAny(String text, String... terms) {
+        for (String term : terms) {
+            if (text.contains(term)) return true;
+        }
+        return false;
+    }
+
+    /** Boosts candidates whose category matches the detected domain. */
+    private List<RetrievalCandidate> applyDomainBoost(List<RetrievalCandidate> candidates, String domain) {
+        if ("general".equals(domain)) return candidates;
+
+        List<RetrievalCandidate> boosted = new ArrayList<>();
+        for (RetrievalCandidate c : candidates) {
+            String category = extractCategory(c);
+            double boost = computeDomainBoost(category, domain);
+            double newScore = Math.min(1.0, c.rankingScore() * (1.0 + boost));
+            boosted.add(new RetrievalCandidate(
+                    c.chunk(), c.text(), c.keywordScore(), c.vectorScore(),
+                    newScore, c.confidenceScore(), c.provider(), c.citation()));
+        }
+        boosted.sort(Comparator.comparingDouble(RetrievalCandidate::rankingScore).reversed());
+        return boosted;
+    }
+
+    private String extractCategory(RetrievalCandidate c) {
+        // citation title often contains the document title which reveals the category
+        if (c.citation() != null && c.citation().title() != null) {
+            String title = c.citation().title().toLowerCase();
+            if (containsAny(title, "bau", "baugb", "baunvo", "bauvorlv", "abstands")) return "building";
+            if (containsAny(title, "vergabe", "beschaffung", "gwb", "vgv", "uvgo", "berlavg", "vob")) return "procurement";
+            if (containsAny(title, "tv-l", "urlaub", "reisekosten", "arbeitszeit", "entgelt", "brkg", "lrkg", "mobile"))
+                return "hr";
+        }
+        // fall back to chunk metadata
+        if (c.chunk() != null && c.chunk().documentType() != null) {
+            return c.chunk().documentType().name().toLowerCase();
+        }
+        return "unknown";
+    }
+
+    private double computeDomainBoost(String category, String domain) {
+        if (category.equals(domain)) return 0.35;   // Strong boost for matching domain
+        if ("unknown".equals(category)) return 0.0;  // No boost for unknown
+        return -0.15;                                 // Penalize non-matching
     }
 
     private String buildRerankPrompt(String query, List<RetrievalCandidate> candidates) {

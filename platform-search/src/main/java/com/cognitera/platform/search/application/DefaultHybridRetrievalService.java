@@ -13,6 +13,8 @@ import com.cognitera.platform.search.model.QueryIntent;
 import com.cognitera.platform.search.model.RetrievalCandidate;
 import com.cognitera.platform.search.model.SearchMode;
 import com.cognitera.platform.search.model.SearchQuery;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import org.springframework.beans.factory.ObjectProvider;
@@ -24,6 +26,8 @@ import java.util.Map;
 /** Combines keyword and vector search results, merges them, and optionally applies cross-encoder reranking. */
 @Service
 public class DefaultHybridRetrievalService implements HybridRetrievalService {
+
+    private static final Logger log = LoggerFactory.getLogger(DefaultHybridRetrievalService.class);
 
     private final KeywordSearchProvider keywordSearchProvider;
     private final VectorSearchProvider vectorSearchProvider;
@@ -53,22 +57,41 @@ public class DefaultHybridRetrievalService implements HybridRetrievalService {
     @Override
     public List<RetrievalCandidate> retrieve(SearchQuery query) {
         QueryIntent intent = intentClassifier.classify(query.query());
+        log.info("RETRIEVAL [{}] Query: '{}' | Mode: {} | Intent: {}",
+                query.context().requestId() != null ? query.context().requestId() : "no-id",
+                query.query().length() > 80 ? query.query().substring(0, 80) + "..." : query.query(),
+                query.mode(), intent.intent());
+
         List<RetrievalCandidate> keywordResults = shouldRunKeyword(query.mode())
                 ? keywordSearchProvider.search(query)
                 : List.of();
+        log.info("RETRIEVAL Keyword hits: {}", keywordResults.size());
+
         List<RetrievalCandidate> vectorResults = shouldRunVector(query.mode())
                 ? vectorSearchProvider.search(query)
                 : List.of();
+        log.info("RETRIEVAL Vector hits: {}", vectorResults.size());
+
         List<RetrievalCandidate> graphResults = shouldRunGraph(query.mode())
                 ? graphSearchProvider.search(query)
                 : List.of();
+        log.info("RETRIEVAL GraphRAG nodes: {}", graphResults.size());
 
         List<RetrievalCandidate> merged = merge(keywordResults, vectorResults, graphResults, intent);
+        log.info("RETRIEVAL Merged candidates: {}", merged.size());
+
         List<RetrievalCandidate> baseReranked = rerankingService.rerank(query, merged);
         RerankingProvider crossReranker = rerankingProvider.getIfAvailable();
         List<RetrievalCandidate> crossReranked = crossReranker != null
                 ? crossReranker.rerank(query, baseReranked)
                 : baseReranked;
+
+        log.info("RETRIEVAL Final (after rerank): {} candidates", crossReranked.size());
+        if (crossReranked.isEmpty()) {
+            log.warn("RETRIEVAL ZERO results — query may be in a different language than the indexed documents, "
+                    + "or embeddings may not have been generated. Keyword hits: {}, Vector hits: {}, Graph hits: {}",
+                    keywordResults.size(), vectorResults.size(), graphResults.size());
+        }
 
         auditPublisher.emit(
                 query.context().actorId(),

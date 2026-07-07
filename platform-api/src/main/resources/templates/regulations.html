@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="#{regulations.title}">Vorschriften & Verfahren</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link th:href="@{/css/platform.css}" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;650;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+<div th:replace="~{fragments/layout :: nav}"></div>
+<main class="app-shell">
+    <div class="page-header flex-between">
+        <div>
+            <h1 th:text="#{regulations.title}">Vorschriften & Verfahren</h1>
+            <p class="page-description" th:text="#{regulations.description}">Alle indexierten Dokumente der Kommunalverwaltung.</p>
+        </div>
+        <a href="/documents/upload" class="btn btn-primary btn-sm" th:text="#{regulations.upload}">Dokument hinzufugen</a>
+    </div>
+
+    <!-- Department Groups -->
+    <div class="section-title">Fachbereiche</div>
+    <div class="domain-grid mb-20">
+        <a href="/admin" class="domain-card">
+            <div class="domain-header">
+                <div class="domain-icon">🏗</div>
+                <div class="domain-name" th:text="#{dept.building}">Bauen & Stadtplanung</div>
+            </div>
+            <div class="domain-desc">BauO Bln, BauGB, BauNVO, BauVorlV 2025. Baugenehmigungen, Bebauungsplane, Abstandsflachen, Brandschutz.</div>
+            <div class="domain-meta">
+                <span><strong>8</strong> Dokumente</span>
+                <span>Zustandig: <strong>Bauaufsicht</strong></span>
+            </div>
+        </a>
+        <a href="/admin" class="domain-card">
+            <div class="domain-header">
+                <div class="domain-icon">📋</div>
+                <div class="domain-name" th:text="#{dept.procurement}">Offentliche Beschaffung</div>
+            </div>
+            <div class="domain-desc">GWB, VgV, UVgO, VOB/A, BerlAVG. EU-Schwellenwerte, Berliner Wertgrenzen, eVergabe, nachhaltige Beschaffung.</div>
+            <div class="domain-meta">
+                <span><strong>6</strong> Dokumente</span>
+                <span>Zustandig: <strong>Vergabestelle</strong></span>
+            </div>
+        </a>
+        <a href="/admin" class="domain-card">
+            <div class="domain-header">
+                <div class="domain-icon">👥</div>
+                <div class="domain-name" th:text="#{dept.hr}">Personal & Innere Verwaltung</div>
+            </div>
+            <div class="domain-desc">TV-L 2025, BRKG, LRKG, Urlaubsverordnung, Arbeitszeit, mobiles Arbeiten, IT-Sicherheit, interne Beschaffung.</div>
+            <div class="domain-meta">
+                <span><strong>9</strong> Dokumente</span>
+                <span>Zustandig: <strong>Personalstelle</strong></span>
+            </div>
+        </a>
+    </div>
+
+    <!-- Document Explorer: 3-Column -->
+    <div th:if="${documents != null && !documents.isEmpty()}">
+        <div class="explorer-layout">
+            <!-- LEFT: Document List -->
+            <div class="explorer-tree">
+                <div class="section-title" style="padding:0 4px 8px" th:text="#{regulations.selectDoc}">Dokument auswahlen</div>
+                <div th:each="doc,stat : ${documents}" class="tree-item" th:classappend="${stat.index == 0} ? 'active'"
+                     th:attr="data-docid=${doc.get('id')},data-title=${doc.get('title')},data-type=${doc.get('type')},data-cat=${doc.get('category')},data-status=${doc.get('status')},data-tags=${doc.get('tags')},data-ver=${doc.get('version')}"
+                     th:text="${doc.get('title')}" onclick="selectDoc(this)"></div>
+            </div>
+
+            <!-- CENTER: Document Preview -->
+            <div class="explorer-center" id="docPreview">
+                <div class="empty-state" th:if="${!documents.isEmpty()}">
+                    <div class="empty-title">Dokument aus der linken Liste auswahlen</div>
+                    <div class="empty-desc">Dokumentinhalt und hervorgehobene Abschnitte erscheinen hier.</div>
+                </div>
+            </div>
+
+            <!-- RIGHT: Document Information -->
+            <div class="explorer-detail" id="docMeta">
+                <div class="section-title" th:text="#{regulations.docInfo}">Dokumentinformationen</div>
+                <table class="table" id="metaTable">
+                    <tr><td th:text="#{regulations.authority}">Behorde</td><td id="metaAuth">—</td></tr>
+                    <tr><td th:text="#{regulations.effectiveDate}">Gultigkeitsdatum</td><td id="metaDate">—</td></tr>
+                    <tr><td>Titel</td><td id="metaTitle">—</td></tr>
+                    <tr><td>Typ</td><td id="metaType">—</td></tr>
+                    <tr><td>Status</td><td id="metaStatus">—</td></tr>
+                    <tr><td>Kategorie</td><td id="metaCat">—</td></tr>
+                    <tr><td>Version</td><td id="metaVer">—</td></tr>
+                    <tr><td>Schlagworter</td><td id="metaTags" class="text-xs">—</td></tr>
+                    <tr><td>Fachbereich</td><td id="metaWs">—</td></tr>
+                    <tr><td>Dokument-ID</td><td id="metaId" class="mono" style="font-size:.70rem">—</td></tr>
+                </table>
+                <div style="margin-top:12px">
+                    <a href="#" id="openDocLink" class="btn btn-secondary btn-sm w-100" style="display:none" th:text="#{regulations.openFullDoc}">Vollstandiges Dokument offnen</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:if="${documents == null || documents.isEmpty()}" class="empty-state">
+        <div class="empty-icon">📄</div>
+        <div class="empty-title" th:text="#{regulations.noDocs}">Keine Dokumente indexiert</div>
+        <div class="empty-desc" th:text="#{regulations.noDocsHint}">Dokumente uber die Verwaltungsseite hochladen.</div>
+    </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function selectDoc(el) {
+        document.querySelectorAll('.tree-item').forEach(i => i.classList.remove('active'));
+        el.classList.add('active');
+        var docId = el.getAttribute('data-docid');
+        document.getElementById('metaTitle').textContent = el.getAttribute('data-title');
+        document.getElementById('metaType').innerHTML = '<span class="tag tag-blue">' + el.getAttribute('data-type') + '</span>';
+        var status = el.getAttribute('data-status');
+        document.getElementById('metaStatus').innerHTML = '<span class="status-badge ' + (status === 'READY' ? 'ok' : 'warn') + '">' + status + '</span>';
+        document.getElementById('metaCat').textContent = el.getAttribute('data-cat') || '—';
+        document.getElementById('metaVer').textContent = el.getAttribute('data-ver');
+        document.getElementById('metaTags').textContent = el.getAttribute('data-tags') || '—';
+        document.getElementById('metaId').textContent = docId;
+        var cat = el.getAttribute('data-cat') || '';
+        document.getElementById('metaWs').textContent = cat.replace('-regulations','').replace('-procedures','').replace('-',' ');
+        document.getElementById('metaAuth').textContent = cat.includes('building') ? 'Senatsverwaltung Bauen' : (cat.includes('procurement') ? 'Senatsverwaltung Finanzen' : (cat.includes('hr') ? 'Senatsverwaltung Inneres' : 'Land Berlin'));
+        document.getElementById('metaDate').textContent = '2024/2025';
+        var openLink = document.getElementById('openDocLink');
+        openLink.href = '/documents/' + docId;
+        openLink.style.display = 'block';
+        var preview = document.getElementById('docPreview');
+        preview.innerHTML = '<div class="loading-spinner"><div class="spinner"></div> Lade Dokument...</div>';
+        fetch('/api/documents/' + docId + '/content')
+            .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+            .then(data => {
+                var text = data.text || '';
+                preview.innerHTML = '<div style="white-space:pre-wrap;font-size:.90rem;line-height:1.7;color:var(--text-primary)">'
+                    + (text.length > 3000 ? text.substring(0, 3000) + '...' : text) + '</div>'
+                    + '<div style="margin-top:16px;font-size:.78rem;color:var(--text-tertiary)">'
+                    + (data.chunks||[]).length + ' Textabschnitte &middot; ' + text.length + ' Zeichen</div>';
+            })
+            .catch(err => {
+                preview.innerHTML = '<div class="empty-state"><div class="empty-title">Dokument konnte nicht geladen werden</div><div class="empty-desc">' + err.message + '</div></div>';
+            });
+    }
+</script>
+</body>
+</html>

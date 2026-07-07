@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Knowledge Graph — Municipal Decision Assistant</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link th:href="@{/css/platform.css}" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;650;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.6/dist/vis-network.min.js"></script>
+    <style>
+        .graph-container { background: #fff; border: 1px solid var(--border-default); border-radius: var(--radius-lg); height: 600px; }
+        .graph-container.fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999; border-radius: 0; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/layout :: nav}"></div>
+<main class="app-shell">
+    <div class="page-header flex-between">
+        <div>
+            <h1>Knowledge Graph</h1>
+            <p class="page-description">Interactive visualization of the municipal knowledge graph. Click nodes to inspect relationships between regulations, procedures, authorities, and forms.</p>
+        </div>
+        <select class="form-select" id="domainFilter" style="width:auto;font-size:.80rem" onchange="filterGraph()">
+            <option value="all">All Domains</option>
+            <option value="building">Building &amp; Urban Planning</option>
+            <option value="procurement">Public Procurement</option>
+            <option value="hr">Human Resources</option>
+        </select>
+    </div>
+
+    <div class="graph-shell">
+        <div class="graph-container" id="graphContainer"></div>
+
+        <!-- Search -->
+        <div class="graph-toolbar">
+            <input type="text" id="graphSearch" placeholder="Search nodes…" oninput="searchGraph()">
+        </div>
+
+        <!-- Fullscreen -->
+        <div class="graph-fullscreen" onclick="toggleFullscreen()" title="Fullscreen">⛶</div>
+
+        <!-- Zoom -->
+        <div class="graph-zoom-controls">
+            <button onclick="if(network)network.moveTo({scale:network.getScale()*1.2})">+</button>
+            <button onclick="if(network)network.moveTo({scale:network.getScale()*0.8})">−</button>
+            <button onclick="if(network)network.fit()">⊡</button>
+        </div>
+
+        <!-- Node Inspector -->
+        <div class="node-inspector" id="nodeInspector">
+            <button class="ni-close" onclick="document.getElementById('nodeInspector').classList.remove('open')">&times;</button>
+            <div class="ni-title" id="niTitle">—</div>
+            <div class="ni-meta" id="niMeta"></div>
+            <div class="ni-section">
+                <div class="ni-section-label">Type</div>
+                <div id="niType" class="text-sm"></div>
+            </div>
+            <div class="ni-section">
+                <div class="ni-section-label">Connected Entities</div>
+                <div id="niConnected"></div>
+            </div>
+            <div class="ni-section">
+                <div class="ni-section-label">Domain</div>
+                <div id="niDomain" class="text-sm"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div style="display:flex;gap:20px;margin-top:12px;font-size:.78rem;color:var(--text-secondary);background:var(--surface-primary);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:10px 16px">
+        <span><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#4d7cff;margin-right:4px"></span> Regulation</span>
+        <span><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#10b981;margin-right:4px"></span> Procedure</span>
+        <span><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#f59e0b;margin-right:4px"></span> Form</span>
+        <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#8b5cf6;margin-right:4px"></span> Authority</span>
+    </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const allNodes = [
+        { id: 1, label: 'BauO Bln', group: 'regulation', domain: 'building', title: 'Berlin Building Code', type: 'Landesgesetz', authority: 'Abgeordnetenhaus Berlin' },
+        { id: 2, label: 'BauGB', group: 'regulation', domain: 'building', title: 'Federal Building Code', type: 'Bundesgesetz', authority: 'BMWSB' },
+        { id: 3, label: 'BauNVO', group: 'regulation', domain: 'building', title: 'Land Use Ordinance', type: 'Verordnung', authority: 'Bundesregierung' },
+        { id: 4, label: 'BauVorlV 2025', group: 'regulation', domain: 'building', title: 'Building Documents Ordinance', type: 'Verordnung', authority: 'Senatsverwaltung Bauen' },
+        { id: 5, label: 'Schneller-Bauen-G', group: 'regulation', domain: 'building', title: 'Faster Building Act', type: 'Landesgesetz', authority: 'Abgeordnetenhaus Berlin' },
+        { id: 6, label: 'Baugenehmigung', group: 'procedure', domain: 'building', title: 'Building Permit Procedure', type: 'Verfahren', authority: 'Bezirksamt' },
+        { id: 7, label: 'Bauantragskonferenz', group: 'procedure', domain: 'building', title: 'Building Application Conference', type: 'Verfahren', authority: 'Bauaufsicht' },
+        { id: 8, label: 'Typengenehmigung', group: 'procedure', domain: 'building', title: 'Type Approval', type: 'Verfahren', authority: 'Senatsverwaltung Bauen' },
+        { id: 9, label: 'Bauantragsformular', group: 'form', domain: 'building', title: 'Building Application Form', type: 'Formular', authority: 'Bauaufsicht' },
+        { id: 10, label: 'Brandschutznachweis', group: 'form', domain: 'building', title: 'Fire Safety Certificate', type: 'Nachweis', authority: 'Bauaufsicht' },
+        { id: 11, label: 'Bauaufsichtsbehorde', group: 'authority', domain: 'building', title: 'Building Authority', type: 'Behorde', authority: 'Bezirksamt' },
+        { id: 12, label: 'Senatsverwaltung Bauen', group: 'authority', domain: 'building', title: 'Senate Dept for Building', type: 'Behorde', authority: 'Land Berlin' },
+        { id: 20, label: 'GWB Teil 4', group: 'regulation', domain: 'procurement', title: 'Act Against Restraints of Competition', type: 'Bundesgesetz', authority: 'BMWK' },
+        { id: 21, label: 'VgV', group: 'regulation', domain: 'procurement', title: 'Procurement Ordinance', type: 'Verordnung', authority: 'Bundesregierung' },
+        { id: 22, label: 'UVgO', group: 'regulation', domain: 'procurement', title: 'Sub-Threshold Procurement', type: 'Verordnung', authority: 'Bundesregierung' },
+        { id: 23, label: 'BerlAVG', group: 'regulation', domain: 'procurement', title: 'Berlin Tender & Procurement Act', type: 'Landesgesetz', authority: 'Abgeordnetenhaus Berlin' },
+        { id: 24, label: 'AV §55 LHO', group: 'regulation', domain: 'procurement', title: 'Berlin Admin Regulation', type: 'VV', authority: 'Senatsverwaltung Finanzen' },
+        { id: 25, label: 'Offene Ausschreibung', group: 'procedure', domain: 'procurement', title: 'Open Tender Procedure', type: 'Verfahren', authority: 'Vergabestelle' },
+        { id: 26, label: 'Beschraenkte Ausschr.', group: 'procedure', domain: 'procurement', title: 'Restricted Tender', type: 'Verfahren', authority: 'Vergabestelle' },
+        { id: 27, label: 'Direktauftrag', group: 'procedure', domain: 'procurement', title: 'Direct Award', type: 'Verfahren', authority: 'Vergabestelle' },
+        { id: 28, label: 'Vergabevermerk', group: 'form', domain: 'procurement', title: 'Procurement Memorandum', type: 'Formular', authority: 'Vergabestelle' },
+        { id: 29, label: 'Angebotsschreiben', group: 'form', domain: 'procurement', title: 'Offer Letter Template', type: 'Muster', authority: 'Vergabestelle' },
+        { id: 30, label: 'Vergabekammer Berlin', group: 'authority', domain: 'procurement', title: 'Procurement Review Chamber', type: 'Behorde', authority: 'Senatsverwaltung Wirtschaft' },
+        { id: 40, label: 'TV-L 2025', group: 'regulation', domain: 'hr', title: 'Collective Agreement Laender', type: 'Tarifvertrag', authority: 'TdL' },
+        { id: 41, label: 'BRKG', group: 'regulation', domain: 'hr', title: 'Federal Travel Expense Act', type: 'Bundesgesetz', authority: 'BMI' },
+        { id: 42, label: 'LRKG Berlin', group: 'regulation', domain: 'hr', title: 'Berlin Travel Expense Act', type: 'Landesgesetz', authority: 'Abgeordnetenhaus' },
+        { id: 43, label: 'UrlVO Bln', group: 'regulation', domain: 'hr', title: 'Berlin Leave Regulation', type: 'Verordnung', authority: 'Senatsverwaltung Inneres' },
+        { id: 44, label: 'AZVO Bln', group: 'regulation', domain: 'hr', title: 'Berlin Working Time Reg.', type: 'Verordnung', authority: 'Senatsverwaltung Inneres' },
+        { id: 45, label: 'Dienstreiseantrag', group: 'procedure', domain: 'hr', title: 'Travel Authorization', type: 'Verfahren', authority: 'Personalstelle' },
+        { id: 46, label: 'Urlaubsantrag', group: 'procedure', domain: 'hr', title: 'Leave Application', type: 'Verfahren', authority: 'Personalstelle' },
+        { id: 47, label: 'Homeoffice-Antrag', group: 'form', domain: 'hr', title: 'Home Office Application', type: 'Formular', authority: 'Personalstelle' },
+        { id: 48, label: 'Reisekostenabrechnung', group: 'form', domain: 'hr', title: 'Travel Expense Form', type: 'Formular', authority: 'Reisestelle' },
+        { id: 49, label: 'Personalstelle', group: 'authority', domain: 'hr', title: 'HR Department', type: 'Behorde', authority: 'Bezirksamt' },
+        { id: 50, label: 'ITDZ Berlin', group: 'authority', domain: 'hr', title: 'IT Service Center Berlin', type: 'Behorde', authority: 'Land Berlin' },
+    ];
+
+    const allEdges = [
+        { from: 1, to: 6, label: 'defines procedure' }, { from: 1, to: 7, label: 'mandates' },
+        { from: 1, to: 8, label: 'establishes' }, { from: 2, to: 1, label: 'federal basis' },
+        { from: 3, to: 1, label: 'supplements' }, { from: 4, to: 6, label: 'specifies' },
+        { from: 5, to: 7, label: 'introduced' }, { from: 6, to: 9, label: 'requires' },
+        { from: 6, to: 10, label: 'requires' }, { from: 6, to: 11, label: 'submitted to' },
+        { from: 11, to: 12, label: 'supervised by' }, { from: 20, to: 25, label: 'governs' },
+        { from: 21, to: 25, label: 'details' }, { from: 22, to: 26, label: 'permits' },
+        { from: 22, to: 27, label: 'allows' }, { from: 23, to: 24, label: 'delegates to' },
+        { from: 24, to: 27, label: 'sets thresholds' }, { from: 25, to: 28, label: 'requires' },
+        { from: 26, to: 28, label: 'requires' }, { from: 28, to: 30, label: 'reviewable by' },
+        { from: 40, to: 46, label: 'entitles' }, { from: 41, to: 45, label: 'governs' },
+        { from: 42, to: 45, label: 'supplements' }, { from: 43, to: 46, label: 'governs' },
+        { from: 44, to: 46, label: 'affects' }, { from: 45, to: 48, label: 'requires' },
+        { from: 46, to: 47, label: 'parallel to' }, { from: 40, to: 49, label: 'administered by' },
+        { from: 23, to: 12, label: 'procures for' }, { from: 11, to: 49, label: 'staffed by' },
+        { from: 50, to: 47, label: 'supports' },
+    ];
+
+    const groups = {
+        regulation: { color: { background: '#4d7cff', border: '#2e63f0' }, shape: 'dot', size: 24, font: { size: 12, face: 'Inter', color: '#232632' } },
+        procedure: { color: { background: '#10b981', border: '#059669' }, shape: 'dot', size: 18, font: { size: 12, face: 'Inter', color: '#232632' } },
+        form: { color: { background: '#f59e0b', border: '#d97706' }, shape: 'dot', size: 15, font: { size: 11, face: 'Inter', color: '#232632' } },
+        authority: { color: { background: '#8b5cf6', border: '#7c3aed' }, shape: 'square', size: 14, font: { size: 11, face: 'Inter', color: '#232632' } },
+    };
+
+    const container = document.getElementById('graphContainer');
+    let network, currentNodes = allNodes, currentEdges = allEdges;
+
+    function renderGraph(nodes, edges) {
+        currentNodes = nodes; currentEdges = edges;
+        const data = { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) };
+        const options = {
+            physics: { solver: 'forceAtlas2Based', forceAtlas2Based: { gravitationalConstant: -45, centralGravity: 0.008, springLength: 160, springConstant: 0.06 } },
+            interaction: { hover: true, tooltipDelay: 150, zoomView: true, dragView: true, navigationButtons: false },
+            edges: { arrows: { to: { enabled: true, scaleFactor: 0.5 } }, font: { size: 9, face: 'Inter', color: '#6f7585', strokeWidth: 2, strokeColor: '#fff' }, smooth: { type: 'continuous' }, width: 1.5 },
+            layout: { improvedLayout: true },
+        };
+        if (network) network.destroy();
+        network = new vis.Network(container, data, options);
+        network.on('click', function(p) {
+            if (p.nodes.length > 0) {
+                const n = nodes.find(x => x.id === p.nodes[0]);
+                if (n) showInspector(n);
+            }
+        });
+        network.on('deselectNode', function() { document.getElementById('nodeInspector').classList.remove('open'); });
+    }
+
+    function showInspector(node) {
+        document.getElementById('niTitle').textContent = node.label;
+        document.getElementById('niMeta').textContent = (node.authority || '') + (node.type ? ' · ' + node.type : '');
+        document.getElementById('niType').textContent = node.group || '—';
+        document.getElementById('niDomain').textContent = (node.domain || '—').replace('building','Building').replace('procurement','Procurement').replace('hr','HR');
+        // Find connected entities
+        const connected = allEdges.filter(e => e.from === node.id || e.to === node.id);
+        const connectedNodes = connected.map(e => {
+            const otherId = e.from === node.id ? e.to : e.from;
+            const other = allNodes.find(x => x.id === otherId);
+            return other ? '<div class="ni-related">' + other.label + ' <span class="text-xs text-tertiary">(' + e.label + ')</span></div>' : '';
+        }).join('');
+        document.getElementById('niConnected').innerHTML = connectedNodes || '<span class="text-xs text-tertiary">No connections</span>';
+        document.getElementById('nodeInspector').classList.add('open');
+    }
+
+    function filterGraph() {
+        const domain = document.getElementById('domainFilter').value;
+        if (domain === 'all') { renderGraph(allNodes, allEdges); return; }
+        const ids = new Set(allNodes.filter(n => n.domain === domain).map(n => n.id));
+        renderGraph(allNodes.filter(n => n.domain === domain), allEdges.filter(e => ids.has(e.from) || ids.has(e.to)));
+    }
+
+    function searchGraph() {
+        const q = document.getElementById('graphSearch').value.toLowerCase();
+        if (!q) { filterGraph(); return; }
+        const domain = document.getElementById('domainFilter').value;
+        let pool = domain === 'all' ? allNodes : allNodes.filter(n => n.domain === domain);
+        const matched = pool.filter(n => n.label.toLowerCase().includes(q) || (n.title||'').toLowerCase().includes(q));
+        if (matched.length > 0) {
+            const ids = new Set(matched.map(n => n.id));
+            renderGraph(pool.filter(n => ids.has(n.id)), allEdges.filter(e => ids.has(e.from) || ids.has(e.to)));
+            network.fit();
+        }
+    }
+
+    function toggleFullscreen() {
+        document.getElementById('graphContainer').classList.toggle('fullscreen');
+        if (network) setTimeout(() => network.fit(), 200);
+    }
+
+    renderGraph(allNodes, allEdges);
+</script>
+</body>
+</html>

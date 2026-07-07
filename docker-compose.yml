@@ -55,8 +55,6 @@ services:
       - neo4j_data:/data
     networks:
       - mda-network
-    profiles:
-      - graph
 
 volumes:
   postgres_data:

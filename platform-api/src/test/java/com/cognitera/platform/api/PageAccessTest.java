@@ -72,8 +72,8 @@ class PageAccessTest {
         void loginPageHasForm() throws Exception {
             mockMvc.perform(get("/login"))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Email")))
-                    .andExpect(content().string(containsString("Password")));
+                    .andExpect(content().string(containsString("Anmelden")))
+                    .andExpect(content().string(containsString("Passwort")));
         }
 
         @Test
@@ -81,8 +81,8 @@ class PageAccessTest {
         void registerPageHasForm() throws Exception {
             mockMvc.perform(get("/register"))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Register")))
-                    .andExpect(content().string(containsString("Display name")));
+                    .andExpect(content().string(containsString("Registrieren")))
+                    .andExpect(content().string(containsString("Anzeigename")));
         }
     }
 
@@ -104,21 +104,21 @@ class PageAccessTest {
         }
 
         @Test
-        @DisplayName("dashboard shows key sections")
+        @DisplayName("home page shows key sections")
         void dashboardContent() throws Exception {
-            mockMvc.perform(get("/dashboard").session(session))
+            mockMvc.perform(get("/home").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Dashboard")))
-                    .andExpect(content().string(containsString("Recent audit events")));
+                    .andExpect(content().string(containsString("Kommunaler Verwaltungsassistent")))
+                    .andExpect(content().string(containsString("Willkommen")));
         }
 
         @Test
-        @DisplayName("AI page shows provider status and model selection")
+        @DisplayName("New Decision page shows query form and typical cases")
         void aiPageContent() throws Exception {
-            mockMvc.perform(get("/ai").session(session))
+            mockMvc.perform(get("/decision").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Provider Status")))
-                    .andExpect(content().string(containsString("modelSelect")));
+                    .andExpect(content().string(containsString("queryForm")))
+                    .andExpect(content().string(containsString("Vorgang analysieren")));
         }
 
         @Test
@@ -126,8 +126,7 @@ class PageAccessTest {
         void searchPageContent() throws Exception {
             mockMvc.perform(get("/search").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Document Search")))
-                    .andExpect(content().string(containsString("hybrid")));
+                    .andExpect(content().string(containsString("Dokumentensuche")));
         }
 
         @Test
@@ -135,7 +134,7 @@ class PageAccessTest {
         void chunksPageContent() throws Exception {
             mockMvc.perform(get("/chunks").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Chunk Inspection")));
+                    .andExpect(content().string(containsString("Textabschnitte")));
         }
 
         @Test
@@ -143,8 +142,7 @@ class PageAccessTest {
         void jobsPageContent() throws Exception {
             mockMvc.perform(get("/jobs").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Ingestion Jobs")))
-                    .andExpect(content().string(containsString("Status")));
+                    .andExpect(content().string(containsString("Verarbeitungsauftrage")));
         }
 
         @Test
@@ -152,8 +150,7 @@ class PageAccessTest {
         void auditPageContent() throws Exception {
             mockMvc.perform(get("/audit").session(session))
                     .andExpect(status().isOk())
-                    .andExpect(content().string(containsString("Audit Viewer")))
-                    .andExpect(content().string(containsString("Any event")));
+                    .andExpect(content().string(containsString("Prufprotokoll")));
         }
 
         @Test

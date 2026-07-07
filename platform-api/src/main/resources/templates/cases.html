@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="#{nav.cases}">Meine Vorgange — Kommunaler Verwaltungsassistent</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link th:href="@{/css/platform.css}" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;650;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+<div th:replace="~{fragments/layout :: nav}"></div>
+<main class="app-shell">
+    <div class="page-header flex-between">
+        <div>
+            <h1 th:text="#{nav.cases}">Meine Vorgange</h1>
+            <p class="page-description">Ubersicht Ihrer bisherigen Verwaltungsvorgange und Analyseergebnisse.</p>
+        </div>
+        <a href="/decision" class="btn btn-primary btn-sm" th:text="#{home.newDecision}">Neue Entscheidung anfordern</a>
+    </div>
+
+    <div class="section-title" th:text="#{home.recentCases}">Letzte Vorgange</div>
+    <div class="card" th:if="${recentAudits != null && !recentAudits.isEmpty()}">
+        <div class="card-body card-flush">
+            <table class="table">
+                <thead><tr><th>Zeit</th><th>Typ</th><th>Akteur</th><th>Vorgangs-ID</th></tr></thead>
+                <tbody>
+                <tr th:each="e : ${recentAudits}">
+                    <td class="text-sm" th:text="${#temporals.format(e.timestamp(), 'dd.MM. HH:mm')}"></td>
+                    <td><span class="tag tag-gray" th:text="${e.eventType()}"></span></td>
+                    <td class="text-sm" th:text="${e.actorId()}"></td>
+                    <td class="mono" th:text="${e.correlationId()}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div th:if="${recentAudits == null || recentAudits.isEmpty()}" class="empty-state">
+        <div class="empty-icon">📋</div>
+        <div class="empty-title">Keine Vorgange vorhanden</div>
+        <div class="empty-desc">Starten Sie eine neue Entscheidung, um Ihren ersten Vorgang zu erstellen.</div>
+        <a href="/decision" class="btn btn-primary btn-sm mt-12" th:text="#{home.newDecision}">Neue Entscheidung anfordern</a>
+    </div>
+
+    <!-- Quick Start: Department shortcuts -->
+    <div class="section-title mt-24" th:text="#{home.deptShortcuts}">Direktzugriff Fachbereiche</div>
+    <div class="domain-grid">
+        <a href="/decision?workspace=building" class="domain-card">
+            <div class="domain-header">
+                <div class="domain-icon">🏗</div>
+                <div class="domain-name" th:text="#{dept.building}">Bauen & Stadtplanung</div>
+            </div>
+            <div class="domain-desc">Baugenehmigung, Vorbescheid, Abstandsflachen, Nutzungsanderung.</div>
+            <div class="domain-meta"><span><strong>8</strong> Dokumente</span></div>
+        </a>
+        <a href="/decision?workspace=procurement" class="domain-card">
+            <div class="domain-header">
+                <div class="domain-icon">📋</div>
+                <div class="domain-name" th:text="#{dept.procurement}">Offentliche Beschaffung</div>
+            </div>
+            <div class="domain-desc">Direktauftrag, beschrankte Ausschreibung, EU-weite Vergabe, Vergabevermerk.</div>
+            <div class="domain-meta"><span><strong>6</strong> Dokumente</span></div>
+        </a>
+        <a href="/decision?workspace=hr" class="domain-card">
+            <div class="domain-header">
+                <div class="domain-icon">👥</div>
+                <div class="domain-name" th:text="#{dept.hr}">Personal & Innere Verwaltung</div>
+            </div>
+            <div class="domain-desc">Dienstreise, Urlaubsantrag, Homeoffice, Arbeitszeit, IT-Sicherheit.</div>
+            <div class="domain-meta"><span><strong>9</strong> Dokumente</span></div>
+        </a>
+    </div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

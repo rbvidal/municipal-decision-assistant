@@ -8,12 +8,13 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Builds a grounded answer prompt by assembling system instructions, objectives, timeline, hierarchy, dossier, and authorities.
+ * Builds a German-language prompt that enforces evidence-grounded answers,
+ * structured decision package output, and hallucination guard rules.
  */
 @Component
 public class DefaultPromptBuilder implements PromptBuilder {
 
-    private static final String TEMPLATE_VERSION = "grounded-answer-v5";
+    private static final String TEMPLATE_VERSION = "grounded-decision-v6";
 
     @Override
     public String build(PromptContext context) {
@@ -22,220 +23,111 @@ public class DefaultPromptBuilder implements PromptBuilder {
         var objectives = context.objectives();
         var hierarchy = context.findingHierarchy();
         var dossier = context.sourceDossier();
-
-        var factual = sources.stream()
-                .filter(s -> s.sourceType() != SourceCitation.SourceType.AUTHORITATIVE)
-                .toList();
-
-        var factualPrimary = factual.stream().filter(s -> s.tier() == SourceCitation.SourceTier.PRIMARY).toList();
-        var factualSupporting = factual.stream().filter(s -> s.tier() == SourceCitation.SourceTier.SUPPORTING).toList();
-        var factualBackground = factual.stream().filter(s -> s.tier() == SourceCitation.SourceTier.BACKGROUND).toList();
-
-        var primaryAuthorities = authorities.stream()
-                .filter(a -> a.tier() == AuthorityReference.ReferenceTier.PRIMARY).toList();
-        var supportingAuthorities = authorities.stream()
-                .filter(a -> a.tier() == AuthorityReference.ReferenceTier.SUPPORTING).toList();
-        var backgroundAuthorities = authorities.stream()
-                .filter(a -> a.tier() == AuthorityReference.ReferenceTier.BACKGROUND).toList();
+        boolean hasInsufficientEvidence = sources.isEmpty()
+                || (sources.size() < 2 && dossier != null && dossier.coverageScore() < 0.3);
 
         StringBuilder prompt = new StringBuilder();
         prompt.append(context.systemInstruction()).append("\n\n");
 
-        // USER OBJECTIVE
-        if (!objectives.isEmpty()) {
-            prompt.append("=== USER'S OBJECTIVE ===\n");
-            prompt.append("The user's PRIMARY practical objective is:\n");
-            var primary = objectives.getFirst();
-            prompt.append("  ").append(primary.keyActions().getFirst()).append("\n");
-            if (objectives.size() > 1) {
-                prompt.append("Secondary objectives:\n");
-                objectives.stream().skip(1).limit(3).forEach(o ->
-                        prompt.append("  - ").append(o.keyActions().getFirst()).append("\n"));
-            }
-            prompt.append("\nFOCUS YOUR ANSWER ON THE PRIMARY OBJECTIVE. ");
-            prompt.append("Deprioritize peripheral items that do not enable these objectives.\n\n");
-        }
+        // ═══ RETRIEVED EVIDENCE ═══
+        appendEvidenceSection(prompt, sources, authorities, hasInsufficientEvidence);
 
-        // PROCEDURAL TIMELINE
-        var timeline = context.retrievalContext().timeline();
-        if (timeline != null && !timeline.events().isEmpty()) {
-            prompt.append("=== COMMUNICATION-FIRST PROCEDURAL TIMELINE ===\n");
-            prompt.append("THIS is the primary evidence. Reason from THESE documents, not from summaries.\n");
-            prompt.append("Communications: ").append(timeline.communicationCount())
-                    .append(" | Summaries: ").append(timeline.summaryCount()).append("\n\n");
-            int idx = 1;
-            for (var event : timeline.events()) {
-                if (!event.isCommunication()) continue;
-                SourceCitation match = findSource(sources, event.sourceDoc());
-                prompt.append("[").append(idx++).append("] *** ").append(event.type())
-                        .append(": ").append(event.description()).append(" ***\n");
-                if (match != null && match.excerpt() != null) {
-                    prompt.append(match.excerpt()).append("\n");
-                }
-                prompt.append("\n");
-            }
-            if (timeline.summaryCount() > 0) {
-                prompt.append("--- Background summaries (use ONLY for context) ---\n");
-                for (var event : timeline.events()) {
-                    if (event.isCommunication()) continue;
-                    SourceCitation match = findSource(sources, event.sourceDoc());
-                    prompt.append("[").append(idx++).append("] ").append(event.type())
-                            .append(": ").append(event.description()).append("\n");
-                    if (match != null && match.excerpt() != null) {
-                        String shortExcerpt = match.excerpt().length() > 300
-                                ? match.excerpt().substring(0, 300) + "..."
-                                : match.excerpt();
-                        prompt.append(shortExcerpt).append("\n");
-                    }
-                }
-                prompt.append("\n");
-            }
-            if (!timeline.missingEventTypes().isEmpty()) {
-                prompt.append("MISSING procedural events: ")
-                        .append(String.join(", ", timeline.missingEventTypes()))
-                        .append(" — state this explicitly, do NOT fabricate.\n\n");
-            }
-        }
+        // ═══ USER QUESTION ═══
+        prompt.append("FRAGE:\n").append(context.userQuestion()).append("\n\n");
 
-        // FINDING HIERARCHY
-        if (hierarchy != null && !hierarchy.primaryFindings().isEmpty()) {
-            prompt.append("=== FINDING HIERARCHY ===\n");
-            prompt.append("IMPORTANT: Primary findings exist independently from supporting elements.\n");
-            if (!hierarchy.primaryFindings().isEmpty()) {
-                prompt.append("PRIMARY FINDINGS (core — main items):\n");
-                for (var e : hierarchy.primaryFindings()) {
-                    prompt.append("  ").append(e.label()).append(" (").append(e.description()).append(")\n");
-                }
-            }
-            if (!hierarchy.secondaryFindings().isEmpty()) {
-                prompt.append("SUPPORTING FINDINGS (does NOT replace primary findings):\n");
-                for (var e : hierarchy.secondaryFindings()) {
-                    prompt.append("  ").append(e.label()).append(" (").append(e.description()).append(")\n");
-                }
-            }
-            if (!hierarchy.relationships().isEmpty()) {
-                prompt.append("RELATIONSHIPS: ");
-                prompt.append(String.join("; ", hierarchy.relationships())).append("\n");
-            }
-            prompt.append("\n");
-        }
-
-        // SOURCE DOSSIER
-        if (dossier != null) {
-            prompt.append("=== SOURCE DOSSIER ===\n");
-            prompt.append("Coverage: ").append(String.format(Locale.US, "%.0f%%", dossier.coverageScore() * 100)).append("\n");
-            prompt.append("Present roles: ").append(String.join(", ", dossier.presentRoles())).append("\n");
-            if (!dossier.missingRoles().isEmpty()) {
-                prompt.append("MISSING: ").append(String.join(", ", dossier.missingRoles())).append("\n");
-                prompt.append("Acknowledge missing source types in your answer.\n");
-            }
-            prompt.append("Assessment: ").append(dossier.completenessAssessment()).append("\n\n");
-        }
-
-        // Fallback: if no timeline, include sources directly
-        boolean hasTimeline = timeline != null && !timeline.events().isEmpty();
-        if (!hasTimeline && !factual.isEmpty()) {
-            if (!factualPrimary.isEmpty()) {
-                prompt.append("=== FACTUAL SOURCES — PRIMARY ===\n");
-                appendSources(prompt, factualPrimary);
-            }
-            if (!factualSupporting.isEmpty()) {
-                prompt.append("=== FACTUAL SOURCES — SUPPORTING ===\n");
-                appendSources(prompt, factualSupporting);
-            }
-        }
-
-        prompt.append("QUESTION:\n").append(context.userQuestion()).append("\n\n");
-
-        // AUTHORITY REFERENCES
-        if (!authorities.isEmpty()) {
-            prompt.append("=== AUTHORITY REFERENCES ===\n");
-            prompt.append("These references have been ranked by relevance to the user's practical objective.\n");
-            prompt.append("Apply the PRIMARY provisions to determine what remedies exist.\n\n");
-
-            if (!primaryAuthorities.isEmpty()) {
-                prompt.append("PRIMARY PROVISIONS (enable remedies/actions):\n");
-                appendAuthorities(prompt, primaryAuthorities);
-            }
-            if (!supportingAuthorities.isEmpty()) {
-                prompt.append("SUPPORTING PROVISIONS (supporting context):\n");
-                appendAuthorities(prompt, supportingAuthorities);
-            }
-            if (!backgroundAuthorities.isEmpty()) {
-                prompt.append("BACKGROUND (use only if essential):\n");
-                appendAuthorities(prompt, backgroundAuthorities);
-            }
-            prompt.append("\n");
-        }
-
-        boolean isAuthoritativeOnly = context.retrievalScope() == RetrievalScope.AUTHORITATIVE_ONLY;
-
-        prompt.append("IMPORTANT INSTRUCTIONS:\n");
-        if (!hasTimeline || isAuthoritativeOnly) {
-            prompt.append("- Base your analysis on the AUTHORITY REFERENCES provided below.\n");
+        // ═══ HALLUCINATION GUARD ═══
+        prompt.append("=== HALLUCINATION GUARD (STRENGSTE REGELN) ===\n");
+        prompt.append("- Sie durfen NUR die oben aufgefuhrten DOKUMENTE als Quelle verwenden.\n");
+        prompt.append("- Sie durfen KEIN eigenes juristisches Wissen einfuhren.\n");
+        prompt.append("- Sie durfen KEINE Vorschriften, Paragraphen oder Gesetze erfinden.\n");
+        prompt.append("- Sie durfen KEINE verwandten Konzepte einfuhren, die nicht in den Dokumenten stehen.\n");
+        prompt.append("- Wenn in den Dokumenten widerspruchliche Informationen stehen, benennen Sie den Widerspruch.\n");
+        prompt.append("  Erfinden Sie KEINEN Kompromiss.\n");
+        if (hasInsufficientEvidence) {
+            prompt.append("- WICHTIG: Die Dokumentenlage reicht fur eine eindeutige Entscheidung NICHT aus.\n");
+            prompt.append("  Antworten Sie dann AUSSCHLIESSLICH mit:\n");
+            prompt.append("  \"Die vorhandenen Unterlagen reichen fur eine eindeutige Entscheidung nicht aus.\"\n");
+            prompt.append("  Nennen Sie konkret, welche Informationen fehlen.\n");
+            prompt.append("  Generieren Sie KEINE Spekulation.\n");
         } else {
-            prompt.append("- Reason from the PROCEDURAL TIMELINE above. It IS the factual evidence.\n");
-            prompt.append("- Communication documents (marked ***) are PRIMARY. Summaries are background only.\n");
+            prompt.append("- Jede rechtliche Aussage MUSS durch mindestens ein Dokument belegt sein.\n");
+            prompt.append("- Jede Empfehlung MUSS auf die einschlagige Vorschrift verweisen.\n");
+            prompt.append("- Verwenden Sie wortliche Zitate aus den Dokumenten, wo immer moglich.\n");
+            prompt.append("- Fassen Sie zusammen und erklaren Sie — aber NUR auf Basis der Dokumente.\n");
         }
-        prompt.append("- ANSWER THE USER'S PRIMARY OBJECTIVE FIRST AND FOREMOST.\n");
-        if (!authorities.isEmpty()) {
-            prompt.append("- Use PRIMARY provisions to identify obligations and remedies.\n");
-        }
+        prompt.append("- Schreiben Sie auf DEUTSCH.\n");
+        prompt.append("- Keine Hoflichkeitsfloskeln. Keine Einleitung. Kein Schlusswort.\n\n");
 
-        if (isAuthoritativeOnly) {
-            prompt.append("- This is a reference analysis question. Analyze based on the references, not case facts.\n");
-            prompt.append("- Address EACH sub-question the user asks explicitly.\n");
-            prompt.append("- Discuss: what the references provide, what rights exist, what exceptions apply.\n");
-            prompt.append("- Do NOT impose a pre-set structure. Adapt to the domain of the question.\n");
-        } else {
-            prompt.append("- FOREGROUND: continuing obligations, not offsets.\n");
-            prompt.append("- Security instruments do NOT extinguish or replace primary obligations.\n");
-            prompt.append("- DO NOT present offset as the primary or automatic remedy.\n");
-            prompt.append("- Structure: (1) Primary obligation, (2) Breach, (3) Security function, (4) Steps, (5) Risks.\n");
-        }
+        // ═══ OUTPUT FORMAT: DECISION PACKAGE ═══
+        prompt.append("=== AUSGABEFORMAT — STRUKTURIERTES ENTSCHEIDUNGSPAKET ===\n");
+        prompt.append("Halten Sie sich GENAU an dieses Format:\n\n");
+        prompt.append("ENTSCHEIDUNG\n");
+        prompt.append("(Eine kurze, pragnante Empfehlung — ein bis zwei Satze)\n\n");
+        prompt.append("KURZBEGRUNDUNG\n");
+        prompt.append("(Kurze Erklarung — zwei bis drei Satze, NUR aus den Dokumenten abgeleitet)\n\n");
+        prompt.append("RECHTSGRUNDLAGEN\n");
+        prompt.append("- [Vorschrift] ([Dokument], [Abschnitt/Paragraph])\n");
+        prompt.append("(Jede Rechtsgrundlage mit konkretem Dokument und Abschnitt)\n\n");
+        prompt.append("ERFORDERLICHES VERFAHREN\n");
+        prompt.append("(Das tatsachlich erforderliche Verfahren — z.B. Direktauftrag, Beschrankte Ausschreibung, Genehmigungsverfahren)\n");
+        prompt.append("ODER: Kein spezifisches Verfahren erforderlich.\n\n");
+        prompt.append("BENOTIGTE FORMULARE\n");
+        prompt.append("- [Formularname]\n");
+        prompt.append("(Liste der tatsachlich benotigten Formulare, falls in den Dokumenten genannt)\n");
+        prompt.append("ODER: Keine Formulare erforderlich.\n\n");
+        prompt.append("BENOTIGTE CHECKLISTEN\n");
+        prompt.append("- [Checklistenname]\n");
+        prompt.append("ODER: Keine Checkliste erforderlich.\n\n");
+        prompt.append("ZUSTANDIGE BEHORDE\n");
+        prompt.append("(Die tatsachlich zustandige Behorde, aus den Dokumenten abgeleitet)\n\n");
+        prompt.append("NAECHSTER SCHRITT\n");
+        prompt.append("(Eine konkrete Handlungsempfehlung)\n\n");
+        prompt.append("VERWENDETE DOKUMENTE\n");
+        prompt.append("- [Dokumenttitel]\n");
+        prompt.append("(Liste aller fur die Entscheidung verwendeten Dokumente)\n\n");
 
-        prompt.append("- If events are missing from the timeline, state this explicitly — do NOT fabricate.\n");
-        prompt.append("- Cite specific references.\n");
-        prompt.append("- End with: This is not professional advice.\n");
+        prompt.append("WICHTIG: Die ENTSCHEIDUNG muss IMMER an erster Stelle stehen.\n");
+        prompt.append("Niemals Abschnitte auslassen. Wenn keine Information vorhanden ist, schreiben Sie 'Keine Angabe in den Dokumenten.'\n");
+        prompt.append("Niemals freie Langtexte ausserhalb dieser Struktur generieren.\n");
+        prompt.append("- End with: Dies ist keine Rechtsberatung.\n");
+
         return prompt.toString();
     }
 
-    private void appendAuthorities(StringBuilder sb, List<AuthorityReference> authorities) {
-        int index = 1;
-        for (AuthorityReference a : authorities) {
-            sb.append("[").append(index++).append("] ");
-            sb.append(a.referenceId());
-            if (a.entryTitle() != null && !a.entryTitle().isEmpty()) {
-                sb.append(" — ").append(a.entryTitle());
-            }
-            sb.append(" (").append(a.basis()).append(")");
-            sb.append(" relevance=").append(String.format(Locale.US, "%.2f", a.relevanceScore()));
-            sb.append("\n");
-            if (a.excerpt() != null && !a.excerpt().isEmpty()) {
-                String shortened = a.excerpt().length() > 600 ? a.excerpt().substring(0, 600) + "..." : a.excerpt();
-                sb.append(shortened).append("\n");
-            }
-            sb.append("\n");
+    private void appendEvidenceSection(StringBuilder prompt,
+                                        List<SourceCitation> sources,
+                                        List<AuthorityReference> authorities,
+                                        boolean insufficient) {
+        prompt.append("=== DOKUMENTE (AUSSCHLIESSLICHE QUELLEN) ===\n");
+        if (sources.isEmpty()) {
+            prompt.append("KEINE passenden Dokumente gefunden.\n");
+            prompt.append("Sie durfen AUSSCHLIESSLICH antworten, dass keine Informationen vorliegen.\n\n");
+            return;
         }
-    }
-
-    private void appendSources(StringBuilder sb, List<SourceCitation> items) {
-        int index = 1;
-        for (SourceCitation s : items) {
-            sb.append("[").append(index++).append("] ");
-            sb.append("title=").append(s.title());
-            sb.append(" type=").append(s.sourceType().name());
-            sb.append(" score=").append(String.format(Locale.US, "%.3f", s.confidenceScore()));
-            if (s.pageNumber() != null) sb.append(" page=").append(s.pageNumber());
-            sb.append("\n").append(s.excerpt()).append("\n\n");
+        prompt.append("NUR diese Dokumente durfen verwendet werden:\n\n");
+        for (int i = 0; i < sources.size(); i++) {
+            SourceCitation s = sources.get(i);
+            prompt.append("[").append(i + 1).append("] ");
+            prompt.append(s.title() != null ? s.title() : "Unbekanntes Dokument");
+            if (s.excerpt() != null && !s.excerpt().isBlank()) {
+                String excerpt = s.excerpt();
+                if (excerpt.length() > 800) excerpt = excerpt.substring(0, 800) + "...";
+                prompt.append("\n    Text: ").append(excerpt);
+            }
+            prompt.append("\n\n");
         }
-    }
 
-    private SourceCitation findSource(List<SourceCitation> sources, String title) {
-        if (title == null) return null;
-        return sources.stream()
-                .filter(s -> title.equals(s.title()))
-                .findFirst().orElse(null);
+        if (!authorities.isEmpty()) {
+            prompt.append("Zusatzliche Referenzen:\n");
+            for (AuthorityReference a : authorities) {
+                prompt.append("- ").append(a.referenceId());
+                if (a.entryTitle() != null && !a.entryTitle().isEmpty()) {
+                    prompt.append(": ").append(a.entryTitle());
+                }
+                prompt.append("\n");
+            }
+            prompt.append("\n");
+        }
     }
 
     @Override

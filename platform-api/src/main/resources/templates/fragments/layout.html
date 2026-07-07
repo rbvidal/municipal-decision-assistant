@@ -1,35 +1,35 @@
 <!doctype html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
 <head>
     <link rel="icon" href="data:,">
 </head>
 <body>
-<nav th:fragment="nav" class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-    <div class="container-fluid app-shell">
-        <a class="navbar-brand" th:href="@{/dashboard}"><th:block th:text="#{app.name}">Municipal Decision Assistant</th:block></a>
+<nav th:fragment="nav" class="navbar">
+    <div class="app-shell">
+        <a class="navbar-brand" th:href="@{/home}">
+            <span class="brand-accent">KVA</span>
+            <span>Kommunaler Verwaltungsassistent</span>
+        </a>
         <div class="navbar-nav">
-            <a class="nav-link" th:href="@{/workspaces}" th:text="#{nav.workspaces}">Workspaces</a>
-            <a class="nav-link" th:href="@{/documents}" th:text="#{nav.documents}">Documents</a>
-            <a class="nav-link" th:href="@{/jobs}" th:text="#{nav.jobs}">Jobs</a>
-            <a class="nav-link" th:href="@{/documents/upload}" th:text="#{nav.upload}">Upload</a>
-            <a class="nav-link" th:href="@{/search}" th:text="#{nav.search}">Search</a>
-            <a class="nav-link" th:href="@{/chunks}" th:text="#{nav.chunks}">Chunks</a>
-            <a class="nav-link" th:href="@{/audit}" th:text="#{nav.audit}">Audit</a>
-            <a class="nav-link" th:href="@{/ai}" th:text="#{nav.ai}">AI</a>
+            <a class="nav-link" th:href="@{/home}" th:classappend="${#strings.startsWith(currentUri, '/home') || currentUri == '/' || #strings.startsWith(currentUri, '/dashboard')} ? 'active'"><th:block th:text="#{nav.home}">Startseite</th:block></a>
+            <a class="nav-link" th:href="@{/cases}" th:classappend="${#strings.startsWith(currentUri, '/cases')} ? 'active'"><th:block th:text="#{nav.cases}">Meine Vorgange</th:block></a>
+            <a class="nav-link" th:href="@{/decision}" th:classappend="${#strings.startsWith(currentUri, '/decision') || #strings.startsWith(currentUri, '/ai') || #strings.startsWith(currentUri, '/decision-assistant')} ? 'active'"><th:block th:text="#{nav.decision}">Neue Entscheidung</th:block></a>
+            <a class="nav-link" th:href="@{/regulations}" th:classappend="${#strings.startsWith(currentUri, '/regulations') || #strings.startsWith(currentUri, '/knowledge')} ? 'active'"><th:block th:text="#{nav.regulations}">Vorschriften & Verfahren</th:block></a>
+            <a class="nav-link" th:href="@{/documents}" th:classappend="${#strings.startsWith(currentUri, '/documents')} ? 'active'"><th:block th:text="#{nav.documents}">Dokumente</th:block></a>
+            <a class="nav-link" th:href="@{/admin}" th:classappend="${#strings.startsWith(currentUri, '/admin') || #strings.startsWith(currentUri, '/graph') || #strings.startsWith(currentUri, '/analytics') || #strings.startsWith(currentUri, '/workspaces') || #strings.startsWith(currentUri, '/audit') || #strings.startsWith(currentUri, '/jobs') || #strings.startsWith(currentUri, '/chunks') || #strings.startsWith(currentUri, '/search')} ? 'active'"><th:block th:text="#{nav.admin}">Verwaltung</th:block></a>
         </div>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-8">
             <div class="dropdown">
-                <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    🌐
+                <button class="btn btn-ghost btn-sm" type="button" data-bs-toggle="dropdown" style="color:var(--gray-400)">
+                    <span th:text="${#locale.language == 'en' ? 'EN' : 'DE'}">DE</span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" th:href="@{${currentUri}(lang=en)}">🇬🇧 English</a></li>
-                    <li><a class="dropdown-item" th:href="@{${currentUri}(lang=de)}">🇩🇪 Deutsch</a></li>
-                    <li><a class="dropdown-item" th:href="@{${currentUri}(lang=fr)}">🇫🇷 Français</a></li>
+                    <li><a class="dropdown-item" th:href="@{${currentUri}(lang=de)}">Deutsch</a></li>
+                    <li><a class="dropdown-item" th:href="@{${currentUri}(lang=en)}">English</a></li>
                 </ul>
             </div>
             <form th:action="@{/logout}" method="post" class="m-0">
-                <button class="btn btn-outline-light btn-sm" type="submit" th:text="#{nav.logout}">Logout</button>
+                <button class="btn btn-ghost btn-sm" type="submit" style="color:var(--gray-400)"><th:block th:text="#{nav.logout}">Abmelden</th:block></button>
             </form>
         </div>
     </div>

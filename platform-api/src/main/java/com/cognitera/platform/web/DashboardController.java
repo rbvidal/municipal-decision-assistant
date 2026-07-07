@@ -5,6 +5,7 @@ import com.cognitera.platform.audit.api.AuditService;
 import com.cognitera.platform.document.infrastructure.persistence.JpaDocumentEntityRepository;
 import com.cognitera.platform.document.infrastructure.persistence.JpaIngestionJobEntityRepository;
 import com.cognitera.platform.document.model.DocumentStatus;
+import com.cognitera.platform.workspace.infrastructure.persistence.JpaWorkspaceRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,27 +17,31 @@ public class DashboardController {
     private final JpaDocumentEntityRepository documentRepository;
     private final JpaIngestionJobEntityRepository ingestionJobRepository;
     private final AuditService auditService;
+    private final JpaWorkspaceRepository workspaceRepository;
 
     public DashboardController(JpaDocumentEntityRepository documentRepository,
                                JpaIngestionJobEntityRepository ingestionJobRepository,
-                               AuditService auditService) {
+                               AuditService auditService,
+                               JpaWorkspaceRepository workspaceRepository) {
         this.documentRepository = documentRepository;
         this.ingestionJobRepository = ingestionJobRepository;
         this.auditService = auditService;
+        this.workspaceRepository = workspaceRepository;
     }
 
-    @GetMapping({"/", "/dashboard"})
+    @GetMapping({"/", "/home", "/dashboard"})
     public String dashboard(Model model) {
         model.addAttribute("documentCount", documentRepository.count());
         model.addAttribute("readyDocumentCount",
                 documentRepository.count(
                         (root, query, cb) -> cb.equal(root.get("status"), DocumentStatus.READY)));
         model.addAttribute("ingestionJobCount", ingestionJobRepository.count());
+        model.addAttribute("workspaceCount", workspaceRepository.count());
 
         var auditPage = auditService.query(new AuditQuery(null, null, null, null, null,
                 null, null, null, null, null, 0, 10));
         model.addAttribute("recentAudits", auditPage.events());
 
-        return "dashboard";
+        return "home";
     }
 }

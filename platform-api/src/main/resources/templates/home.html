@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="#{home.title}">Startseite — Kommunaler Verwaltungsassistent</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link th:href="@{/css/platform.css}" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;650;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+<div th:replace="~{fragments/layout :: nav}"></div>
+<main class="app-shell">
+    <!-- Welcome -->
+    <div class="page-header flex-between">
+        <div>
+            <h1 th:text="#{home.welcome}">Willkommen zuruck</h1>
+            <p class="page-description">Kommunaler Verwaltungsassistent fur die Berliner Bezirksverwaltung. Vorschriften finden, Verfahren verstehen, Entscheidungen treffen.</p>
+        </div>
+        <a href="/decision" class="btn btn-primary" th:text="#{home.newDecision}">Neue Entscheidung anfordern</a>
+    </div>
+
+    <!-- Quick Decision Input -->
+    <div class="card mb-20">
+        <div class="card-body" style="padding:18px 22px">
+            <form th:action="@{/decision}" method="post" style="display:flex;gap:10px;align-items:center">
+                <textarea name="question" class="form-textarea" rows="1" style="font-size:.90rem;resize:none;flex:1"
+                          th:attr="placeholder=#{home.describeCase}"></textarea>
+                <button class="btn btn-primary" type="submit" style="padding:10px 22px;white-space:nowrap" th:text="#{decision.analyze}">Vorgang analysieren</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Department Shortcuts -->
+    <div class="section-title" th:text="#{home.deptShortcuts}">Direktzugriff Fachbereiche</div>
+    <div class="domain-grid mb-20">
+        <a href="/decision?workspace=building" class="domain-card">
+            <div class="domain-header">
+                <div class="domain-icon">🏗</div>
+                <div class="domain-name" th:text="#{dept.building}">Bauen & Stadtplanung</div>
+            </div>
+            <div class="domain-desc" th:text="#{dept.buildingDesc}"></div>
+            <div class="domain-meta">
+                <span><strong>8</strong> <th:block th:text="#{dept.docs}">Dokumente</th:block></span>
+                <span th:text="#{dept.ready}">Bereit</span>
+            </div>
+        </a>
+        <a href="/decision?workspace=procurement" class="domain-card">
+            <div class="domain-header">
+                <div class="domain-icon">📋</div>
+                <div class="domain-name" th:text="#{dept.procurement}">Offentliche Beschaffung</div>
+            </div>
+            <div class="domain-desc" th:text="#{dept.procurementDesc}"></div>
+            <div class="domain-meta">
+                <span><strong>6</strong> <th:block th:text="#{dept.docs}">Dokumente</th:block></span>
+                <span th:text="#{dept.ready}">Bereit</span>
+            </div>
+        </a>
+        <a href="/decision?workspace=hr" class="domain-card">
+            <div class="domain-header">
+                <div class="domain-icon">👥</div>
+                <div class="domain-name" th:text="#{dept.hr}">Personal & Innere Verwaltung</div>
+            </div>
+            <div class="domain-desc" th:text="#{dept.hrDesc}"></div>
+            <div class="domain-meta">
+                <span><strong>9</strong> <th:block th:text="#{dept.docs}">Dokumente</th:block></span>
+                <span th:text="#{dept.ready}">Bereit</span>
+            </div>
+        </a>
+    </div>
+
+    <!-- Frequent Regulations + Recent Docs -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <div class="card">
+            <div class="card-header" th:text="#{home.frequentRegulations}">Haufig genutzte Vorschriften</div>
+            <div class="card-body" style="padding:8px 0 0">
+                <a href="/documents" class="d-block" style="padding:8px 20px;font-size:.84rem;border-bottom:1px solid var(--border-subtle)">Bauordnung Berlin (BauO Bln)</a>
+                <a href="/documents" class="d-block" style="padding:8px 20px;font-size:.84rem;border-bottom:1px solid var(--border-subtle)">AV zu § 55 LHO — Wertgrenzen</a>
+                <a href="/documents" class="d-block" style="padding:8px 20px;font-size:.84rem;border-bottom:1px solid var(--border-subtle)">TV-L 2025 — Entgelttabellen</a>
+                <a href="/documents" class="d-block" style="padding:8px 20px;font-size:.84rem;border-bottom:1px solid var(--border-subtle)">Bundesreisekostengesetz (BRKG)</a>
+                <a href="/documents" class="d-block" style="padding:8px 20px;font-size:.84rem">BauGB — Baugesetzbuch</a>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header" th:text="#{home.recentDocs}">Kurzlich geoffnete Dokumente</div>
+            <div class="card-body" style="padding:8px 0 0">
+                <div th:if="${recentAudits != null && !#lists.isEmpty(recentAudits)}">
+                    <div th:each="e,iter : ${recentAudits}" th:if="${iter.index < 5}"
+                         style="padding:8px 20px;font-size:.84rem;border-bottom:1px solid var(--border-subtle)">
+                        <span th:text="${e.eventType()}">Event</span>
+                        <span class="text-xs text-tertiary ml-2" th:text="${#temporals.format(e.timestamp(), 'dd.MM. HH:mm')}"></span>
+                    </div>
+                </div>
+                <div th:if="${recentAudits == null || #lists.isEmpty(recentAudits)}" style="padding:16px 20px;font-size:.84rem;color:var(--text-tertiary)">Keine aktuellen Aktivitaten.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="section-title" th:text="#{home.recentActivity}">Letzte Aktivitaten</div>
+    <div class="card" th:if="${recentAudits != null && !#lists.isEmpty(recentAudits)}">
+        <div class="card-body card-flush">
+            <table class="table">
+                <thead><tr><th>Zeit</th><th>Typ</th><th>Akteur</th><th>Vorgang</th></tr></thead>
+                <tbody>
+                <tr th:each="e : ${recentAudits}">
+                    <td class="text-sm" th:text="${#temporals.format(e.timestamp(), 'dd.MM. HH:mm')}"></td>
+                    <td><span class="tag tag-gray" th:text="${e.eventType()}"></span></td>
+                    <td class="text-sm" th:text="${e.actorId()}"></td>
+                    <td class="mono" th:text="${e.correlationId()}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div th:if="${recentAudits == null || #lists.isEmpty(recentAudits)}" class="empty-state">
+        <div class="empty-title">Keine Aktivitaten</div>
+        <div class="empty-desc">Aktivitaten erscheinen hier, sobald Dokumente hochgeladen und Vorgange analysiert werden.</div>
+    </div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

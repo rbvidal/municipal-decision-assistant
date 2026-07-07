@@ -30,14 +30,14 @@ class PlatformApiApplicationTests {
     void loginPageLoads() throws Exception {
         mockMvc.perform(get("/login"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Login")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Anmelden")));
     }
 
     @Test
     void registerPageLoads() throws Exception {
         mockMvc.perform(get("/register"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Register")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Registrieren")));
     }
 
     @Test

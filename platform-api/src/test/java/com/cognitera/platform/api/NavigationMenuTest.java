@@ -104,7 +104,7 @@ class NavigationMenuTest {
 
         mockMvc.perform(get("/dashboard").session(session))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Ubersicht")));
+                .andExpect(content().string(containsString(">DE<")));
     }
 
     @Test

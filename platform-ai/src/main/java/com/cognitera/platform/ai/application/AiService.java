@@ -68,6 +68,12 @@ public class AiService implements AiOrchestrationService {
 
         // Intent gate: route INDEX_INSPECTION and CORPUS_DISCOVERY queries
         QueryIntent intent = intentClassifier.classify(normalized.question());
+        log.info("AI PIPELINE Intent: {} | Model: {} | Workspace: {} | Query: {}",
+                intent,
+                normalized.model() != null ? normalized.model() : "default",
+                normalized.workspaceId() != null ? normalized.workspaceId() : "all",
+                normalized.question().length() > 100
+                        ? normalized.question().substring(0, 100) + "..." : normalized.question());
         if (intent == QueryIntent.INDEX_INSPECTION || intent == QueryIntent.CORPUS_DISCOVERY) {
             log.info("Routing query to IndexInspectionService: intent={}, query={}",
                     intent, normalized.question());
@@ -76,6 +82,10 @@ public class AiService implements AiOrchestrationService {
 
         Instant requestedAt = Instant.now();
         RetrievalContext retrievalContext = retrievalAugmentationService.retrieve(normalized);
+        log.info("AI PIPELINE Retrieved: {} sources, strategy={}, authorities={}",
+                retrievalContext.sources().size(),
+                retrievalContext.retrievalStrategy(),
+                retrievalContext.authorityReferences().size());
         PromptContext promptContext = contextAssembler.assemble(normalized, retrievalContext);
         String prompt = promptBuilder.build(promptContext);
         ModelCapabilities capabilities = modelProvider.capabilities(normalized.model());
