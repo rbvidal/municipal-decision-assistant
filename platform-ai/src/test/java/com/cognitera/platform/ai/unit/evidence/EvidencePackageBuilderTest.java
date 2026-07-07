@@ -2,6 +2,7 @@ package com.cognitera.platform.ai.unit.evidence;
 
 import com.cognitera.platform.ai.application.EvidencePackageBuilder;
 import com.cognitera.platform.ai.application.NumericExtractor;
+import com.cognitera.platform.ai.config.AiPipelineProperties;
 import com.cognitera.platform.ai.model.EvidenceItem;
 import com.cognitera.platform.ai.model.EvidencePackage;
 import com.cognitera.platform.ai.model.EvidencePackage.CoverageStatus;
@@ -15,19 +16,17 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Regression tests for the EvidencePackageBuilder.
- * Covers: salary lookup, procurement approval, travel expenses,
- * vacation rules, working hours, home office, conflicting regulations,
- * missing regulations, and numeric calculations.
- */
 class EvidencePackageBuilderTest {
 
     private EvidencePackageBuilder builder;
 
     @BeforeEach
     void setUp() {
-        builder = new EvidencePackageBuilder(new NumericExtractor());
+        AiPipelineProperties props = new AiPipelineProperties();
+        props.setMaxEvidenceSources(4);
+        props.setMaxParagraphsPerSource(3);
+        props.setMaxExcerptLength(500);
+        builder = new EvidencePackageBuilder(new NumericExtractor(), props);
     }
 
     // ── Salary lookup ──
@@ -186,14 +185,16 @@ class EvidencePackageBuilderTest {
     // ── Paragraph citations ──
 
     @Test
-    void shouldExtractParagraphReferences() {
-        var sources = List.of(source("BauO Bln",
-                "Section 63 defines the simplified permit procedure. "
-                + "Gemäß § 6 Abs. 1 beträgt die Abstandsfläche..."));
+    void shouldGroupEvidenceByDocument() {
+        var sources = List.of(
+                source("BauO Bln", "Section 63 defines the simplified permit procedure."),
+                source("BauO Bln", "Section 6 defines setback requirements."));
         EvidencePackage pkg = builder.build("Abstandsflächen", sources);
+        // Should have 1 item (both chunks from same document grouped)
+        assertEquals(1, pkg.items().size());
         EvidenceItem item = pkg.items().getFirst();
-        assertFalse(item.paragraph().isBlank());
-        assertTrue(item.paragraph().contains("Section 63") || item.paragraph().contains("6"));
+        assertEquals("BauO Bln", item.documentTitle());
+        assertFalse(item.paragraph().isBlank()); // "2 Abschnitte" or similar
     }
 
     // ── Helper ──

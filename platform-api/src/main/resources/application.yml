@@ -51,6 +51,15 @@ platform:
       embedding-model: ${OLLAMA_EMBEDDING_MODEL:nomic-embed-text}
       embedding-dimension: ${OLLAMA_EMBEDDING_DIMENSION:768}
       request-timeout: ${OLLAMA_REQUEST_TIMEOUT:120s}
+    pipeline:
+      max-evidence-sources: ${AI_MAX_EVIDENCE_SOURCES:4}
+      max-paragraphs-per-source: ${AI_MAX_PARAGRAPHS:3}
+      max-prompt-length: ${AI_MAX_PROMPT_LENGTH:3800}
+      max-excerpt-length: ${AI_MAX_EXCERPT_LENGTH:500}
+      retry-enabled: ${AI_RETRY_ENABLED:false}
+      coverage-threshold: ${AI_COVERAGE_THRESHOLD:0.6}
+      domain-boost-factor: ${AI_DOMAIN_BOOST:0.35}
+      max-mismatched-documents: ${AI_MAX_MISMATCHED_DOCS:0}
   neo4j:
     uri: ${NEO4J_URI:bolt://localhost:7687}
     username: ${NEO4J_USERNAME:neo4j}

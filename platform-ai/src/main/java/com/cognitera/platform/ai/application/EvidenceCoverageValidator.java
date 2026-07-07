@@ -87,24 +87,30 @@ public class EvidenceCoverageValidator {
             }
         }
 
-        // ── Check 3: Are important numeric values present? ──
+        // ── Check 3: Are RELEVANT numeric values present? ──
+        // Only validate numbers the user is actually asking about
+        Set<String> queryAmounts = extractAmountsFromQuery(query);
+        Set<String> queryGrades = extractGradesFromQuery(query);
         for (EvidenceItem item : evidence.items()) {
             if (item.numericExtraction() == null || item.numericExtraction().isEmpty()) continue;
-            // Check money values
             for (var mv : item.numericExtraction().moneyValues()) {
+                // Only require amounts that match what the user asked about
+                if (!queryAmounts.isEmpty() && queryAmounts.stream().noneMatch(
+                        qa -> Math.abs(mv.amount() - parseAmount(qa)) < 0.01)) continue;
                 String amountStr = String.format(java.util.Locale.US, "%.2f", mv.amount())
                         .replaceAll("\\.?0+$", "");
                 if (!answerLower.contains(amountStr) && !answerLower.contains(
-                        String.format(java.util.Locale.GERMANY, "%.2f", mv.amount())
-                                .replaceAll(",?0+$", ""))) {
-                    missingNumerics.add(mv.amount() + " " + mv.currency() + " (" + mv.label() + ")");
+                        String.valueOf((int) mv.amount()))) {
+                    missingNumerics.add(mv.amount() + " " + mv.currency());
                     numericValuesPresent = false;
                 }
             }
-            // Check salary grades
             for (var sg : item.numericExtraction().salaryGrades()) {
-                if (sg.amount() > 0 && !answerLower.contains(
-                        String.valueOf((int) sg.amount()))) {
+                if (queryGrades.isEmpty()) continue;
+                boolean gradeMatch = queryGrades.stream().anyMatch(
+                        g -> sg.grade().toLowerCase().contains(g.toLowerCase()));
+                if (!gradeMatch) continue;
+                if (sg.amount() > 0 && !answerLower.contains(String.valueOf((int) sg.amount()))) {
                     missingNumerics.add(sg.grade() + " Stufe " + sg.step() + ": " +
                             String.format("%.2f €", sg.amount()));
                     numericValuesPresent = false;
@@ -158,5 +164,30 @@ public class EvidenceCoverageValidator {
             if (word.length() > 3 && text.contains(word)) return true;
         }
         return false;
+    }
+
+    /** Extracts monetary amounts mentioned in the query (e.g. "800 Euro", "18.000 €"). */
+    private Set<String> extractAmountsFromQuery(String query) {
+        Set<String> amounts = new HashSet<>();
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile(
+                "(\\d{1,3}(?:\\.\\d{3})*(?:,\\d{2})?)\\s*(?:€|Euro|EUR)",
+                java.util.regex.Pattern.CASE_INSENSITIVE).matcher(query);
+        while (m.find()) amounts.add(m.group(1));
+        return amounts;
+    }
+
+    /** Extracts salary grades mentioned in the query (e.g. "EG 9a", "EG9 Stufe 3"). */
+    private Set<String> extractGradesFromQuery(String query) {
+        Set<String> grades = new HashSet<>();
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile(
+                "EG\\s*(\\d+[a-z]?)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(query);
+        while (m.find()) grades.add("EG " + m.group(1));
+        return grades;
+    }
+
+    private double parseAmount(String s) {
+        try {
+            return Double.parseDouble(s.replace(".", "").replace(",", "."));
+        } catch (NumberFormatException e) { return 0; }
     }
 }

@@ -1,6 +1,7 @@
 package com.cognitera.platform.ai.application;
 
 import com.cognitera.platform.ai.api.*;
+import com.cognitera.platform.ai.config.AiPipelineProperties;
 import com.cognitera.platform.ai.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,8 +13,18 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The main AI orchestration service that coordinates the full pipeline: retrieval, prompting, inference,
- * temporal and claim validation, grounding, and audit publishing.
+ * Simplified AI orchestration service with full pipeline profiling.
+ *
+ * <p>The pipeline flow:
+ * <ol>
+ *   <li>Intent classification → route or continue</li>
+ *   <li>Hybrid retrieval</li>
+ *   <li>Evidence package assembly (grouped, deduplicated, limited)</li>
+ *   <li>Compact prompt construction</li>
+ *   <li>Single LLM inference (no auto-retry)</li>
+ *   <li>Post-hoc coverage validation (metric only, not blocking)</li>
+ *   <li>Grounding and audit</li>
+ * </ol>
  */
 @Service
 public class AiService implements AiOrchestrationService {
@@ -27,12 +38,11 @@ public class AiService implements AiOrchestrationService {
     private final ChatCompletionProvider chatCompletionProvider;
     private final GroundingService groundingService;
     private final AiAuditPublisher auditPublisher;
-    private final TemporalConsistencyValidator temporalValidator;
-    private final ClaimValidator claimValidator;
-    private final StructuredAnswerAssembler answerAssembler;
     private final QueryIntentClassifier intentClassifier;
     private final IndexInspectionService indexInspectionService;
     private final EvidenceCoverageValidator evidenceCoverageValidator;
+    private final PipelineProfiler profiler;
+    private final AiPipelineProperties props;
 
     public AiService(
             RetrievalAugmentationService retrievalAugmentationService,
@@ -42,13 +52,11 @@ public class AiService implements AiOrchestrationService {
             ChatCompletionProvider chatCompletionProvider,
             GroundingService groundingService,
             AiAuditPublisher auditPublisher,
-            TemporalConsistencyValidator temporalValidator,
-            ClaimValidator claimValidator,
-            StructuredAnswerAssembler answerAssembler,
             QueryIntentClassifier intentClassifier,
             IndexInspectionService indexInspectionService,
-            EvidenceCoverageValidator evidenceCoverageValidator
-    ) {
+            EvidenceCoverageValidator evidenceCoverageValidator,
+            PipelineProfiler profiler,
+            AiPipelineProperties props) {
         this.retrievalAugmentationService = retrievalAugmentationService;
         this.contextAssembler = contextAssembler;
         this.promptBuilder = promptBuilder;
@@ -56,108 +64,75 @@ public class AiService implements AiOrchestrationService {
         this.chatCompletionProvider = chatCompletionProvider;
         this.groundingService = groundingService;
         this.auditPublisher = auditPublisher;
-        this.temporalValidator = temporalValidator;
-        this.claimValidator = claimValidator;
-        this.answerAssembler = answerAssembler;
         this.intentClassifier = intentClassifier;
         this.indexInspectionService = indexInspectionService;
         this.evidenceCoverageValidator = evidenceCoverageValidator;
+        this.profiler = profiler;
+        this.props = props;
     }
 
     @Override
     @Transactional
     public AiResponse answer(AiRequest request) {
         AiRequest normalized = normalize(request);
+        profiler.start(normalized.context().requestId() != null
+                ? normalized.context().requestId() : "unknown");
 
-        // Intent gate: route INDEX_INSPECTION and CORPUS_DISCOVERY queries
+        // ── Intent ──
         QueryIntent intent = intentClassifier.classify(normalized.question());
-        log.info("AI PIPELINE Intent: {} | Model: {} | Workspace: {} | Query: {}",
-                intent,
-                normalized.model() != null ? normalized.model() : "default",
-                normalized.workspaceId() != null ? normalized.workspaceId() : "all",
-                normalized.question().length() > 100
-                        ? normalized.question().substring(0, 100) + "..." : normalized.question());
+        profiler.record("intent-classification");
+
         if (intent == QueryIntent.INDEX_INSPECTION || intent == QueryIntent.CORPUS_DISCOVERY) {
-            log.info("Routing query to IndexInspectionService: intent={}, query={}",
-                    intent, normalized.question());
+            profiler.finish();
             return indexInspectionService.inspect(normalized);
         }
 
-        Instant requestedAt = Instant.now();
+        // ── Retrieval ──
         RetrievalContext retrievalContext = retrievalAugmentationService.retrieve(normalized);
-        log.info("AI PIPELINE Retrieved: {} sources, strategy={}, authorities={}",
-                retrievalContext.sources().size(),
-                retrievalContext.retrievalStrategy(),
-                retrievalContext.authorityReferences().size());
+        profiler.record("hybrid-retrieval");
+        log.info("Retrieved: {} sources", retrievalContext.sources().size());
+
+        // ── Evidence package ──
         PromptContext promptContext = contextAssembler.assemble(normalized, retrievalContext);
+        profiler.record("evidence-building");
+
+        // ── Prompt ──
         String prompt = promptBuilder.build(promptContext);
+        profiler.record("prompt-construction");
+        log.info("Prompt size: {} chars, {} evidence docs",
+                prompt.length(),
+                promptContext.evidencePackage() != null
+                        ? promptContext.evidencePackage().items().size() : 0);
+
+        // ── LLM ──
         ModelCapabilities capabilities = modelProvider.capabilities(normalized.model());
-
-        auditPublisher.emit(
-                normalized.context().actorId(),
-                normalized.context().tenantId(),
-                "PROMPT_EXECUTED",
-                normalized.context().requestId(),
-                Map.of(
-                        "templateVersion", promptBuilder.templateVersion(),
-                        "retrievalSourceCount", Integer.toString(retrievalContext.sources().size())));
-
+        Instant inferenceStart = Instant.now();
         String rawAnswer = chatCompletionProvider.complete(prompt, capabilities);
+        profiler.record("llm-inference");
+        long inferenceMs = java.time.Duration.between(inferenceStart, Instant.now()).toMillis();
+        log.info("LLM inference: {} ms", inferenceMs);
 
-        TemporalConsistencyValidator.TemporalCheckResult temporalCheck =
-                temporalValidator.validate(normalized.question(), rawAnswer);
-        if (!temporalCheck.consistent()) {
-            log.warn("Temporal inconsistency detected: {}", temporalCheck.issues());
-            StringBuilder correctedAnswer = new StringBuilder(rawAnswer);
-            correctedAnswer.append("\n\n[Temporal validation warning: ");
-            correctedAnswer.append(String.join("; ", temporalCheck.issues()));
-            correctedAnswer.append("]");
-            rawAnswer = correctedAnswer.toString();
+        // ── Coverage validation (metric only, non-blocking per Part F) ──
+        if (promptContext.evidencePackage() != null) {
+            var coverageCheck = evidenceCoverageValidator.validate(
+                    rawAnswer, promptContext.evidencePackage(), normalized.question());
+            profiler.record("coverage-validation");
+            log.info("Coverage: passed={}, missingDocs={}, missingNums={}",
+                    coverageCheck.passed(),
+                    coverageCheck.missingDocumentTitles(),
+                    coverageCheck.missingNumericValues());
+            // NEVER retry — coverage is a quality metric, not a gate
         }
 
-        // Claim validation
-        var claimCheck = claimValidator.validate(rawAnswer,
-                retrievalContext.authorityReferences());
-        if (!claimCheck.valid()) {
-            log.warn("Reference-claim validation: {}", claimCheck.unsupportedClaims());
-            StringBuilder corrected = new StringBuilder(rawAnswer);
-            corrected.append("\n\n[Reference validation: ");
-            corrected.append(String.join("; ", claimCheck.unsupportedClaims()));
-            corrected.append("]");
-            rawAnswer = corrected.toString();
-        }
-
-        // Evidence coverage validation — verify top evidence was actually used
-        var coverageCheck = evidenceCoverageValidator.validate(
-                rawAnswer, promptContext.evidencePackage(), normalized.question());
-        if (!coverageCheck.passed()) {
-            log.warn("Evidence coverage FAILED: {}", coverageCheck.recommendation());
-            if (coverageCheck.needsRetry() && retrievalContext.sources().size() > 1) {
-                log.info("Retrying with reordered evidence to prioritize: {}",
-                        coverageCheck.missingDocumentTitles());
-                // Reorder: move missing docs to front and retry once
-                var reordered = reorderEvidence(
-                        retrievalContext.sources(), coverageCheck.missingDocumentTitles());
-                var reorderedCtx = new RetrievalContext(
-                        retrievalContext.query(), retrievalContext.retrievalStrategy(),
-                        reordered, retrievalContext.authorityReferences(),
-                        retrievalContext.findingHierarchy(), retrievalContext.sourceDossier(),
-                        retrievalContext.timeline());
-                PromptContext retryCtx = contextAssembler.assemble(normalized, reorderedCtx);
-                String retryPrompt = promptBuilder.build(retryCtx);
-                rawAnswer = chatCompletionProvider.complete(retryPrompt, capabilities);
-                log.info("Retry complete with reordered evidence.");
-            }
-        }
-
+        // ── Grounding ──
         ReasonedAnswer reasonedAnswer = groundingService.ground(rawAnswer, retrievalContext);
-        Instant completedAt = Instant.now();
+        profiler.record("grounding");
+        profiler.finish();
 
+        Instant completedAt = Instant.now();
         InferenceMetadata metadata = new InferenceMetadata(
-                capabilities.provider(),
-                capabilities.model(),
-                requestedAt,
-                completedAt,
+                capabilities.provider(), capabilities.model(),
+                Instant.now(), completedAt,
                 normalized.context().correlationId(),
                 normalized.context().requestId(),
                 promptBuilder.templateVersion(),
@@ -165,63 +140,28 @@ public class AiService implements AiOrchestrationService {
                 retrievalContext.sources().stream().map(s -> s.chunkId().toString()).toList(),
                 reasonedAnswer.confidence().overallConfidence());
 
-        auditPublisher.emit(
-                normalized.context().actorId(),
-                normalized.context().tenantId(),
-                "MODEL_INFERENCE",
-                normalized.context().requestId(),
-                Map.of(
-                        "provider", capabilities.provider(),
+        auditPublisher.emit(normalized.context().actorId(), normalized.context().tenantId(),
+                "MODEL_INFERENCE", normalized.context().requestId(),
+                Map.of("provider", capabilities.provider(),
                         "model", capabilities.model(),
-                        "grounded", Boolean.toString(reasonedAnswer.grounded()),
-                        "citationCount", Integer.toString(reasonedAnswer.sourceCitations().size())));
+                        "promptChars", Integer.toString(prompt.length()),
+                        "inferenceMs", Long.toString(inferenceMs),
+                        "grounded", Boolean.toString(reasonedAnswer.grounded())));
 
         return new AiResponse(reasonedAnswer, metadata);
     }
 
     private AiRequest normalize(AiRequest request) {
-        if (request == null) {
-            throw new IllegalArgumentException("AI request is required");
-        }
-        if (request.question() == null || request.question().isBlank()) {
+        if (request == null) throw new IllegalArgumentException("AI request is required");
+        if (request.question() == null || request.question().isBlank())
             throw new IllegalArgumentException("Question is required");
-        }
         AiConversationContext context = request.context() == null
                 ? new AiConversationContext(List.of(), null, null, null, null)
-                : new AiConversationContext(
-                        request.context().messages(),
-                        request.context().actorId(),
-                        request.context().tenantId(),
-                        hasText(request.context().correlationId()) ? request.context().correlationId() : null,
-                        hasText(request.context().requestId()) ? request.context().requestId() : null);
-        return new AiRequest(
-                request.question().trim(),
-                request.model(),
-                request.searchFilter(),
-                context,
-                request.maxRetrievalResults() <= 0 ? 5 : Math.min(request.maxRetrievalResults(), 20),
-                request.retrievalScope(),
-                request.workspaceId());
-    }
-
-    private boolean hasText(String value) {
-        return value != null && !value.isBlank();
-    }
-
-    /** Reorders sources to prioritize documents mentioned in missingTitles. */
-    private List<SourceCitation> reorderEvidence(List<SourceCitation> sources, List<String> missingTitles) {
-        List<SourceCitation> prioritized = new java.util.ArrayList<>();
-        List<SourceCitation> rest = new java.util.ArrayList<>();
-        for (SourceCitation s : sources) {
-            boolean isMissing = missingTitles.stream().anyMatch(
-                    t -> s.title() != null && s.title().toLowerCase().contains(t.toLowerCase()));
-            if (isMissing) {
-                prioritized.add(s);
-            } else {
-                rest.add(s);
-            }
-        }
-        prioritized.addAll(rest);
-        return prioritized;
+                : request.context();
+        return new AiRequest(request.question().trim(), request.model(),
+                request.searchFilter(), context,
+                request.maxRetrievalResults() <= 0 ? 5
+                        : Math.min(request.maxRetrievalResults(), 20),
+                request.retrievalScope(), request.workspaceId());
     }
 }
