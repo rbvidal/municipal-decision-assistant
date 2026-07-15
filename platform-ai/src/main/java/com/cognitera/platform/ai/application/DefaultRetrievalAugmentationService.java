@@ -25,14 +25,17 @@ public class DefaultRetrievalAugmentationService implements RetrievalAugmentatio
     private final SearchFacade searchFacade;
     private final AuthorityGroundingService authorityGroundingService;
     private final RetrievalPlanner retrievalPlanner;
+    private final DomainGate domainGate;
 
     public DefaultRetrievalAugmentationService(
             SearchFacade searchFacade,
             AuthorityGroundingService authorityGroundingService,
-            RetrievalPlanner retrievalPlanner) {
+            RetrievalPlanner retrievalPlanner,
+            DomainGate domainGate) {
         this.searchFacade = searchFacade;
         this.authorityGroundingService = authorityGroundingService;
         this.retrievalPlanner = retrievalPlanner;
+        this.domainGate = domainGate;
     }
 
     @Override
@@ -52,12 +55,34 @@ public class DefaultRetrievalAugmentationService implements RetrievalAugmentatio
                 plan.maxResults());
         var page = searchFacade.search(searchQuery);
 
+        // ── Apply domain filter — DomainGate was previously computed but never applied ──
+        List<SearchResult> domainFiltered = page.results();
+        if (!page.results().isEmpty()) {
+            List<String> titles = page.results().stream()
+                    .map(r -> r.citation() != null ? r.citation().title() : null)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .toList();
+            if (!titles.isEmpty()) {
+                DomainGate.FilterResult domainResult = domainGate.filter(
+                        request.question(), titles);
+                Set<String> accepted = new LinkedHashSet<>(domainResult.accepted());
+                domainFiltered = page.results().stream()
+                        .filter(r -> r.citation() == null || r.citation().title() == null
+                                || accepted.contains(r.citation().title()))
+                        .toList();
+                log.info("DomainGate: {} accepted, {} rejected → {} results remain (was {})",
+                        accepted.size(), domainResult.rejected().size(),
+                        domainFiltered.size(), page.results().size());
+            }
+        }
+
         // ── Apply diversity constraint: max N chunks per document ──
         List<SearchResult> diverseResults = enforceDiversity(
-                page.results(), plan.maxChunksPerDocument());
+                domainFiltered, plan.maxChunksPerDocument());
 
-        log.info("Retrieval: {} total → {} diverse (max {}/doc) | domain={}",
-                page.results().size(), diverseResults.size(),
+        log.info("Retrieval: {} total → {} domain-filtered → {} diverse (max {}/doc) | domain={}",
+                page.results().size(), domainFiltered.size(), diverseResults.size(),
                 plan.maxChunksPerDocument(), plan.primaryDomain());
 
         // ── Build citations ──
@@ -87,7 +112,7 @@ public class DefaultRetrievalAugmentationService implements RetrievalAugmentatio
                 plan.retrievalStrategy(),
                 sources,
                 authorityResult.references(),
-                null, null, null);
+                null, null, null, null);
     }
 
     /**

@@ -44,6 +44,11 @@ public class PersistentChunkRepository implements ChunkRepository {
                 .toList();
     }
 
+    @Override
+    public int deleteByDocumentId(UUID documentId) {
+        return chunks.deleteByDocumentId(documentId);
+    }
+
     private int normalizeSize(int size) {
         if (size <= 0) {
             return 50;

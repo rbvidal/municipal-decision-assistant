@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Corpus Inventory — Kommunaler Verwaltungsassistent</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link th:href="@{/css/platform.css}" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;650;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+<div th:replace="~{fragments/layout :: nav}"></div>
+<main class="app-shell">
+
+    <div class="page-header flex-between">
+        <div>
+            <h1>Corpus Inventory</h1>
+            <p class="page-description">Vollständiges Manifest aller Rechtsquellen und deren Verarbeitungsstatus</p>
+        </div>
+        <div>
+            <a href="/admin/corpus-health" class="btn btn-secondary btn-sm">Corpus Health</a>
+        </div>
+    </div>
+
+    <!-- Summary -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+        <div class="stat-card">
+            <div class="stat-value" th:text="${summary.totalEntries()}">—</div>
+            <div class="stat-label">Manifest-Einträge</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" th:text="${summary.fullyEmbedded()}">—</div>
+            <div class="stat-label">Vollständig eingebettet</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" th:text="${summary.fullyIndexed()}">—</div>
+            <div class="stat-label">Vollständig indexiert</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" th:text="${summary.totalChunks() + ' / ' + summary.totalVectors()}">—</div>
+            <div class="stat-label">Chunks / Vektoren</div>
+        </div>
+    </div>
+
+    <!-- By Domain -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <div class="card">
+            <div class="card-header">Nach Rechtsgebiet</div>
+            <div class="card-body">
+                <table class="table" style="font-size:.85rem">
+                    <tr th:each="entry : ${byDomain}">
+                        <td th:text="${entry.key}"></td>
+                        <td class="mono" th:text="${entry.value}"></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">Nach Priorität</div>
+            <div class="card-body">
+                <table class="table" style="font-size:.85rem">
+                    <tr th:each="entry : ${byPriority}">
+                        <td th:text="${entry.key}"></td>
+                        <td class="mono" th:text="${entry.value}"></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Entries -->
+    <div class="section-title">Alle Manifest-Einträge</div>
+    <div class="card" style="overflow-x:auto">
+        <table class="table" style="font-size:.78rem;margin:0">
+            <thead>
+                <tr>
+                    <th>Titel</th>
+                    <th>Rechtsgebiet</th>
+                    <th>Gerichtsbarkeit</th>
+                    <th>Behörde</th>
+                    <th>Dokumenttyp</th>
+                    <th>Sprache</th>
+                    <th>Dateiformat</th>
+                    <th>Upload</th>
+                    <th>Ingestion</th>
+                    <th>Indexierung</th>
+                    <th>Embedding</th>
+                    <th>Seiten</th>
+                    <th>Chunks</th>
+                    <th>Vektoren</th>
+                    <th>Priorität</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="e : ${entries}">
+                    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" th:text="${e.title()}" th:attr="title=${e.title}"></td>
+                    <td th:text="${e.legalDomain()} ?: '—'"></td>
+                    <td th:text="${e.jurisdiction()} ?: '—'"></td>
+                    <td style="max-width:160px;font-size:.72rem" th:text="${e.authority()} ?: '—'"></td>
+                    <td th:text="${e.docType()} ?: '—'"></td>
+                    <td th:text="${e.language()} ?: '—'"></td>
+                    <td><code style="font-size:.7rem" th:text="${e.fileFormat()} ?: '—'"></code></td>
+                    <td><span class="status-badge" th:classappend="${e.uploadStatus().name() == 'UPLOADED'} ? 'ok' : 'warn'" th:text="${e.uploadStatus()}"></span></td>
+                    <td><span class="status-badge" th:classappend="${e.ingestionStatus().name() == 'COMPLETED'} ? 'ok' : 'warn'" th:text="${e.ingestionStatus()}"></span></td>
+                    <td><span class="status-badge" th:classappend="${e.indexingStatus().name() == 'INDEXED'} ? 'ok' : 'warn'" th:text="${e.indexingStatus()}"></span></td>
+                    <td><span class="status-badge" th:classappend="${e.embeddingStatus().name() == 'EMBEDDED'} ? 'ok' : 'warn'" th:text="${e.embeddingStatus()}"></span></td>
+                    <td th:text="${e.pageCount()} > 0 ? ${e.pageCount()} : '—'"></td>
+                    <td th:text="${e.chunkCount()}"></td>
+                    <td th:text="${e.vectorCount()}"></td>
+                    <td><span class="status-badge" th:classappend="${e.priority() == 'P1'} ? 'ok' : (${e.priority() == 'P2'} ? 'warn' : '')" th:text="${e.priority()} ?: '—'"></span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+</main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

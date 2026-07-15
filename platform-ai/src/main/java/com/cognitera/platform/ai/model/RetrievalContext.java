@@ -16,7 +16,8 @@ public record RetrievalContext(
         List<AuthorityReference> authorityReferences,
         FindingHierarchy findingHierarchy,
         SourceDossier sourceDossier,
-        ProceduralTimeline timeline
+        ProceduralTimeline timeline,
+        DecisionResult structuredDecision
 ) {
     public RetrievalContext {
         sources = sources == null ? List.of() : List.copyOf(sources);
@@ -33,6 +34,11 @@ public record RetrievalContext(
     }
 
     public RetrievalContext(String query, String retrievalStrategy, List<SourceCitation> sources) {
-        this(query, retrievalStrategy, sources, List.of(), null, null, null);
+        this(query, retrievalStrategy, sources, List.of(), null, null, null, null);
+    }
+
+    public RetrievalContext(String query, String retrievalStrategy, List<SourceCitation> sources,
+                           DecisionResult structuredDecision) {
+        this(query, retrievalStrategy, sources, List.of(), null, null, null, structuredDecision);
     }
 }

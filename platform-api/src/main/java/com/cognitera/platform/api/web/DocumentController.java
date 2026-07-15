@@ -6,6 +6,7 @@ import com.cognitera.platform.api.dto.document.DocumentPageResponse;
 import com.cognitera.platform.api.dto.document.DocumentResponse;
 import com.cognitera.platform.api.dto.document.UpdateDocumentMetadataRequest;
 import com.cognitera.platform.api.dto.document.DocumentContentResponse;
+import com.cognitera.platform.api.ingestion.BatchImportService;
 import com.cognitera.platform.document.api.AddDocumentVersionCommand;
 import com.cognitera.platform.document.api.CreateDocumentCommand;
 import com.cognitera.platform.document.api.DocumentFacade;
@@ -36,6 +37,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -54,16 +56,19 @@ public class DocumentController {
     private final ObjectProvider<DocumentLifecycleHook> lifecycleHook;
     private final TextExtractionService textExtractionService;
     private final ChunkManagementService chunks;
+    private final BatchImportService batchImportService;
 
     /**
      * Constructs the controller with required dependencies.
      */
     public DocumentController(DocumentFacade documents, ObjectProvider<DocumentLifecycleHook> lifecycleHook,
-                              TextExtractionService textExtractionService, ChunkManagementService chunks) {
+                              TextExtractionService textExtractionService, ChunkManagementService chunks,
+                              BatchImportService batchImportService) {
         this.documents = documents;
         this.lifecycleHook = lifecycleHook;
         this.textExtractionService = textExtractionService;
         this.chunks = chunks;
+        this.batchImportService = batchImportService;
     }
 
     /**
@@ -238,5 +243,38 @@ public class DocumentController {
                 document.id(), document.metadata().title(),
                 document.metadata().type() != null ? document.metadata().type().name() : "UNKNOWN",
                 version.versionNumber(), text, anchors);
+    }
+
+    /**
+     * Batch-imports documents from a directory tree.
+     * Each PDF should have a JSON metadata sidecar.
+     * Returns a summary of imported, skipped, and failed files.
+     */
+    @PostMapping("/batch-import")
+    public ResponseEntity<Map<String, Object>> batchImport(
+            @RequestParam String sourceDir,
+            @RequestParam(defaultValue = "") String tags) throws IOException {
+
+        Set<String> tagSet = tags.isBlank() ? Set.of() : Set.of(tags.split("\\s*,\\s*"));
+        BatchImportService.BatchResult result = batchImportService.importDirectory(sourceDir, tagSet);
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("batchId", result.batchId());
+        response.put("totalFiles", result.totalFiles());
+        response.put("imported", result.imported());
+        response.put("skippedDuplicates", result.skippedDuplicates());
+        response.put("skippedNewerVersion", result.skippedNewerVersion());
+        response.put("failedValidation", result.failedValidation());
+        response.put("failedImport", result.failedImport());
+        response.put("durationSeconds", result.durationSeconds());
+        response.put("errors", result.errors());
+        response.put("files", result.importedFiles().stream()
+                .map(f -> Map.of("fileName", f.fileName(),
+                        "documentId", f.documentId() != null ? f.documentId().toString() : "",
+                        "title", f.title(),
+                        "status", f.status()))
+                .toList());
+
+        return ResponseEntity.ok(response);
     }
 }

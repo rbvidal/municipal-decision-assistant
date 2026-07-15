@@ -59,7 +59,7 @@ public class RuleEngine {
 
         if (tableOpt.isPresent()) {
             var table = tableOpt.get();
-            var entryOpt = table.lookup(amount, type);
+            var entryOpt = table.lookup(amount, ThresholdTable.normalizeCategory(type));
             if (entryOpt.isPresent()) {
                 var entry = entryOpt.get();
                 procedure = entry.procedure();

@@ -16,4 +16,7 @@ public interface ChunkManagementService {
 
     /** Finds chunks matching the given filter with pagination. */
     List<DocumentChunk> findChunks(SearchFilter filter, int page, int size);
+
+    /** Deletes all chunks for a document, returning the count. */
+    int deleteByDocumentId(UUID documentId);
 }

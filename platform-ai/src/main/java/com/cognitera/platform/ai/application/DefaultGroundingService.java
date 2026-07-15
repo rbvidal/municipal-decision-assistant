@@ -3,6 +3,7 @@ package com.cognitera.platform.ai.application;
 import com.cognitera.platform.ai.api.GroundingService;
 import com.cognitera.platform.ai.model.AuthorityReference;
 import com.cognitera.platform.ai.model.ConfidenceProfile;
+import com.cognitera.platform.ai.model.DecisionResult;
 import com.cognitera.platform.ai.model.ReasonedAnswer;
 import com.cognitera.platform.ai.model.RetrievalContext;
 import com.cognitera.platform.ai.model.SourceCitation;
@@ -12,12 +13,20 @@ import java.util.*;
 
 /**
  * Grounds a raw AI answer against retrieved evidence by reattributing sources and computing confidence.
+ * Supports both retrieval-based grounding and structured (RuleEngine) grounding.
  */
 @Service
 public class DefaultGroundingService implements GroundingService {
 
     @Override
     public ReasonedAnswer ground(String rawAnswer, RetrievalContext retrievalContext) {
+        // ── Structured grounding (RuleEngine decisions) ──
+        if ("RULE_ENGINE".equals(retrievalContext.retrievalStrategy())
+                && retrievalContext.structuredDecision() != null) {
+            return groundStructured(rawAnswer, retrievalContext.structuredDecision());
+        }
+
+        // ── Retrieval grounding ──
         if (retrievalContext.sources().isEmpty() && retrievalContext.authorityReferences().isEmpty()) {
             return new ReasonedAnswer("Insufficient retrieved evidence to answer the question.",
                     List.of(), List.of(), 0.0, false);
@@ -117,5 +126,20 @@ public class DefaultGroundingService implements GroundingService {
             if (w.length() > 3 && answerTokens.contains(w)) hits++;
         }
         return Math.min(1.0, (double) hits / Math.max(answerTokens.size(), 1));
+    }
+
+    /**
+     * Grounds a RuleEngine answer against its structured decision.
+     * Structured knowledge (procurement tables, salary tables, travel allowances)
+     * is a first-class evidence type — no retrieved documents required.
+     */
+    private ReasonedAnswer groundStructured(String rawAnswer, DecisionResult decision) {
+        double conf = Math.min(1.0, decision.confidence());
+        ConfidenceProfile profile = new ConfidenceProfile(
+                conf, conf, conf, conf, conf,
+                "Structured knowledge: " + decision.source());
+
+        return new ReasonedAnswer(rawAnswer, List.of(), List.of(),
+                null, null, profile, true);
     }
 }

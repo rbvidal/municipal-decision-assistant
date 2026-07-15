@@ -1,0 +1,18 @@
+{
+  "title": "Bauordnung für Berlin (BauO Bln) — § 61 Genehmigungsfreie Vorhaben",
+  "short_name": "BauO Bln §61",
+  "legal_domain": "Baurecht",
+  "jurisdiction": "Berlin",
+  "authority": "Senatsverwaltung für Stadtentwicklung, Bauen und Wohnen Berlin",
+  "doc_type": "Gesetz",
+  "document_category": "primary_law",
+  "language": "DE",
+  "publication_date": "2025-06-17",
+  "effective_date": "2025-06-30",
+  "version_identifier": "2025-06-30",
+  "version_state": "current",
+  "source_url": "https://gesetze.berlin.de/baubln",
+  "tags": ["baurecht", "genehmigungsfrei", "verfahrensfrei", "carport", "garage"],
+  "priority": "P1",
+  "update_frequency": "alle 2-3 Jahre"
+}

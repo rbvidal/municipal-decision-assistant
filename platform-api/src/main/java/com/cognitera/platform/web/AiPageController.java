@@ -304,12 +304,13 @@ public class AiPageController {
     // ═══════════════════════════════════════════════════════════
 
     /** Parses the LLM structured output into named sections. */
-    private static Map<String, String> parseDecisionPackage(String text) {
+    static Map<String, String> parseDecisionPackage(String text) {
         Map<String, String> sections = new LinkedHashMap<>();
         if (text == null || text.isBlank()) return sections;
         String[] sectionNames = {
             "ENTSCHEIDUNG", "EMPFEHLUNG", "KURZBEGRUNDUNG", "BEGRUNDUNG",
-            "RECHTSGRUNDLAGEN", "ERFORDERLICHES VERFAHREN", "VERFAHREN",
+            "RECHTSGRUNDLAGE", "RECHTSGRUNDLAGEN",
+            "ERFORDERLICHES VERFAHREN", "VERFAHREN",
             "BENOTIGTE FORMULARE", "FORMULARE",
             "BENOTIGTE CHECKLISTEN", "CHECKLISTEN",
             "ZUSTANDIGE BEHORDE", "BEHORDE",
@@ -324,7 +325,7 @@ public class AiPageController {
             for (String name : sectionNames) {
                 if (trimmed.equalsIgnoreCase(name) || trimmed.startsWith(name + "\n") || trimmed.equals(name + ":")) {
                     if (lastKey != null) sections.put(lastKey, lastValue.toString().strip());
-                    lastKey = name;
+                    lastKey = "RECHTSGRUNDLAGE".equals(name) ? "RECHTSGRUNDLAGEN" : name;
                     lastValue = new StringBuilder();
                     foundSection = true;
                     // Consume rest of line after the section name
@@ -508,27 +509,45 @@ public class AiPageController {
     // Regulation cards with explainability
     // ═══════════════════════════════════════════════════════════
 
-    private List<Map<String, Object>> buildEvidenceCards(List<SourceCitation> sources, String workspaceId) {
-        List<Map<String, Object>> list = new ArrayList<>();
+    List<Map<String, Object>> buildEvidenceCards(List<SourceCitation> sources, String workspaceId) {
+        // Group sources by documentId (preferred) or title (fallback)
+        record DocGroup(UUID docId, String title, List<SourceCitation> chunks) {}
+        Map<UUID, DocGroup> byDocId = new LinkedHashMap<>();
+        for (SourceCitation s : sources) {
+            UUID key = s.documentId() != null ? s.documentId() : UUID.randomUUID();
+            byDocId.computeIfAbsent(key, k -> new DocGroup(key, s.title(), new ArrayList<>()))
+                   .chunks().add(s);
+        }
+
         Map<String, String> metaCache = buildDocMetaCache(sources);
-        double maxScore = 0.85;
-        for (int i = 0; i < sources.size(); i++) {
-            SourceCitation s = sources.get(i);
+        List<Map<String, Object>> list = new ArrayList<>();
+        int idx = 0;
+
+        for (DocGroup group : byDocId.values()) {
+            idx++;
+            List<SourceCitation> chunks = group.chunks();
+
+            // Select best chunk by confidence, then by excerpt length
+            SourceCitation best = chunks.stream()
+                    .max(Comparator.comparingDouble(SourceCitation::confidenceScore)
+                            .thenComparingInt(s -> s.excerpt() != null ? s.excerpt().length() : 0))
+                    .orElse(chunks.getFirst());
+
             Map<String, Object> m = new LinkedHashMap<>();
-            m.put("documentId", s.documentId());
-            m.put("chunkId", s.chunkId());
-            m.put("title", s.title());
-            m.put("excerpt", s.excerpt() != null ? s.excerpt() : "");
-            double score = maxScore - (i * 0.03);
-            m.put("score", String.format(java.util.Locale.US, "%.2f", Math.max(0.40, score)));
-            String meta = metaCache.getOrDefault(s.title(), "");
+            m.put("documentId", best.documentId());
+            m.put("chunkId", best.chunkId());
+            m.put("title", best.title());
+            m.put("excerpt", best.excerpt() != null ? best.excerpt() : "");
+            m.put("score", String.format(java.util.Locale.US, "%.2f", best.confidenceScore()));
+            String meta = metaCache.getOrDefault(best.title(), "");
             String[] parts = meta.split("\\|");
             m.put("authority", parts.length > 0 ? parts[0] : "Land Berlin");
             m.put("date", parts.length > 1 ? parts[1] : "2024");
             String cat = parts.length > 2 ? parts[2] : (workspaceId != null ? workspaceId : "regulation");
             m.put("category", cat);
             m.put("categoryLabel", categoryLabel(cat));
-            m.put("explainWhy", buildExplainWhy(s, workspaceId));
+            m.put("explainWhy", buildExplainWhy(best, workspaceId));
+            m.put("passageCount", chunks.size());
             list.add(m);
         }
         return list;
@@ -568,7 +587,9 @@ public class AiPageController {
         sb.append("<div class=\"regulation-section\">");
         sb.append("<h2 class=\"section-title\">Maßgebliche Vorschriften</h2>");
         sb.append("<div class=\"section-subtitle\">")
-          .append(sources.size()).append(" Dokumente gefunden und ausgewertet</div>");
+          .append(evidenceList.size()).append(" Vorschrift").append(evidenceList.size() != 1 ? "en" : "")
+          .append(" · ").append(sources.size()).append(" relevante Textstelle").append(sources.size() != 1 ? "n" : "")
+          .append(" gefunden</div>");
 
         for (int i = 0; i < evidenceList.size(); i++) {
             Map<String, Object> s = evidenceList.get(i);
@@ -586,8 +607,20 @@ public class AiPageController {
             sb.append("<span class=\"reg-meta-sep\">·</span>");
             sb.append("<span class=\"reg-tag\">").append(escapeHtml((String) s.get("categoryLabel"))).append("</span>");
             sb.append("</div>");
+
+            // Passage count
+            Object passageCount = s.get("passageCount");
+            int count = passageCount instanceof Integer ? (Integer) passageCount : 0;
+            if (count > 0) {
+                sb.append("<div class=\"reg-card-passages\">")
+                  .append(count).append(" relevante Fundstelle").append(count != 1 ? "n" : "")
+                  .append("</div>");
+            }
+
+            // Best excerpt
             if (s.get("excerpt") != null && !s.get("excerpt").toString().isBlank()) {
                 sb.append("<div class=\"reg-card-excerpt\">")
+                  .append("<span class=\"reg-card-excerpt-label\">Relevanteste Textstelle: </span>")
                   .append(escapeHtml(s.get("excerpt").toString())).append("</div>");
             }
             // Explainability

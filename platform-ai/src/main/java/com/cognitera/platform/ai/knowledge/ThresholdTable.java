@@ -30,6 +30,25 @@ public class ThresholdTable {
     }
 
     /**
+     * Normalizes a procurement category string to the canonical categories
+     * used by the threshold tables. IT-related categories (IT-Dienstleistung,
+     * Software, Cloud, etc.) map to "Lieferung/Dienstleistung". Bau-related
+     * categories map to "Bauleistung".
+     */
+    public static String normalizeCategory(String category) {
+        if (category == null) return null;
+        String lower = category.toLowerCase();
+        if (lower.startsWith("it") || lower.contains("software") || lower.contains("cloud")
+                || lower.contains("digital")) {
+            return "Lieferung/Dienstleistung";
+        }
+        if (lower.startsWith("bau") && !lower.equals("bauleistung")) {
+            return "Bauleistung";
+        }
+        return category;
+    }
+
+    /**
      * Determines the applicable procurement procedure for a given amount.
      */
     public Optional<ThresholdEntry> lookup(double amount, String categoryFilter) {

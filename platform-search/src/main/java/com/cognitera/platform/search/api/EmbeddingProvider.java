@@ -12,4 +12,7 @@ public interface EmbeddingProvider {
 
     /** Returns the dimensionality of the embedding vectors produced. */
     int dimension();
+
+    /** Returns a human-readable model identifier for embedding reference tracking. */
+    String modelName();
 }

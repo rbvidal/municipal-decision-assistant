@@ -81,6 +81,16 @@ public class DecisionRouter {
             }
         }
 
+        // ── Threshold inquiry (no amount, general question about thresholds) ──
+        if (isThresholdInquiry(lower)) {
+            var result = tryThresholdOverview();
+            if (result != null) {
+                log.info("DecisionRouter → RULE_ENGINE (threshold overview)");
+                return new RoutingResult(DecisionStrategy.RULE_ENGINE, result,
+                        "Threshold overview via structured AV §55 LHO table");
+            }
+        }
+
         // ── Fallback: retrieval ──
         log.info("DecisionRouter → HYBRID_RETRIEVAL (domain={})", domain.primary());
         return new RoutingResult(DecisionStrategy.HYBRID_RETRIEVAL, null,
@@ -99,13 +109,20 @@ public class DecisionRouter {
         return hasAny(q, "dienstreise", "reisekosten", "tagegeld", "verpflegung",
                 "verpflegungspauschale", "übernachtungspauschale",
                 "kilometerpauschale", "brkg", "lrkg")
-                && containsPattern(q, "\\d+[\\s-]*(stündig|stunden|stündige|stündiger)");
+                && containsPattern(q, "\\d+[\\s-]*(stündig|stündigen|stunden|stündige|stündiger)");
     }
 
     private boolean isProcurementQuery(String q) {
         return hasAny(q, "beschaffung", "vergabe", "direktauftrag", "ausschreibung",
                 "freihändig", "auftrag", "einkauf")
                 && containsPattern(q, "\\d{1,3}(?:\\.\\d{3})*(?:,\\d{2})?\\s*(€|euro|eur)");
+    }
+
+    /** Threshold inquiries without a specific Euro amount — e.g. "Welche Wertgrenzen gelten?" */
+    private boolean isThresholdInquiry(String q) {
+        return hasAny(q, "wertgrenze", "wertgrenzen", "schwellenwert", "schwellenwerte")
+                && hasAny(q, "direktauftrag", "av", "lho", "§55", "§ 55", "vergabe",
+                          "beschaffung", "ausschreibung");
     }
 
     // ── Lookups ──
@@ -174,7 +191,7 @@ public class DecisionRouter {
         var table = registry.findThresholdTable("AV §55 LHO");
         if (table.isEmpty()) return null;
 
-        var entry = table.get().lookup(amount, type);
+        var entry = table.get().lookup(amount, ThresholdTable.normalizeCategory(type));
         if (entry.isPresent()) {
             var e = entry.get();
             return new DecisionResult.ProcurementDecision(
@@ -187,6 +204,30 @@ public class DecisionRouter {
                     "Senatsverwaltung für Finanzen");
         }
         return null;
+    }
+
+    /** Returns all threshold entries from AV §55 LHO as a structured decision overview. */
+    private DecisionResult tryThresholdOverview() {
+        var table = registry.findThresholdTable("AV §55 LHO");
+        if (table.isEmpty()) return null;
+
+        var entries = table.get().allThresholds();
+        if (entries.isEmpty()) return null;
+
+        List<String> requirements = new ArrayList<>();
+        for (var e : entries) {
+            requirements.add(e.procedure() + " (" + String.format(java.util.Locale.US, "%.0f", e.minAmount())
+                    + " €, " + (e.category() != null ? e.category() : "Lieferung/Dienstleistung") + ")");
+        }
+
+        return new DecisionResult.ProcurementDecision(
+                "Die Wertgrenzen nach AV §55 LHO sind: " + String.join("; ", requirements),
+                "Vollständige Wertgrenzenübersicht",
+                table.get().sourceDocument(),
+                0.98, 0, "Übersicht", requirements,
+                "Lieferung/Dienstleistung",
+                table.get().effectiveFrom().toString(),
+                "Senatsverwaltung für Finanzen");
     }
 
     // ── Extraction helpers ──

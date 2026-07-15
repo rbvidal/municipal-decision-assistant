@@ -52,6 +52,11 @@ public class OllamaEmbeddingProvider implements EmbeddingProvider {
         return dimension;
     }
 
+    @Override
+    public String modelName() {
+        return model;
+    }
+
     private record OllamaEmbeddingResponse(float[] embedding) {
     }
 }

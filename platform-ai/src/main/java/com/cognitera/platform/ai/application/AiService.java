@@ -102,7 +102,7 @@ public class AiService implements AiOrchestrationService {
             assertNoRetrieval();
 
             DecisionResult decision = routing.decision();
-            String prompt = buildExplanationPrompt(decision);
+            String prompt = buildExplanationPrompt(normalized.question(), decision);
             profiler.record("prompt");
             log.info("RuleEngine prompt: {} chars | decision={} | source={}",
                     prompt.length(), decision.getClass().getSimpleName(), decision.source());
@@ -113,7 +113,7 @@ public class AiService implements AiOrchestrationService {
             log.info("LLM (explain): {} ms", System.currentTimeMillis() - startMs);
 
             retrievalContext = new RetrievalContext(normalized.question(),
-                    "RULE_ENGINE", List.of());
+                    "RULE_ENGINE", List.of(), decision);
 
         } else {
             // ═══════ HYBRID-RETRIEVAL PATH ═══════
@@ -181,35 +181,116 @@ public class AiService implements AiOrchestrationService {
 
     // ── Prompt ──
 
-    private String buildExplanationPrompt(DecisionResult decision) {
-        return """
-            Sie erklären eine bereits getroffene Verwaltungsentscheidung.
-            Diese Entscheidung wurde von einem Regelsystem getroffen.
-            Sie dürfen NICHT berechnen, interpretieren oder anzweifeln.
+    String buildExplanationPrompt(String question, DecisionResult decision) {
+        var values = decision.values();
 
-            ENTSCHEIDUNG
-            %s
+        Map<String, String> labels = new HashMap<>();
+        labels.put("amount", "Betrag");
+        labels.put("category", "Kategorie");
+        labels.put("procedure", "Verfahren");
+        labels.put("requirements", "Zusätzliche Pflichten");
+        labels.put("grade", "Entgeltgruppe");
+        labels.put("step", "Stufe");
+        labels.put("monthlyAmount", "Monatsbetrag");
+        labels.put("payScale", "Tarifvertrag");
+        labels.put("effectiveDate", "Gültig ab");
+        labels.put("hours", "Stunden");
+        labels.put("allowanceEur", "Tagegeld");
+        labels.put("description", "Beschreibung");
+        labels.put("feeType", "Gebührenart");
+        labels.put("regulation", "Regelung");
 
-            QUELLE
-            %s
+        StringBuilder sb = new StringBuilder();
 
-            BEGRÜNDUNG
-            %s
+        // ── FRAGE ──
+        sb.append("FRAGE\n").append(question).append("\n\n");
+        sb.append("↓\n\n");
 
-            BEHÖRDE
-            %s
+        // ── ANTWORT DES REGELSYSTEMS ──
+        sb.append("ANTWORT DES REGELSYSTEMS\n");
+        sb.append(buildDeterministicAnswer(decision)).append("\n\n");
+        sb.append("↓\n\n");
 
-            Format: KURZANTWORT (1 Satz), ENTSCHEIDUNG (2-3 Sätze), QUELLE.
-            Sprache: deutsche Kommunalverwaltung. Keine Rechtsberatung.
-            """.formatted(decision.decision(), decision.source(),
-                    decision.reason(), decision.authority());
+        // ── DETAILS DES REGELSYSTEMS ──
+        sb.append("DETAILS DES REGELSYSTEMS\n");
+
+        for (var entry : values.entrySet()) {
+            String label = labels.getOrDefault(entry.getKey(), entry.getKey());
+            Object val = entry.getValue();
+            if (val instanceof List<?> list) {
+                sb.append(label).append(":\n");
+                for (Object item : list) {
+                    sb.append("  - ").append(item).append("\n");
+                }
+            } else {
+                sb.append(label).append(": ").append(formatGermanValue(val)).append("\n");
+            }
+            sb.append("\n");
+        }
+
+        sb.append("Angewendete Schwelle: ").append(decision.reason()).append("\n");
+        sb.append("Rechtsgrundlage: ").append(decision.source()).append("\n");
+        sb.append("Behörde: ").append(decision.authority()).append("\n\n");
+
+        sb.append("↓\n\n");
+
+        // ── IHRE AUFGABE ──
+        sb.append("IHRE AUFGABE\n\n");
+        sb.append("Die Entscheidung wurde bereits deterministisch\n");
+        sb.append("vom Regelsystem getroffen.\n");
+        sb.append("Alle nachfolgenden Angaben sind verbindlich.\n");
+        sb.append("Ihre Aufgabe besteht ausschließlich darin,\n");
+        sb.append("die Entscheidung verständlich zu erklären.\n\n");
+        sb.append("Sie dürfen\n\n");
+        sb.append("- kein anderes Verfahren auswählen\n\n");
+        sb.append("- keine andere Schwelle anwenden\n\n");
+        sb.append("- keine eigenen Berechnungen durchführen\n\n");
+        sb.append("- keine eigene juristische Bewertung vornehmen\n\n");
+        sb.append("- keine zusätzlichen Vorschriften erfinden\n\n");
+        sb.append("Erklären Sie, warum das Regelsystem\n");
+        sb.append("genau diese Entscheidung getroffen hat.\n\n");
+        sb.append("Format: KURZANTWORT (1 Satz), ENTSCHEIDUNG (2-3 Sätze), RECHTSGRUNDLAGEN.\n");
+        sb.append("Sprache: deutsche Kommunalverwaltung. Keine Rechtsberatung.");
+
+        return sb.toString();
+    }
+
+    /** Formats a value using German locale conventions. Numeric values get German number formatting with €. */
+    private static String formatGermanValue(Object val) {
+        if (val instanceof Number num) {
+            var nf = java.text.NumberFormat.getInstance(java.util.Locale.GERMANY);
+            nf.setMinimumFractionDigits(2);
+            nf.setMaximumFractionDigits(2);
+            return nf.format(num.doubleValue()) + " €";
+        }
+        return val.toString();
+    }
+
+    /** Builds a short deterministic answer from the structured decision data. */
+    private static String buildDeterministicAnswer(DecisionResult decision) {
+        if (decision instanceof DecisionResult.ProcurementDecision pd) {
+            return "Das zulässige Verfahren ist:\n" + pd.procedure();
+        }
+        if (decision instanceof DecisionResult.SalaryDecision sd) {
+            return sd.grade() + " Stufe " + sd.step() + " =\n"
+                    + formatGermanValue(sd.monthlyAmount());
+        }
+        if (decision instanceof DecisionResult.TravelDecision td) {
+            return "Tagegeld: " + formatGermanValue(td.allowanceEur())
+                    + " (" + td.description() + ")";
+        }
+        if (decision instanceof DecisionResult.FeeDecision fd) {
+            return "Gebühr: " + formatGermanValue(fd.amount())
+                    + " (" + fd.feeType() + ")";
+        }
+        return decision.decision();
     }
 
     // ── Trace ──
 
     private void logExecutionTrace(DecisionStrategy strategy, RetrievalContext ctx,
                                     PipelineProfiler profiler) {
-        log.info("""
+        String trace = """
             ╔══════════════════════════════════════╗
             ║  EXECUTION TRACE                     ║
             ╠══════════════════════════════════════╣
@@ -221,7 +302,7 @@ public class AiService implements AiOrchestrationService {
             ║  LLM role:   %-24s ║
             ║  Sources:    %-24d ║
             ║  Total ms:   %-24d ║
-            ╚══════════════════════════════════════╝""",
+            ╚══════════════════════════════════════╝""".formatted(
             strategy,
             strategy == DecisionStrategy.HYBRID_RETRIEVAL ? "EXECUTED" : "SKIPPED",
             "SKIPPED",
@@ -230,6 +311,7 @@ public class AiService implements AiOrchestrationService {
             strategy == DecisionStrategy.RULE_ENGINE ? "explain-only" : "reason",
             ctx.sources().size(),
             profiler.totalMs());
+        log.info(trace);
     }
 
     private AiRequest normalize(AiRequest request) {

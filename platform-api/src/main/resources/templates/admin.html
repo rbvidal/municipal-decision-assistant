@@ -92,6 +92,26 @@
             <div style="font-weight:600;font-size:.88rem" th:text="#{admin.search}">Suche</div>
             <div class="text-xs text-secondary mt-2" th:text="#{admin.searchDesc}">Stichwort, Vektor, Hybrid</div>
         </a>
+        <a href="/admin/corpus-health" class="card" style="padding:16px 18px;text-decoration:none;color:inherit">
+            <div style="font-weight:600;font-size:.88rem" th:text="#{admin.corpusHealth}">Corpus Health</div>
+            <div class="text-xs text-secondary mt-2" th:text="#{admin.corpusHealthDesc}">Dokumente, Chunks, Qdrant Vektorindex</div>
+        </a>
+        <a href="/admin/corpus-inventory" class="card" style="padding:16px 18px;text-decoration:none;color:inherit">
+            <div style="font-weight:600;font-size:.88rem" th:text="#{admin.corpusInventory}">Corpus Inventory</div>
+            <div class="text-xs text-secondary mt-2" th:text="#{admin.corpusInventoryDesc}">Manifest & Verarbeitungsstatus</div>
+        </a>
+        <form action="/admin/corpus-inventory/generate" method="post" style="display:contents">
+            <button type="submit" class="card" style="padding:16px 18px;text-decoration:none;color:inherit;border:none;background:var(--gray-50);cursor:pointer;text-align:left;width:100%;display:block">
+                <div style="font-weight:600;font-size:.88rem" th:text="#{admin.genInventory}">Inventar generieren</div>
+                <div class="text-xs text-secondary mt-2" th:text="#{admin.genInventoryDesc}">CORPUS_INVENTORY.md schreiben</div>
+            </button>
+        </form>
+        <form action="/admin/corpus-release-report/generate" method="post" style="display:contents">
+            <button type="submit" class="card" style="padding:16px 18px;text-decoration:none;color:inherit;border:none;background:var(--gray-50);cursor:pointer;text-align:left;width:100%;display:block">
+                <div style="font-weight:600;font-size:.88rem" th:text="#{admin.genRelease}">Release Report</div>
+                <div class="text-xs text-secondary mt-2" th:text="#{admin.genReleaseDesc}">RELEASE_CORPUS_REPORT.md schreiben</div>
+            </button>
+        </form>
     </div>
 </main>
 

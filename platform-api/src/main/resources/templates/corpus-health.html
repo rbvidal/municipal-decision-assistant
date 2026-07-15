@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Corpus Health — Kommunaler Verwaltungsassistent</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link th:href="@{/css/platform.css}" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;650;700;800&display=swap" rel="stylesheet">
+    <style>
+        .health-green  { color: #16a34a; }
+        .health-yellow { color: #ca8a04; }
+        .health-red    { color: #dc2626; }
+        .stat-card {
+            border-radius: 8px; border: 1px solid var(--gray-200); padding: 16px 20px;
+            background: var(--gray-50); text-align: center;
+        }
+        .stat-value { font-size: 1.6rem; font-weight: 700; }
+        .stat-label { font-size: .78rem; color: var(--gray-500); margin-top: 4px; }
+        .warn-box {
+            border-left: 4px solid #f59e0b; background: #fffbeb;
+            padding: 12px 16px; margin-bottom: 8px; border-radius: 4px;
+            font-size: .85rem;
+        }
+        .warn-box.critical {
+            border-left-color: #dc2626; background: #fef2f2;
+        }
+        .cat-card {
+            border-radius: 8px; border: 1px solid var(--gray-200);
+            padding: 14px 16px; margin-bottom: 10px;
+            background: var(--gray-50);
+        }
+        .cat-card.cat-green  { border-left: 4px solid #16a34a; }
+        .cat-card.cat-yellow { border-left: 4px solid #ca8a04; }
+        .cat-card.cat-red    { border-left: 4px solid #dc2626; }
+        .cat-name { font-weight: 600; font-size: .85rem; }
+        .cat-items { font-size: .78rem; color: var(--gray-500); margin-top: 4px; }
+        .cat-badge {
+            font-size: .72rem; padding: 2px 8px; border-radius: 100px;
+            font-weight: 600; display: inline-block; margin-left: 8px;
+        }
+        .cat-badge.green { background: #dcfce7; color: #16a34a; }
+        .cat-badge.yellow { background: #fef3c7; color: #ca8a04; }
+        .cat-badge.red { background: #fee2e2; color: #dc2626; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/layout :: nav}"></div>
+<main class="app-shell">
+
+    <div class="page-header flex-between">
+        <div>
+            <h1>Corpus Health</h1>
+            <p class="page-description">Dokumentenkorpus, Chunk-Integrität und Vektorindex-Status</p>
+        </div>
+        <div>
+            <span th:if="${warningCount == 0}" class="status-badge ok">Gesund</span>
+            <span th:if="${warningCount > 0 and warningCount < 5}" class="status-badge warn" th:text="${warningCount} + ' Warnungen'">0 Warnungen</span>
+            <span th:if="${warningCount >= 5}" class="status-badge" style="background:#fee2e2;color:#dc2626" th:text="${warningCount} + ' Warnungen'">0 Warnungen</span>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
+        <div class="stat-card">
+            <div class="stat-value" th:text="${docCount}">—</div>
+            <div class="stat-label">Dokumente</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" th:text="${chunkCount}">—</div>
+            <div class="stat-label">Chunks</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" th:text="${embeddedCount}">—</div>
+            <div class="stat-label">Mit Embedding</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" th:text="${qdrantVectors}">—</div>
+            <div class="stat-label">Qdrant Vektoren</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" th:text="${embeddingCoverage + '%'}">—</div>
+            <div class="stat-label">Embedding Coverage</div>
+        </div>
+    </div>
+
+    <!-- Secondary Stats -->
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
+        <div class="stat-card">
+            <div class="stat-value" th:text="${missingEmbeddings}">—</div>
+            <div class="stat-label">Fehlende Embeddings</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" th:text="${avgChunksPerDoc}">—</div>
+            <div class="stat-label">&empty; Chunks / Dokument</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" th:text="${avgRetrievalScore}">—</div>
+            <div class="stat-label">&empty; Retrieval Score</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" th:text="${qdrantVectorDim}">—</div>
+            <div class="stat-label">&empty; Vektor-Dimension</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">
+                <span class="health-green" th:text="${greenCount}">0</span>
+                <span style="color:var(--gray-300)">/</span>
+                <span class="health-yellow" th:text="${yellowCount}">0</span>
+                <span style="color:var(--gray-300)">/</span>
+                <span class="health-red" th:text="${redCount}">0</span>
+            </div>
+            <div class="stat-label">Grün / Gelb / Rot</div>
+        </div>
+    </div>
+
+    <!-- Warnings -->
+    <div th:if="${hasWarnings}" style="margin-bottom:20px">
+        <div class="section-title">Warnungen</div>
+        <div th:each="w : ${warnings}">
+            <div class="warn-box" th:classappend="${#strings.contains(w, '0 Vektoren') or #strings.contains(w, 'nicht erreichbar')} ? 'critical'">
+                <strong>WARNING:</strong> <span th:text="${w}"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Health Categories -->
+    <div class="section-title">Korpus-Integrität</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px">
+        <div th:each="cat : ${categoryRows}" th:class="'cat-card cat-' + ${cat.statusClass()}">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+                <span class="cat-name" th:text="${cat.label()}">Category</span>
+                <span th:class="'cat-badge ' + ${cat.statusClass()}" th:text="${cat.isEmpty()} ? 'OK' : ${cat.count()}"></span>
+            </div>
+            <div th:if="${!cat.isEmpty()}" class="cat-items">
+                <span th:each="item, iter : ${cat.items()}" th:text="${item} + (iter.last ? '' : ', ')"></span>
+            </div>
+            <div th:if="${cat.isEmpty()}" class="cat-items">Keine Probleme gefunden.</div>
+        </div>
+    </div>
+
+    <!-- Manifest Summary -->
+    <div class="section-title">Manifest-Übersicht</div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
+        <div class="stat-card">
+            <div class="stat-value" th:text="${manifestSummary.totalEntries()}">—</div>
+            <div class="stat-label">Manifest-Einträge</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" th:text="${manifestSummary.withDocuments()}">—</div>
+            <div class="stat-label">Mit Dokument verknüpft</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" th:text="${manifestSummary.fullyEmbedded()}">—</div>
+            <div class="stat-label">Vollständig eingebettet</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" th:text="${manifestSummary.fullyIndexed()}">—</div>
+            <div class="stat-label">Vollständig indexiert</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" th:text="${manifestSummary.totalChunks()} + ' / ' + ${manifestSummary.totalVectors()}">—</div>
+            <div class="stat-label">Chunks / Vektoren (gesamt)</div>
+        </div>
+    </div>
+
+    <!-- Document Table -->
+    <div class="section-title">Dokumente</div>
+    <div class="card" style="overflow-x:auto">
+        <table class="table" style="font-size:.82rem;margin:0">
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Dokument</th>
+                    <th>Rechtsgebiet</th>
+                    <th>Behörde</th>
+                    <th>Kategorie</th>
+                    <th>Datum</th>
+                    <th>Sprache</th>
+                    <th>Seiten</th>
+                    <th>Chunks</th>
+                    <th>Mit Emb.</th>
+                    <th>Ohne Emb.</th>
+                    <th>Qdrant</th>
+                    <th>Vektoren</th>
+                    <th>Metadaten</th>
+                    <th>Letzte Indexierung</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="r : ${rows}">
+                    <td>
+                        <span th:if="${r.statusClass() == 'green'}" class="status-badge ok" th:text="${r.statusLabel()}">OK</span>
+                        <span th:if="${r.statusClass() == 'yellow'}" class="status-badge warn" th:text="${r.statusLabel()}">WARN</span>
+                        <span th:if="${r.statusClass() == 'red'}" class="status-badge" style="background:#fee2e2;color:#dc2626" th:text="${r.statusLabel()}">FAIL</span>
+                    </td>
+                    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" th:text="${r.title()}" th:attr="title=${r.title()}"></td>
+                    <td th:text="${r.legalDomain()}"></td>
+                    <td style="max-width:180px;font-size:.76rem" th:text="${r.authority()}"></td>
+                    <td><code style="font-size:.72rem" th:text="${r.category()}"></code></td>
+                    <td style="font-size:.76rem;white-space:nowrap" th:text="${r.date()}"></td>
+                    <td th:text="${r.language()}"></td>
+                    <td th:text="${r.pages()}"></td>
+                    <td th:text="${r.chunkCount()}"></td>
+                    <td th:text="${r.chunksWithEmbeddings()}"></td>
+                    <td th:text="${r.chunksWithoutEmbeddings()}"></td>
+                    <td>
+                        <span th:class="${r.indexedClass()}" th:text="${r.indexedDisplay()}">—</span>
+                    </td>
+                    <td th:text="${r.vectorCount()}"></td>
+                    <td>
+                        <span th:class="${r.metadataClass()}" th:text="${r.metadataPct()}">—</span>
+                    </td>
+                    <td style="font-size:.74rem;white-space:nowrap" th:text="${r.lastIndexing()}"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+</main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -153,7 +153,7 @@ public class OllamaRerankingProvider implements RerankingProvider {
     private double computeDomainBoost(String category, String domain) {
         if (category.equals(domain)) return 0.35;   // Strong boost for matching domain
         if ("unknown".equals(category)) return 0.0;  // No boost for unknown
-        return -0.15;                                 // Penalize non-matching
+        return -0.50;                                 // Penalize non-matching (increased from -0.15)
     }
 
     private String buildRerankPrompt(String query, List<RetrievalCandidate> candidates) {

@@ -1,0 +1,18 @@
+{
+  "title": "Bundesreisekostengesetz (BRKG) — Tagegeld, Übernachtungsgeld und Fahrtkosten",
+  "short_name": "BRKG",
+  "legal_domain": "Personalrecht",
+  "jurisdiction": "Bund",
+  "authority": "Bundesministerium des Innern und für Heimat",
+  "doc_type": "Gesetz",
+  "document_category": "primary_law",
+  "language": "DE",
+  "publication_date": "2025-01-01",
+  "effective_date": "2025-01-01",
+  "version_identifier": "2025-01-01",
+  "version_state": "current",
+  "source_url": "https://www.gesetze-im-internet.de/brkg/",
+  "tags": ["personalrecht", "dienstreise", "tagegeld", "übernachtung", "kilometerpauschale"],
+  "priority": "P1",
+  "update_frequency": "alle 2-3 Jahre"
+}

@@ -13,12 +13,15 @@ import com.cognitera.platform.search.api.VectorSearchProvider;
 import com.cognitera.platform.search.model.ChunkPosition;
 import com.cognitera.platform.search.model.ChunkType;
 import com.cognitera.platform.search.model.DocumentChunk;
+import com.cognitera.platform.search.model.MetadataFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /** Orchestrates document indexing by extracting text, chunking, generating embeddings, and storing in the vector DB. */
 public class DefaultIndexingOrchestrationService implements IndexingOrchestrationService {
@@ -87,11 +90,18 @@ public class DefaultIndexingOrchestrationService implements IndexingOrchestratio
 
     @Override
     public void deleteDocumentChunks(UUID documentId) {
+        chunkManagementService.deleteByDocumentId(documentId);
         vectorSearchProvider.deleteByDocument(documentId);
     }
 
     private DocumentChunk persistChunk(Document document, DocumentVersion version, DocumentChunk raw, int chunkIndex) {
         ChunkPosition position = raw.position();
+        String embedRef = embeddingProvider.modelName() + ":" + embeddingProvider.dimension() + "d";
+        log.info("persistChunk: embeddingRef={} doc={} chunk={}", embedRef, document.metadata().title(), chunkIndex);
+
+        // Extract § references from chunk text for citation metadata
+        List<MetadataFilter> attributes = extractLegalAttributes(raw.text());
+
         return chunkManagementService.indexChunk(new IndexChunkCommand(
                 document.id(),
                 version.versionNumber(),
@@ -109,8 +119,29 @@ public class DefaultIndexingOrchestrationService implements IndexingOrchestratio
                 "upload",
                 document.tenantId(),
                 document.createdAt(),
-                List.of(),
-                null
+                attributes,
+                embedRef
         ));
+    }
+
+    private static final Pattern SECTION_REF = Pattern.compile("§\\s*(\\d+[a-z]?)");
+    private static final Pattern CLAUSE_REF = Pattern.compile("\\((\\d+[a-z]?)\\)");
+    private static final Pattern ARTICLE_REF = Pattern.compile("Art\\.\\s*(\\d+[a-z]?)");
+
+    private List<MetadataFilter> extractLegalAttributes(String chunkText) {
+        List<MetadataFilter> attrs = new ArrayList<>();
+        Matcher sm = SECTION_REF.matcher(chunkText);
+        if (sm.find()) {
+            attrs.add(new MetadataFilter("section_ref", sm.group(1)));
+        }
+        Matcher cm = CLAUSE_REF.matcher(chunkText);
+        if (cm.find()) {
+            attrs.add(new MetadataFilter("clause_ref", cm.group(1)));
+        }
+        Matcher am = ARTICLE_REF.matcher(chunkText);
+        if (am.find()) {
+            attrs.add(new MetadataFilter("article_ref", am.group(1)));
+        }
+        return attrs;
     }
 }

@@ -14,6 +14,7 @@ import com.cognitera.platform.workspace.infrastructure.persistence.JpaWorkspaceR
 import com.cognitera.platform.workspace.api.WorkspaceDocumentLinkEntity;
 import com.cognitera.platform.workspace.api.WorkspaceEntity;
 import com.cognitera.platform.workspace.model.WorkspacePhase;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,8 +34,8 @@ import java.util.UUID;
 
 /**
  * Creates the demo knowledge corpus on first startup.
- * Seeds 3 workspaces with 20 pre-indexed documents across all three SCCON demo domains.
- * Idempotent — skips if demo data already exists.
+ * Seeds 3 workspaces with 23 pre-indexed documents across all three SCCON demo domains.
+ * Idempotent — verifies integrity and reuses intact demo data; deletes and recreates if corrupted.
  */
 @Component
 public class DemoDataInitializer implements ApplicationRunner {
@@ -42,6 +43,7 @@ public class DemoDataInitializer implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(DemoDataInitializer.class);
     private static final String DEMO_TAG = "sccon-demo";
     private static final String ACTOR = "demo-setup";
+    private static final int EXPECTED_DEMO_DOCUMENT_COUNT = 23;
 
     private final JpaDocumentEntityRepository documentRepo;
     private final JpaDocumentChunkRepository chunkRepo;
@@ -65,10 +67,13 @@ public class DemoDataInitializer implements ApplicationRunner {
     @Transactional
     public void run(ApplicationArguments args) {
         if (workspaceRepo.count() > 0) {
-            log.info("Demo data exists — {} workspaces. Repairing missing files.", workspaceRepo.count());
-            repairMissingFiles();
-            repairMissingEmbeddings();
-            return;
+            if (isDemoDataIntact()) {
+                log.info("Demo data intact — {} workspaces, {} documents. Skipping seed.",
+                        workspaceRepo.count(), countDemoDocuments());
+                return;
+            }
+            log.info("Demo data corrupted — deleting and recreating.");
+            deleteAllDemoData();
         }
         log.info("Seeding SCCON demo knowledge corpus...");
         Instant now = Instant.now();
@@ -81,59 +86,84 @@ public class DemoDataInitializer implements ApplicationRunner {
         indexAllDocuments();
     }
 
-    /** Rewrites demo document content to disk if the file is missing. */
-    private void repairMissingFiles() {
-        var docs = documentRepo.findAll();
-        int repaired = 0;
-        for (var doc : docs) {
-            for (var ver : doc.getVersions()) {
-                Path filePath = Path.of(ver.getStorageKey());
-                if (!Files.exists(filePath)) {
-                    try {
-                        Files.createDirectories(filePath.getParent());
-                        // Reconstruct content from chunks
-                        var chunkList = chunkRepo.findByDocumentIdOrderByChunkIndex(doc.getId());
-                        if (chunkList != null && !chunkList.isEmpty()) {
-                            StringBuilder sb = new StringBuilder();
-                            for (var c : chunkList) {
-                                if (c.getText() != null) sb.append(c.getText()).append(" ");
-                            }
-                            Files.writeString(filePath, sb.toString().trim());
-                            repaired++;
-                        }
-                    } catch (IOException e) {
-                        log.warn("Could not repair file for {}: {}", doc.getTitle(), e.getMessage());
+    /** Returns true if every demo document has exactly one version whose storage_key file exists on disk. */
+    private boolean isDemoDataIntact() {
+        List<DocumentEntity> demoDocs = findDemoDocuments();
+        if (demoDocs.size() != EXPECTED_DEMO_DOCUMENT_COUNT) {
+            log.info("Demo document count: {} (expected {})", demoDocs.size(), EXPECTED_DEMO_DOCUMENT_COUNT);
+            return false;
+        }
+        for (DocumentEntity doc : demoDocs) {
+            if (doc.getVersions().size() != 1) {
+                log.info("Document {} has {} versions (expected 1)", doc.getTitle(), doc.getVersions().size());
+                return false;
+            }
+            for (DocumentVersionEntity ver : doc.getVersions()) {
+                if (!Files.exists(Path.of(ver.getStorageKey()))) {
+                    log.info("Missing file for {}: {}", doc.getTitle(), ver.getStorageKey());
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /** Deletes all demo documents, chunks, Qdrant vectors, workspace links, workspaces, and stale files. */
+    private void deleteAllDemoData() {
+        List<DocumentEntity> demoDocs = findDemoDocuments();
+        List<WorkspaceEntity> demoWorkspaces = workspaceRepo.findByOwnerId(ACTOR);
+        IndexingOrchestrationService indexing = indexingOrchestrationProvider.getIfAvailable();
+
+        // 1. Delete Qdrant vectors and DB chunks for every demo document
+        for (DocumentEntity doc : demoDocs) {
+            if (indexing != null) {
+                try {
+                    indexing.deleteDocumentChunks(doc.getId());
+                } catch (Exception e) {
+                    log.warn("Failed to delete Qdrant vectors for {}: {}", doc.getTitle(), e.getMessage());
+                    chunkRepo.deleteByDocumentId(doc.getId());
+                }
+            } else {
+                chunkRepo.deleteByDocumentId(doc.getId());
+            }
+        }
+
+        // 2. Delete workspace-document links
+        for (WorkspaceEntity ws : demoWorkspaces) {
+            linkRepo.deleteAll(linkRepo.findByWorkspaceId(ws.getId()));
+        }
+
+        // 3. Delete documents (cascades to document_versions and document_tags)
+        documentRepo.deleteAll(demoDocs);
+
+        // 4. Delete workspaces
+        workspaceRepo.deleteAll(demoWorkspaces);
+
+        // 5. Clean stale files from disk
+        Path demoDir = Path.of("uploads", "demo-data");
+        if (Files.exists(demoDir)) {
+            File[] files = demoDir.toFile().listFiles();
+            if (files != null) {
+                for (File f : files) {
+                    if (!f.delete()) {
+                        log.debug("Could not delete stale file: {}", f.getAbsolutePath());
                     }
                 }
             }
         }
-        if (repaired > 0) log.info("Repaired {} missing demo files.", repaired);
+
+        log.info("Deleted {} demo documents, {} workspaces, and stale files from {}.",
+                demoDocs.size(), demoWorkspaces.size(), demoDir);
     }
 
-    /** Triggers embedding generation and Qdrant indexing for all demo documents that lack vectors. */
-    private void repairMissingEmbeddings() {
-        IndexingOrchestrationService indexing = indexingOrchestrationProvider.getIfAvailable();
-        if (indexing == null) {
-            log.warn("IndexingOrchestrationService not available — skipping embedding repair.");
-            return;
-        }
-        var docs = documentRepo.findAll();
-        int indexed = 0;
-        int failed = 0;
-        for (var doc : docs) {
-            if (doc.getStatus() != DocumentStatus.READY) continue;
-            try {
-                indexing.reindexDocument(doc.getId());
-                indexed++;
-                log.info("Re-indexed document: {} ({} chunks)", doc.getTitle(),
-                        chunkRepo.findByDocumentIdOrderByChunkIndex(doc.getId()).size());
-            } catch (Exception e) {
-                failed++;
-                log.warn("Failed to re-index document {}: {}", doc.getTitle(), e.getMessage());
-            }
-        }
-        log.info("Embedding repair complete: {} indexed, {} failed out of {} documents.",
-                indexed, failed, docs.size());
+    private List<DocumentEntity> findDemoDocuments() {
+        return documentRepo.findAll().stream()
+                .filter(doc -> doc.getTags().contains(DEMO_TAG))
+                .toList();
+    }
+
+    private int countDemoDocuments() {
+        return findDemoDocuments().size();
     }
 
     /** Indexes all newly created demo documents into Qdrant. */

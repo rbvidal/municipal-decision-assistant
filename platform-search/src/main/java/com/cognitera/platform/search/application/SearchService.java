@@ -134,6 +134,12 @@ public class SearchService implements SearchFacade, ChunkManagementService {
     }
 
     @Override
+    @Transactional
+    public int deleteByDocumentId(UUID documentId) {
+        return chunks.deleteByDocumentId(documentId);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<DocumentChunk> findChunks(SearchFilter filter, int page, int size) {
         return chunks.find(normalize(filter), Math.max(page, 0), normalizeSize(size));
