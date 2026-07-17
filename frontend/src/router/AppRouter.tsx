@@ -29,6 +29,9 @@ const NewCasePage = lazy(() =>
 const NotFoundPage = lazy(() =>
   import("../pages/not-found").then((m) => ({ default: m.NotFoundPage })),
 );
+const SearchPage = lazy(() =>
+  import("../pages/search").then((m) => ({ default: m.SearchPage })),
+);
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
@@ -50,6 +53,7 @@ export const AppRouter: React.FC = () => (
               <Route path="/work/:caseId" element={<CaseWorkspacePage />} />
               <Route path="/knowledge" element={<KnowledgePage />} />
               <Route path="/documents" element={<DocumentsPage />} />
+              <Route path="/search" element={<SearchPage />} />
               <Route path="/supervisor" element={<SupervisorPage />} />
               <Route path="/admin" element={<AdministrationPage />} />
               <Route path="/admin/corpus" element={<CorpusPage />} />
