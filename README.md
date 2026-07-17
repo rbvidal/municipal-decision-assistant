@@ -4,7 +4,7 @@
 
 Semantic search, document reasoning, and knowledge graphs applied to municipal documents: council resolutions, regulatory texts, building permits, development plans, citizen correspondence, and administrative regulations.
 
-**Java 21 · Spring Boot 3.3 · 9 Modules · 176 Tests**
+**Java 21 · Spring Boot 3.3 · 9 Modules · 133 Tests**
 
 ---
 
@@ -27,20 +27,27 @@ It demonstrates:
 ## Quick Start
 
 ```bash
-git clone https://github.com/cognitera/municipal-decision-assistant
+git clone https://github.com/rbvidal/municipal-decision-assistant
 cd municipal-decision-assistant
 
-# Start infrastructure (PostgreSQL + Qdrant)
+# Start all infrastructure (PostgreSQL + pgAdmin + Qdrant + Neo4j)
 docker compose up -d
 
-# Enable knowledge graph and GraphRAG
-docker compose --profile graph up -d
+# Build all modules (required before spring-boot:run)
+mvn clean install -DskipTests
 
-# Build and run
+# Start the backend
 mvn spring-boot:run -pl platform-api
+
+# In a separate terminal, start the frontend
+cd frontend
+npm install
+npm run dev
 ```
 
-Open `http://localhost:8080`. Upload municipal documents and start querying.
+Open `http://localhost:5173` for the React frontend or `http://localhost:8080` for the Thymeleaf UI. Upload municipal documents and start querying.
+
+**Prerequisites:** Java 21, Maven 3.9+, Node.js 24+, Docker, Ollama (optional — for local LLM inference).
 
 ---
 
@@ -120,10 +127,11 @@ mvn verify -Pui-tests         # + Playwright browser tests
 
 ## Requirements
 
-- Java 21
-- Maven 3.x
-- Docker (for PostgreSQL, Qdrant, Neo4j)
-- Ollama (optional — for local LLM inference)
+- Java 21 (Temurin recommended)
+- Maven 3.9+
+- Node.js 24+ and npm 11+
+- Docker (for PostgreSQL, pgAdmin, Qdrant, Neo4j)
+- Ollama (optional — for local LLM inference and embeddings; install separately)
 
 ---
 

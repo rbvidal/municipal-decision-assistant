@@ -107,11 +107,11 @@ public final class BenchmarkDataset {
 
             q("PROC-009", "Procurement",
                 "Welche Wertgrenzen gelten in Berlin für Direktaufträge nach AV §55 LHO?",
-                HYBRID_RETRIEVAL, 0.15, 0.65,
-                List.of("Vorschriften", "Dienststelle"),
+                RULE_ENGINE, 0.95, 0.99,
+                List.of("Wertgrenzen", "Direktauftrag", "AV", "LHO"),
                 List.of(),
-                null, false, true,
-                List.of("Wertgrenze", "Berlin", "LHO"),
+                "AV zu Paragraph 55 LHO Berlin", true, false,
+                List.of("Wertgrenze", "Berlin", "LHO", "Direktauftrag"),
                 List.of("BRKG", "TV-L", "Tagegeld", "BauGB", "Gehalt")),
 
             q("PROC-010", "Procurement",
