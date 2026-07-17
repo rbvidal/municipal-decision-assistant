@@ -23,7 +23,7 @@ import org.springframework.context.annotation.Configuration;
  * chunking, indexing orchestration) based on property-driven conditional activation.
  */
 @Configuration
-@EnableConfigurationProperties({QdrantProperties.class, OllamaEmbeddingConfig.class, ChunkingProperties.class})
+@EnableConfigurationProperties({QdrantProperties.class, OllamaEmbeddingConfig.class, ChunkingProperties.class, RetrievalProperties.class})
 public class SearchInfrastructureConfig {
 
     /**

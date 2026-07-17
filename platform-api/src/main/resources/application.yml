@@ -84,3 +84,7 @@ platform:
       max-chunk-size: ${CHUNKING_MAX_SIZE:500}
       overlap: ${CHUNKING_OVERLAP:50}
       strategy: ${CHUNKING_STRATEGY:SENTENCE}
+    retrieval:
+      keyword-weight: ${RETRIEVAL_KEYWORD_WEIGHT:0.40}
+      vector-weight: ${RETRIEVAL_VECTOR_WEIGHT:0.40}
+      confidence-weight: ${RETRIEVAL_CONFIDENCE_WEIGHT:0.20}
