@@ -1,12 +1,13 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { AppShell } from "../../layouts/AppShell";
 import { TopNavigation, TabBar, type NavModule, type TabItem } from "../../components/navigation";
 import { SearchBar, FilterPanel } from "../../components/search";
 import { DataTable, type DataTableColumn } from "../../components/data";
 import { DocumentVersionHistory } from "../../components/documents";
-import { Badge, Icon, PropertyGrid, ActionToolbar } from "../../components/common";
-import { mockDocuments, DOCUMENT_CATEGORIES, DOCUMENT_STATUS_COLORS } from "../../mocks/documents";
+import { Badge, Icon, PropertyGrid, ActionToolbar, Button } from "../../components/common";
+import { documentService } from "../../services/serviceFactory";
 import type { DocumentItem } from "../../mocks/documents";
+import { DOCUMENT_CATEGORIES, DOCUMENT_STATUS_COLORS } from "../../mocks/documents";
 import styles from "./DocumentsPage.module.css";
 
 const NAV_MODULES: NavModule[] = [
@@ -54,12 +55,72 @@ export const DocumentsPage: React.FC = React.memo(() => {
   const [typeFilter, setTypeFilter] = useState("Alle Dokumenttypen");
   const [statusFilter, setStatusFilter] = useState("Status: Alle");
   const [activeCategory, setActiveCategory] = useState("vorgangsdokumente");
-  const [selectedId, setSelectedId] = useState<string | null>("doc-1");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Upload state
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadTitle, setUploadTitle] = useState("");
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Document list from API
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const loadDocuments = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const data = await documentService.getAll();
+      setDocuments(data);
+    } catch (err) {
+      setLoadError((err as Error).message ?? "Fehler beim Laden der Dokumente");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDocuments();
+  }, [loadDocuments]);
+
+  const handleUpload = useCallback(async () => {
+    if (!uploadFile) return;
+    setIsUploading(true);
+    setUploadError(null);
+    setUploadSuccess(null);
+    setUploadProgress(0);
+    try {
+      const title = uploadTitle.trim() || undefined;
+      const result = await documentService.upload(uploadFile, title, setUploadProgress);
+      setUploadSuccess(`"${result.title}" hochgeladen (${result.status})`);
+      setUploadFile(null);
+      setUploadTitle("");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      loadDocuments();
+    } catch (err) {
+      setUploadError((err as Error).message ?? "Upload fehlgeschlagen");
+    } finally {
+      setIsUploading(false);
+    }
+  }, [uploadFile, uploadTitle, loadDocuments]);
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setUploadFile(file);
+    setUploadError(null);
+    setUploadSuccess(null);
+    setUploadProgress(null);
+  }, []);
 
   const filteredDocuments = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
-    return mockDocuments.filter((doc) => {
+    return documents.filter((doc) => {
       if (typeFilter !== "Alle Dokumenttypen" && doc.typ !== typeFilter) return false;
       if (statusFilter !== "Status: Alle" && doc.status !== statusFilter) return false;
       if (query) {
@@ -72,11 +133,11 @@ export const DocumentsPage: React.FC = React.memo(() => {
       }
       return true;
     });
-  }, [searchQuery, typeFilter, statusFilter]);
+  }, [documents, searchQuery, typeFilter, statusFilter]);
 
   const selectedDoc = useMemo(
-    () => mockDocuments.find((d) => d.id === selectedId) ?? null,
-    [selectedId],
+    () => documents.find((d) => d.id === selectedId) ?? null,
+    [documents, selectedId],
   );
 
   const handleSelectionChange = useCallback((ids: Set<string>) => {
@@ -170,6 +231,56 @@ export const DocumentsPage: React.FC = React.memo(() => {
           <TabBar tabs={SUB_TABS} activeTab={subTab} onTabChange={setSubTab} />
         </div>
 
+        {subTab === "upload" && (
+          <div className={styles.uploadSection}>
+            <h2 className={styles.uploadTitle}>Dokument hochladen</h2>
+            <div className={styles.uploadForm}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.docx,.txt,.html,.htm"
+                onChange={handleFileSelect}
+                className={styles.uploadFileInput}
+                aria-label="Datei auswählen"
+              />
+              <input
+                type="text"
+                value={uploadTitle}
+                onChange={(e) => setUploadTitle(e.target.value)}
+                placeholder="Titel (optional — Dateiname wird verwendet)"
+                className={styles.uploadTitleInput}
+                aria-label="Dokumenttitel"
+              />
+              <Button
+                onClick={handleUpload}
+                disabled={!uploadFile || isUploading}
+                variant="primary"
+              >
+                {isUploading ? "Lädt..." : "Hochladen"}
+              </Button>
+            </div>
+            {uploadProgress != null && isUploading && (
+              <div className={styles.uploadProgress}>
+                <div
+                  className={styles.uploadProgressBar}
+                  style={{ width: `${uploadProgress}%` }}
+                />
+                <span className={styles.uploadProgressText}>{uploadProgress}%</span>
+              </div>
+            )}
+            {uploadSuccess && (
+              <div className={styles.uploadSuccess} role="status">
+                {uploadSuccess}
+              </div>
+            )}
+            {uploadError && (
+              <div className={styles.uploadError} role="alert">
+                {uploadError}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className={styles.toolbarRow}>
           <div className={styles.searchWrap}>
             <SearchBar
@@ -206,11 +317,27 @@ export const DocumentsPage: React.FC = React.memo(() => {
           </div>
           <ActionToolbar
             actions={[
-              { id: "upload", label: "Hochladen", onClick: () => {}, variant: "primary" },
-              { id: "new", label: "Neues Dokument", onClick: () => {}, variant: "secondary" },
+              {
+                id: "upload",
+                label: "Hochladen",
+                onClick: () => setSubTab("upload"),
+                variant: "primary",
+              },
+              {
+                id: "refresh",
+                label: "Aktualisieren",
+                onClick: loadDocuments,
+                variant: "secondary",
+              },
             ]}
           />
         </div>
+
+        {loadError && (
+          <div className={styles.uploadError} role="alert">
+            {loadError}
+          </div>
+        )}
 
         {bulkCount > 0 && (
           <div className={styles.bulkBar}>
@@ -237,16 +364,20 @@ export const DocumentsPage: React.FC = React.memo(() => {
           </div>
 
           <div className={styles.tableCol}>
-            <DataTable
-              columns={columns}
-              data={filteredDocuments}
-              keyField="id"
-              emptyState="Keine Dokumente gefunden"
-              selectable
-              selectedIds={selectedIds}
-              onSelectionChange={handleSelectionChange}
-              onRowClick={(doc) => setSelectedId(doc.id)}
-            />
+            {isLoading ? (
+              <p className={styles.loadingText}>Dokumente werden geladen...</p>
+            ) : (
+              <DataTable
+                columns={columns}
+                data={filteredDocuments}
+                keyField="id"
+                emptyState="Keine Dokumente gefunden"
+                selectable
+                selectedIds={selectedIds}
+                onSelectionChange={handleSelectionChange}
+                onRowClick={(doc) => setSelectedId(doc.id)}
+              />
+            )}
           </div>
 
           {selectedDoc && (

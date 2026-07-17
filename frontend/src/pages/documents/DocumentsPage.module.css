@@ -238,6 +238,84 @@
   color: var(--color-gray-600);
 }
 
+/* ── Upload section ── */
+
+.uploadSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--color-white);
+}
+
+.uploadTitle {
+  font-size: var(--text-body-size);
+  font-weight: 600;
+  color: var(--color-gray-900);
+  margin: 0;
+}
+
+.uploadForm {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.uploadFileInput {
+  font-size: var(--text-caption-size);
+  color: var(--color-gray-700);
+}
+
+.uploadTitleInput {
+  flex: 1;
+  height: var(--size-button-sm);
+  padding: 0 var(--space-3);
+  border: var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: var(--text-caption-size);
+  font-family: var(--font-sans);
+  color: var(--color-gray-700);
+}
+
+.uploadProgress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.uploadProgressBar {
+  height: 4px;
+  background: var(--color-primary-500);
+  border-radius: var(--radius-sm);
+  transition: width 0.2s;
+}
+
+.uploadProgressText {
+  font-size: var(--text-caption-size);
+  color: var(--color-gray-500);
+}
+
+.uploadSuccess {
+  font-size: var(--text-caption-size);
+  color: var(--color-success-700);
+  font-weight: 500;
+}
+
+.uploadError {
+  font-size: var(--text-caption-size);
+  color: var(--color-error-700);
+  font-weight: 500;
+}
+
+.loadingText {
+  font-size: var(--text-caption-size);
+  color: var(--color-gray-500);
+  padding: var(--space-4);
+  text-align: center;
+}
+
 @media (max-width: 1280px) {
   .layoutThreeCol {
     grid-template-columns: 220px 1fr;

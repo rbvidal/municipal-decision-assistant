@@ -1,10 +1,25 @@
 import type { DocumentItem } from "../mocks/documents";
 import { mockDocuments } from "../mocks/documents";
 
+export interface DocumentUploadResult {
+  id: string;
+  title: string;
+  type: string;
+  status: string;
+  fileName: string;
+  sizeBytes: number;
+  ingestionPending: boolean;
+}
+
 export interface DocumentService {
   getAll(): Promise<DocumentItem[]>;
   getById(id: string): Promise<DocumentItem | null>;
   search(query: string): Promise<DocumentItem[]>;
+  upload(
+    file: File,
+    title?: string,
+    onProgress?: (pct: number) => void,
+  ): Promise<DocumentUploadResult>;
 }
 
 export const mockDocumentService: DocumentService = {
@@ -19,5 +34,8 @@ export const mockDocumentService: DocumentService = {
         d.vorgangId.toLowerCase().includes(q) ||
         d.buerger.toLowerCase().includes(q),
     );
+  },
+  upload: async () => {
+    throw new Error("Mock upload not implemented — use REST service");
   },
 };
