@@ -1,6 +1,6 @@
-import React from 'react';
-import { AppShell } from '../AppShell';
-import styles from './CaseWorkspaceLayout.module.css';
+import React from "react";
+import { AppShell } from "../AppShell";
+import styles from "./CaseWorkspaceLayout.module.css";
 
 interface CaseWorkspaceLayoutProps {
   children: React.ReactNode;
@@ -12,30 +12,30 @@ interface CaseWorkspaceLayoutProps {
   sidebarCollapsed?: boolean;
 }
 
-export const CaseWorkspaceLayout: React.FC<CaseWorkspaceLayoutProps> = React.memo(({
-  children,
-  topNavigation,
-  breadcrumb,
-  caseHeader,
-  tabBar,
-  sidebar,
-  sidebarCollapsed = false,
-}) => (
-  <AppShell
-    topNavigation={topNavigation}
-    breadcrumb={breadcrumb}
-    sidebar={sidebar}
-    sidebarCollapsed={sidebarCollapsed}
-    sidebarWidth={320}
-  >
-    <div className={styles.workspace}>
-      {caseHeader && <div className={styles.caseHeader}>{caseHeader}</div>}
-      {tabBar && <nav className={styles.tabBar}>{tabBar}</nav>}
-      <div className={styles.content}>
-        {children}
+export const CaseWorkspaceLayout: React.FC<CaseWorkspaceLayoutProps> = React.memo(
+  ({
+    children,
+    topNavigation,
+    breadcrumb,
+    caseHeader,
+    tabBar,
+    sidebar,
+    sidebarCollapsed = false,
+  }) => (
+    <AppShell
+      topNavigation={topNavigation}
+      breadcrumb={breadcrumb}
+      sidebar={sidebar}
+      sidebarCollapsed={sidebarCollapsed}
+      sidebarWidth={320}
+    >
+      <div className={styles.workspace}>
+        {caseHeader && <div className={styles.caseHeader}>{caseHeader}</div>}
+        {tabBar && <nav className={styles.tabBar}>{tabBar}</nav>}
+        <div className={styles.content}>{children}</div>
       </div>
-    </div>
-  </AppShell>
-));
+    </AppShell>
+  ),
+);
 
-CaseWorkspaceLayout.displayName = 'CaseWorkspaceLayout';
+CaseWorkspaceLayout.displayName = "CaseWorkspaceLayout";

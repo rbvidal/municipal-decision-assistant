@@ -9,7 +9,7 @@ export {
   mockChecklistProposals,
   mockCaseNotes,
   DOCUMENT_TYPES,
-} from './data';
+} from "./data";
 
 export type {
   CaseDetails,
@@ -20,4 +20,4 @@ export type {
   RegulationItemData,
   ChecklistProposalData,
   CaseNoteData,
-} from './data';
+} from "./data";

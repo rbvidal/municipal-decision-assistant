@@ -1,8 +1,8 @@
-import React, { useCallback } from 'react';
-import { cn } from '../../../utils';
-import { Skeleton } from '../../common/Skeleton';
-import { EmptyState } from '../../common/EmptyState';
-import styles from './DataTable.module.css';
+import React, { useCallback } from "react";
+import { cn } from "../../../utils";
+import { Skeleton } from "../../common/Skeleton";
+import { EmptyState } from "../../common/EmptyState";
+import styles from "./DataTable.module.css";
 
 export interface DataTableColumn<T> {
   key: string;
@@ -10,7 +10,7 @@ export interface DataTableColumn<T> {
   render: (item: T) => React.ReactNode;
   sortable?: boolean;
   width?: string;
-  align?: 'left' | 'right' | 'center';
+  align?: "left" | "right" | "center";
   className?: string;
 }
 
@@ -32,7 +32,7 @@ export function DataTable<T extends Record<string, any>>({
   columns,
   data,
   keyField,
-  emptyState = 'Keine Einträge gefunden',
+  emptyState = "Keine Einträge gefunden",
   isLoading = false,
   onRowClick,
   striped = true,
@@ -41,8 +41,13 @@ export function DataTable<T extends Record<string, any>>({
   selectedIds,
   onSelectionChange,
 }: DataTableProps<T>) {
-  const allSelected = selectable && selectedIds && data.length > 0 && data.every((item) => selectedIds.has(String(item[keyField])));
-  const someSelected = selectable && selectedIds && data.some((item) => selectedIds.has(String(item[keyField])));
+  const allSelected =
+    selectable &&
+    selectedIds &&
+    data.length > 0 &&
+    data.every((item) => selectedIds.has(String(item[keyField])));
+  const someSelected =
+    selectable && selectedIds && data.some((item) => selectedIds.has(String(item[keyField])));
 
   const handleSelectAll = useCallback(() => {
     if (!onSelectionChange || !selectedIds) return;
@@ -71,11 +76,15 @@ export function DataTable<T extends Record<string, any>>({
         <table className={styles.table} role="table">
           <thead>
             <tr>
-              {selectable && <th className={styles.checkCell}><span className={styles.checkbox} /></th>}
+              {selectable && (
+                <th className={styles.checkCell}>
+                  <span className={styles.checkbox} />
+                </th>
+              )}
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  style={{ width: col.width, textAlign: col.align ?? 'left' }}
+                  style={{ width: col.width, textAlign: col.align ?? "left" }}
                   className={col.className}
                 >
                   {col.header}
@@ -112,7 +121,9 @@ export function DataTable<T extends Record<string, any>>({
                   type="checkbox"
                   className={styles.checkbox}
                   checked={allSelected ?? false}
-                  ref={(el) => { if (el) el.indeterminate = (someSelected ?? false) && !(allSelected ?? false); }}
+                  ref={(el) => {
+                    if (el) el.indeterminate = (someSelected ?? false) && !(allSelected ?? false);
+                  }}
                   onChange={handleSelectAll}
                   aria-label="Alle auswählen"
                 />
@@ -121,7 +132,7 @@ export function DataTable<T extends Record<string, any>>({
             {columns.map((col) => (
               <th
                 key={col.key}
-                style={{ width: col.width, textAlign: col.align ?? 'left' }}
+                style={{ width: col.width, textAlign: col.align ?? "left" }}
                 className={cn(col.sortable && styles.sortable, col.className)}
                 scope="col"
               >
@@ -146,10 +157,15 @@ export function DataTable<T extends Record<string, any>>({
                 tabIndex={onRowClick ? 0 : undefined}
                 onKeyDown={
                   onRowClick
-                    ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRowClick(item); } }
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onRowClick(item);
+                        }
+                      }
                     : undefined
                 }
-                role={onRowClick ? 'button' : undefined}
+                role={onRowClick ? "button" : undefined}
                 aria-label={onRowClick ? `Zeile ${key} öffnen` : undefined}
               >
                 {selectable && (
@@ -167,7 +183,7 @@ export function DataTable<T extends Record<string, any>>({
                 {columns.map((col) => (
                   <td
                     key={col.key}
-                    style={{ textAlign: col.align ?? 'left' }}
+                    style={{ textAlign: col.align ?? "left" }}
                     className={col.className}
                   >
                     {col.render(item)}
@@ -182,4 +198,4 @@ export function DataTable<T extends Record<string, any>>({
   );
 }
 
-DataTable.displayName = 'DataTable';
+DataTable.displayName = "DataTable";

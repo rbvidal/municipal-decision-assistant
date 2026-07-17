@@ -1,8 +1,28 @@
-.dot { display: inline-block; border-radius: 50%; flex-shrink: 0; }
-.sm { width: 6px; height: 6px; }
-.md { width: 8px; height: 8px; }
-.success { background: var(--color-dot-green); }
-.warning { background: var(--color-dot-amber); }
-.error   { background: var(--color-dot-red); }
-.info    { background: var(--color-primary-500); }
-.neutral { background: var(--color-dot-gray); }
+.dot {
+  display: inline-block;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sm {
+  width: 6px;
+  height: 6px;
+}
+.md {
+  width: 8px;
+  height: 8px;
+}
+.success {
+  background: var(--color-dot-green);
+}
+.warning {
+  background: var(--color-dot-amber);
+}
+.error {
+  background: var(--color-dot-red);
+}
+.info {
+  background: var(--color-primary-500);
+}
+.neutral {
+  background: var(--color-dot-gray);
+}

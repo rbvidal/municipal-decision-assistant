@@ -1,5 +1,5 @@
-import type { Wissenspaket, QdrantMetrics, BackgroundJob, AuditLog } from '../mocks/corpus';
-import { mockPackages, mockMetrics, mockBackgroundJobs, mockAuditLogs } from '../mocks/corpus';
+import type { Wissenspaket, QdrantMetrics, BackgroundJob, AuditLog } from "../mocks/corpus";
+import { mockPackages, mockMetrics, mockBackgroundJobs, mockAuditLogs } from "../mocks/corpus";
 
 export interface CorpusService {
   getPackages(): Promise<Wissenspaket[]>;

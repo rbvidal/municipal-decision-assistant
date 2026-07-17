@@ -1,1 +1,1 @@
-export { CorpusPage } from './CorpusPage';
+export { CorpusPage } from "./CorpusPage";

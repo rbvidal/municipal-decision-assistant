@@ -1,5 +1,19 @@
-import type { CaseDetails, ChecklistItemData, DocumentItemData, TimelineEntryData, CaseNoteData, WorkflowStep } from '../mocks/case-workspace';
-import { mockCase, mockWorkflowSteps, mockChecklistItems, mockDocuments, mockTimelineEvents, mockCaseNotes } from '../mocks/case-workspace';
+import type {
+  CaseDetails,
+  ChecklistItemData,
+  DocumentItemData,
+  TimelineEntryData,
+  CaseNoteData,
+  WorkflowStep,
+} from "../mocks/case-workspace";
+import {
+  mockCase,
+  mockWorkflowSteps,
+  mockChecklistItems,
+  mockDocuments,
+  mockTimelineEvents,
+  mockCaseNotes,
+} from "../mocks/case-workspace";
 
 export interface CaseService {
   getCase(id: string): Promise<CaseDetails>;

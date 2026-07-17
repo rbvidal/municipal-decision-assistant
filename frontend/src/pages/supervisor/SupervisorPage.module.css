@@ -227,9 +227,15 @@
   flex-shrink: 0;
 }
 
-.verificationSuccess { color: var(--color-success-700); }
-.verificationWarning { color: var(--color-warning-700); }
-.verificationError { color: var(--color-error-700); }
+.verificationSuccess {
+  color: var(--color-success-700);
+}
+.verificationWarning {
+  color: var(--color-warning-700);
+}
+.verificationError {
+  color: var(--color-error-700);
+}
 
 .verificationContent {
   display: flex;
@@ -275,9 +281,15 @@
   margin-top: var(--space-1);
 }
 
-.consistencySuccess { background: var(--color-dot-green); }
-.consistencyWarning { background: var(--color-dot-amber); }
-.consistencyError { background: var(--color-dot-red); }
+.consistencySuccess {
+  background: var(--color-dot-green);
+}
+.consistencyWarning {
+  background: var(--color-dot-amber);
+}
+.consistencyError {
+  background: var(--color-dot-red);
+}
 
 /* ── Right Sidebar ── */
 

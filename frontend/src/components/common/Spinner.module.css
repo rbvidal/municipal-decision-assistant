@@ -11,6 +11,15 @@
   animation: var(--anim-spin);
 }
 
-.sm .dot { width: 16px; height: 16px; }
-.md .dot { width: 20px; height: 20px; }
-.lg .dot { width: 32px; height: 32px; }
+.sm .dot {
+  width: 16px;
+  height: 16px;
+}
+.md .dot {
+  width: 20px;
+  height: 20px;
+}
+.lg .dot {
+  width: 32px;
+  height: 32px;
+}

@@ -1,1 +1,1 @@
-export { NotesWidget } from './NotesWidget';
+export { NotesWidget } from "./NotesWidget";

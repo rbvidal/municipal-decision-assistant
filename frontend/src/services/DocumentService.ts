@@ -1,5 +1,5 @@
-import type { DocumentItem } from '../mocks/documents';
-import { mockDocuments } from '../mocks/documents';
+import type { DocumentItem } from "../mocks/documents";
+import { mockDocuments } from "../mocks/documents";
 
 export interface DocumentService {
   getAll(): Promise<DocumentItem[]>;
@@ -13,9 +13,11 @@ export const mockDocumentService: DocumentService = {
   search: async (query: string) => {
     const q = query.toLowerCase().trim();
     if (!q) return mockDocuments;
-    return mockDocuments.filter((d) =>
-      d.name.toLowerCase().includes(q) ||
-      d.vorgangId.toLowerCase().includes(q) ||
-      d.buerger.toLowerCase().includes(q));
+    return mockDocuments.filter(
+      (d) =>
+        d.name.toLowerCase().includes(q) ||
+        d.vorgangId.toLowerCase().includes(q) ||
+        d.buerger.toLowerCase().includes(q),
+    );
   },
 };

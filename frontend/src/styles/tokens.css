@@ -6,53 +6,53 @@
 
 :root {
   /* ── Colors: Primary ── */
-  --color-primary-900: #1A365D;
-  --color-primary-700: #2B6CB0;
-  --color-primary-500: #3182CE;
-  --color-primary-100: #EBF8FF;
-  --color-primary-50: #F7FAFC;
+  --color-primary-900: #1a365d;
+  --color-primary-700: #2b6cb0;
+  --color-primary-500: #3182ce;
+  --color-primary-100: #ebf8ff;
+  --color-primary-50: #f7fafc;
 
   /* ── Colors: Neutral / Gray ── */
-  --color-gray-900: #1A1A2E;
-  --color-gray-700: #4A5568;
+  --color-gray-900: #1a1a2e;
+  --color-gray-700: #4a5568;
   --color-gray-600: #718096;
-  --color-gray-500: #A0AEC0;
-  --color-gray-400: #CBD5E0;
-  --color-gray-300: #E2E8F0;
-  --color-gray-200: #EDF2F7;
-  --color-gray-100: #F7FAFC;
-  --color-gray-50: #FAFBFC;
+  --color-gray-500: #a0aec0;
+  --color-gray-400: #cbd5e0;
+  --color-gray-300: #e2e8f0;
+  --color-gray-200: #edf2f7;
+  --color-gray-100: #f7fafc;
+  --color-gray-50: #fafbfc;
 
   /* ── Colors: Semantic ── */
   --color-success-700: #276749;
-  --color-success-100: #F0FFF4;
-  --color-success-50: #E6FFED;
+  --color-success-100: #f0fff4;
+  --color-success-50: #e6ffed;
 
-  --color-warning-700: #975A16;
-  --color-warning-100: #FFFFF0;
-  --color-warning-50: #FFFBEB;
+  --color-warning-700: #975a16;
+  --color-warning-100: #fffff0;
+  --color-warning-50: #fffbeb;
 
-  --color-error-700: #9B2C2C;
-  --color-error-100: #FFF5F5;
-  --color-error-50: #FED7D7;
+  --color-error-700: #9b2c2c;
+  --color-error-100: #fff5f5;
+  --color-error-50: #fed7d7;
 
-  --color-info-700: #2B6CB0;
-  --color-info-100: #EBF8FF;
-  --color-info-50: #E3F2FD;
+  --color-info-700: #2b6cb0;
+  --color-info-100: #ebf8ff;
+  --color-info-50: #e3f2fd;
 
   /* ── Colors: Background ── */
-  --color-white: #FFFFFF;
-  --color-bg-page: #FAFBFC;
+  --color-white: #ffffff;
+  --color-bg-page: #fafbfc;
 
   /* ── Colors: Status Dots ── */
-  --color-dot-green: #38A169;
-  --color-dot-amber: #D69E2E;
-  --color-dot-red: #E53E3E;
-  --color-dot-gray: #A0AEC0;
+  --color-dot-green: #38a169;
+  --color-dot-amber: #d69e2e;
+  --color-dot-red: #e53e3e;
+  --color-dot-gray: #a0aec0;
 
   /* ── Typography: Font Family ── */
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Cascadia Code', monospace;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", monospace;
 
   /* ── Typography: Font Size ── */
   --text-h1-size: 24px;
@@ -156,10 +156,17 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }

@@ -1,5 +1,15 @@
-import type { SystemHealth, BackgroundJob, AuditLogEntry, DepartmentConfig } from '../mocks/administration';
-import { mockSystemHealth, mockBackgroundJobs, mockAuditLogs, mockDepartments } from '../mocks/administration';
+import type {
+  SystemHealth,
+  BackgroundJob,
+  AuditLogEntry,
+  DepartmentConfig,
+} from "../mocks/administration";
+import {
+  mockSystemHealth,
+  mockBackgroundJobs,
+  mockAuditLogs,
+  mockDepartments,
+} from "../mocks/administration";
 
 export interface AdminService {
   getSystemHealth(): Promise<SystemHealth>;

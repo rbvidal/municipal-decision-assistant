@@ -79,13 +79,13 @@
 }
 
 .pillDanger {
-  background: #FFE8E8;
-  color: #CC4444;
+  background: #ffe8e8;
+  color: #cc4444;
 }
 
 .pillSuccess {
-  background: #E6F4EA;
-  color: #2E7D32;
+  background: #e6f4ea;
+  color: #2e7d32;
 }
 
 .pillInfo {

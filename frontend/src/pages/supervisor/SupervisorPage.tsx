@@ -1,46 +1,47 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { AppShell } from '../../layouts/AppShell';
-import { TopNavigation, type NavModule } from '../../components/navigation';
-import {
-  Panel, Badge, Button, Icon, PropertyGrid,
-} from '../../components/common';
+import React, { useState, useCallback, useMemo } from "react";
+import { AppShell } from "../../layouts/AppShell";
+import { TopNavigation, type NavModule } from "../../components/navigation";
+import { Panel, Badge, Button, Icon } from "../../components/common";
 import {
   ApprovalTimeline,
   ApprovalRecommendation,
   ApprovalComments,
   ApprovalRiskCard,
   PrecedentCard,
-} from '../../components/approval';
-import { supervisorCases } from '../../mocks/supervisor';
-import type { SupervisorCase } from '../../mocks/supervisor';
-import styles from './SupervisorPage.module.css';
+} from "../../components/approval";
+import { supervisorCases } from "../../mocks/supervisor";
+import styles from "./SupervisorPage.module.css";
 
 const NAV_MODULES: NavModule[] = [
-  { id: 'home', label: 'Startseite', href: '/home' },
-  { id: 'work', label: 'Meine Arbeit', href: '/work', active: true },
-  { id: 'knowledge', label: 'Wissen', href: '/knowledge' },
-  { id: 'documents', label: 'Dokumente', href: '/documents' },
-  { id: 'admin', label: 'Verwaltung', href: '/admin' },
+  { id: "home", label: "Startseite", href: "/home" },
+  { id: "work", label: "Meine Arbeit", href: "/work", active: true },
+  { id: "knowledge", label: "Wissen", href: "/knowledge" },
+  { id: "documents", label: "Dokumente", href: "/documents" },
+  { id: "admin", label: "Verwaltung", href: "/admin" },
 ];
 
 const VERIFICATION_ICONS = {
-  success: { icon: 'check-circle', className: styles.verificationSuccess },
-  warning: { icon: 'alert-triangle', className: styles.verificationWarning },
-  error: { icon: 'alert-circle', className: styles.verificationError },
+  success: { icon: "check-circle", className: styles.verificationSuccess },
+  warning: { icon: "alert-triangle", className: styles.verificationWarning },
+  error: { icon: "alert-circle", className: styles.verificationError },
 } as const;
 
 function getConsistency(rating: string) {
   switch (rating) {
-    case 'GERING': return { value: '100 %', label: 'Match', color: styles.consistencySuccess };
-    case 'MITTEL': return { value: '85 %', label: 'Abgleich', color: styles.consistencyWarning };
-    case 'HOCH': return { value: '45 %', label: 'Abweichung', color: styles.consistencyError };
-    default: return { value: '—', label: '', color: '' };
+    case "GERING":
+      return { value: "100 %", label: "Match", color: styles.consistencySuccess };
+    case "MITTEL":
+      return { value: "85 %", label: "Abgleich", color: styles.consistencyWarning };
+    case "HOCH":
+      return { value: "45 %", label: "Abweichung", color: styles.consistencyError };
+    default:
+      return { value: "—", label: "", color: "" };
   }
 }
 
 export const SupervisorPage: React.FC = React.memo(() => {
   const [selectedCaseId, setSelectedCaseId] = useState(supervisorCases[0].caseId);
-  const [comments, setComments] = useState('');
+  const [comments, setComments] = useState("");
   const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
 
   const activeCase = useMemo(
@@ -51,22 +52,22 @@ export const SupervisorPage: React.FC = React.memo(() => {
   const caseStatus = statusOverrides[activeCase.caseId] ?? activeCase.statusLabel;
 
   const handleApprove = useCallback(() => {
-    setStatusOverrides((prev) => ({ ...prev, [activeCase.caseId]: 'Genehmigt' }));
-    setComments('');
+    setStatusOverrides((prev) => ({ ...prev, [activeCase.caseId]: "Genehmigt" }));
+    setComments("");
   }, [activeCase.caseId]);
 
   const handleReject = useCallback(() => {
-    setStatusOverrides((prev) => ({ ...prev, [activeCase.caseId]: 'Abgelehnt' }));
-    setComments('');
+    setStatusOverrides((prev) => ({ ...prev, [activeCase.caseId]: "Abgelehnt" }));
+    setComments("");
   }, [activeCase.caseId]);
 
   const handleRevise = useCallback(() => {
-    setStatusOverrides((prev) => ({ ...prev, [activeCase.caseId]: 'Zur Revision' }));
-    setComments('');
+    setStatusOverrides((prev) => ({ ...prev, [activeCase.caseId]: "Zur Revision" }));
+    setComments("");
   }, [activeCase.caseId]);
 
   const canRevise = comments.trim().length > 0;
-  const isResolved = caseStatus === 'Genehmigt' || caseStatus === 'Abgelehnt';
+  const isResolved = caseStatus === "Genehmigt" || caseStatus === "Abgelehnt";
 
   const consistency = getConsistency(activeCase.riskRating);
 
@@ -82,8 +83,8 @@ export const SupervisorPage: React.FC = React.memo(() => {
           userDepartment="Bauaufsicht"
           userInitials="KW"
           userActions={[
-            { id: 'profile', label: 'Profil', onClick: () => {} },
-            { id: 'logout', label: 'Abmelden', onClick: () => {} },
+            { id: "profile", label: "Profil", onClick: () => {} },
+            { id: "logout", label: "Abmelden", onClick: () => {} },
           ]}
           notifications={[]}
           onNotificationClick={() => {}}
@@ -101,7 +102,7 @@ export const SupervisorPage: React.FC = React.memo(() => {
               value={selectedCaseId}
               onChange={(e) => {
                 setSelectedCaseId(e.target.value);
-                setComments('');
+                setComments("");
               }}
               aria-label="Vorgang auswählen"
             >
@@ -113,9 +114,11 @@ export const SupervisorPage: React.FC = React.memo(() => {
             </select>
             <Badge
               status={
-                caseStatus === 'Genehmigt' ? 'success'
-                  : caseStatus === 'Abgelehnt' ? 'error'
-                  : 'warning'
+                caseStatus === "Genehmigt"
+                  ? "success"
+                  : caseStatus === "Abgelehnt"
+                    ? "error"
+                    : "warning"
               }
             >
               {caseStatus}
@@ -131,20 +134,10 @@ export const SupervisorPage: React.FC = React.memo(() => {
             >
               Zurück zur Überarbeitung
             </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={handleReject}
-              disabled={isResolved}
-            >
+            <Button variant="danger" size="sm" onClick={handleReject} disabled={isResolved}>
               Ablehnen
             </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleApprove}
-              disabled={isResolved}
-            >
+            <Button variant="primary" size="sm" onClick={handleApprove} disabled={isResolved}>
               Genehmigen
             </Button>
           </div>
@@ -185,7 +178,9 @@ export const SupervisorPage: React.FC = React.memo(() => {
                 <Panel
                   title="Entscheidungsentwurf"
                   headerAction={
-                    <Badge status="info" variant="pill">{activeCase.draftVersion}</Badge>
+                    <Badge status="info" variant="pill">
+                      {activeCase.draftVersion}
+                    </Badge>
                   }
                 >
                   {activeCase.draftConditions.map((condition, idx) => (
@@ -201,7 +196,9 @@ export const SupervisorPage: React.FC = React.memo(() => {
                 <Panel
                   title="Automatische Verifikation"
                   headerAction={
-                    <Badge status="success" variant="pill">Prüfung aktiv</Badge>
+                    <Badge status="success" variant="pill">
+                      Prüfung aktiv
+                    </Badge>
                   }
                 >
                   {activeCase.verifications.map((v) => {
@@ -219,7 +216,9 @@ export const SupervisorPage: React.FC = React.memo(() => {
                     );
                   })}
                   <div className={styles.consistencyMeter}>
-                    <span className={styles.consistencyLabel}>Text-Metadaten {consistency.label}</span>
+                    <span className={styles.consistencyLabel}>
+                      Text-Metadaten {consistency.label}
+                    </span>
                     <span className={styles.consistencyValue}>{consistency.value}</span>
                     <div className={`${styles.consistencyBar} ${consistency.color}`} />
                   </div>
@@ -269,4 +268,4 @@ export const SupervisorPage: React.FC = React.memo(() => {
   );
 });
 
-SupervisorPage.displayName = 'SupervisorPage';
+SupervisorPage.displayName = "SupervisorPage";

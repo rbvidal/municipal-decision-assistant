@@ -1,4 +1,4 @@
-export { supervisorCases } from './data';
+export { supervisorCases } from "./data";
 
 export type {
   RiskRating,
@@ -7,4 +7,4 @@ export type {
   VerificationItem,
   PrecedentCase,
   SupervisorCase,
-} from './data';
+} from "./data";

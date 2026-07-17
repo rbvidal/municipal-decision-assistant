@@ -1,1 +1,1 @@
-export { CaseWorkspaceLayout } from './CaseWorkspaceLayout';
+export { CaseWorkspaceLayout } from "./CaseWorkspaceLayout";

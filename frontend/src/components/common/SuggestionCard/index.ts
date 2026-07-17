@@ -1,1 +1,1 @@
-export { SuggestionCard } from './SuggestionCard';
+export { SuggestionCard } from "./SuggestionCard";

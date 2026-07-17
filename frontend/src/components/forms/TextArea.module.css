@@ -1,1 +1,4 @@
-.field { margin-bottom: var(--space-4); width: 100%; }
+.field {
+  margin-bottom: var(--space-4);
+  width: 100%;
+}

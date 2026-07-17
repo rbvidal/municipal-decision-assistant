@@ -6,4 +6,4 @@ export function ariaLabelIfHidden(label: string, visible: boolean): string | und
   return visible ? undefined : label;
 }
 
-export const FOCUS_RING = 'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500';
+export const FOCUS_RING = "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500";

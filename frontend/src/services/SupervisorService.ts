@@ -1,5 +1,5 @@
-import type { SupervisorCase } from '../mocks/supervisor';
-import { supervisorCases } from '../mocks/supervisor';
+import type { SupervisorCase } from "../mocks/supervisor";
+import { supervisorCases } from "../mocks/supervisor";
 
 export interface SupervisorService {
   getAll(): Promise<SupervisorCase[]>;

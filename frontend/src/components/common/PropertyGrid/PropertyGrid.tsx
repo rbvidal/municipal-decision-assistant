@@ -1,6 +1,6 @@
-import React from 'react';
-import { cn } from '../../../utils';
-import styles from './PropertyGrid.module.css';
+import React from "react";
+import { cn } from "../../../utils";
+import styles from "./PropertyGrid.module.css";
 
 interface PropertyItem {
   label: string;
@@ -33,4 +33,4 @@ export const PropertyGrid: React.FC<PropertyGridProps> = React.memo(({ items, cl
   </dl>
 ));
 
-PropertyGrid.displayName = 'PropertyGrid';
+PropertyGrid.displayName = "PropertyGrid";

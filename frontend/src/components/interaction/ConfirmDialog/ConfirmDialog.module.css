@@ -1,4 +1,6 @@
-.danger, .warning, .info {
+.danger,
+.warning,
+.info {
   display: flex;
   align-items: flex-start;
   gap: var(--space-4);
@@ -10,9 +12,15 @@
   margin-top: 2px;
 }
 
-.danger .icon { color: var(--color-error-700); }
-.warning .icon { color: var(--color-warning-700); }
-.info .icon { color: var(--color-info-700); }
+.danger .icon {
+  color: var(--color-error-700);
+}
+.warning .icon {
+  color: var(--color-warning-700);
+}
+.info .icon {
+  color: var(--color-info-700);
+}
 
 .confirmTitle {
   font-size: var(--text-body-size);

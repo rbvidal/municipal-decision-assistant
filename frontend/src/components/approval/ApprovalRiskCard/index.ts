@@ -1,1 +1,1 @@
-export { ApprovalRiskCard } from './ApprovalRiskCard';
+export { ApprovalRiskCard } from "./ApprovalRiskCard";

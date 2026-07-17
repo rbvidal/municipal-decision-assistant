@@ -1,5 +1,5 @@
-import type { UserItem } from '../mocks/users';
-import { mockUsers } from '../mocks/users';
+import type { UserItem } from "../mocks/users";
+import { mockUsers } from "../mocks/users";
 
 export interface UserService {
   getAll(): Promise<UserItem[]>;

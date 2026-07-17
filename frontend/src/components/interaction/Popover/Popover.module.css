@@ -14,12 +14,30 @@
   animation: popoverIn var(--duration-fast) var(--ease-out);
 }
 
-.bottom { top: calc(100% + 4px); left: 0; }
-.top    { bottom: calc(100% + 4px); left: 0; }
-.left   { right: calc(100% + 4px); top: 0; }
-.right  { left: calc(100% + 4px); top: 0; }
+.bottom {
+  top: calc(100% + 4px);
+  left: 0;
+}
+.top {
+  bottom: calc(100% + 4px);
+  left: 0;
+}
+.left {
+  right: calc(100% + 4px);
+  top: 0;
+}
+.right {
+  left: calc(100% + 4px);
+  top: 0;
+}
 
 @keyframes popoverIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

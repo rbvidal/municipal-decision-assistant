@@ -1,6 +1,6 @@
-import React from 'react';
-import { Workspace } from '../../../components/layout';
-import { Panel, EmptyState } from '../../../components/common';
+import React from "react";
+import { Workspace } from "../../../components/layout";
+import { Panel, EmptyState } from "../../../components/common";
 
 export const DraftTab: React.FC = React.memo(() => (
   <Workspace>
@@ -13,4 +13,4 @@ export const DraftTab: React.FC = React.memo(() => (
   </Workspace>
 ));
 
-DraftTab.displayName = 'DraftTab';
+DraftTab.displayName = "DraftTab";

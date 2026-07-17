@@ -65,9 +65,4 @@ export interface BreakpointTokens {
   tablet: string;
 }
 
-export type ZIndexLayer =
-  | 'base'
-  | 'dropdown'
-  | 'sticky'
-  | 'dialog'
-  | 'toast';
+export type ZIndexLayer = "base" | "dropdown" | "sticky" | "dialog" | "toast";

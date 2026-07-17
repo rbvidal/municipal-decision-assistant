@@ -1,7 +1,7 @@
-import React, { useState, useCallback } from 'react';
-import { Panel } from '../../common/Panel';
-import { Icon } from '../../common/Icon';
-import styles from './NotesWidget.module.css';
+import React, { useState, useCallback } from "react";
+import { Panel } from "../../common/Panel";
+import { Icon } from "../../common/Icon";
+import styles from "./NotesWidget.module.css";
 
 interface NoteItem {
   id: string;
@@ -17,71 +17,64 @@ interface NotesWidgetProps {
   className?: string;
 }
 
-export const NotesWidget: React.FC<NotesWidgetProps> = React.memo(({
-  title = 'Interne Notizen',
-  notes,
-  onAddNote,
-  className,
-}) => {
-  const [noteContent, setNoteContent] = useState('');
+export const NotesWidget: React.FC<NotesWidgetProps> = React.memo(
+  ({ title = "Interne Notizen", notes, onAddNote, className }) => {
+    const [noteContent, setNoteContent] = useState("");
 
-  const handleSubmit = useCallback(() => {
-    if (noteContent.trim()) {
-      onAddNote(noteContent.trim());
-      setNoteContent('');
-    }
-  }, [noteContent, onAddNote]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        handleSubmit();
+    const handleSubmit = useCallback(() => {
+      if (noteContent.trim()) {
+        onAddNote(noteContent.trim());
+        setNoteContent("");
       }
-    },
-    [handleSubmit],
-  );
+    }, [noteContent, onAddNote]);
 
-  return (
-    <Panel
-      title={title}
-      icon={<Icon name="sticky-note" size={16} />}
-      className={className}
-    >
-      <div className={styles.list} role="list" aria-label={title}>
-        {notes.map((note) => (
-          <article key={note.id} className={styles.note} role="listitem">
-            <header className={styles.noteHeader}>
-              <span className={styles.author}>{note.author}</span>
-              <span className={styles.time}>{note.time}</span>
-            </header>
-            <p className={styles.content}>{note.content}</p>
-          </article>
-        ))}
-      </div>
+    const handleKeyDown = useCallback(
+      (e: React.KeyboardEvent) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          handleSubmit();
+        }
+      },
+      [handleSubmit],
+    );
 
-      <div className={styles.addForm}>
-        <input
-          type="text"
-          className={styles.input}
-          placeholder="Interne Notiz hinzufügen..."
-          value={noteContent}
-          onChange={(e) => setNoteContent(e.target.value)}
-          onKeyDown={handleKeyDown}
-          aria-label="Neue Notiz"
-        />
-        <button
-          type="button"
-          className={styles.submitBtn}
-          onClick={handleSubmit}
-          aria-label="Notiz senden"
-          disabled={!noteContent.trim()}
-        >
-          <Icon name="send" size={16} />
-        </button>
-      </div>
-    </Panel>
-  );
-});
+    return (
+      <Panel title={title} icon={<Icon name="sticky-note" size={16} />} className={className}>
+        <div className={styles.list} role="list" aria-label={title}>
+          {notes.map((note) => (
+            <article key={note.id} className={styles.note} role="listitem">
+              <header className={styles.noteHeader}>
+                <span className={styles.author}>{note.author}</span>
+                <span className={styles.time}>{note.time}</span>
+              </header>
+              <p className={styles.content}>{note.content}</p>
+            </article>
+          ))}
+        </div>
 
-NotesWidget.displayName = 'NotesWidget';
+        <div className={styles.addForm}>
+          <input
+            type="text"
+            className={styles.input}
+            placeholder="Interne Notiz hinzufügen..."
+            value={noteContent}
+            onChange={(e) => setNoteContent(e.target.value)}
+            onKeyDown={handleKeyDown}
+            aria-label="Neue Notiz"
+          />
+          <button
+            type="button"
+            className={styles.submitBtn}
+            onClick={handleSubmit}
+            aria-label="Notiz senden"
+            disabled={!noteContent.trim()}
+          >
+            <Icon name="send" size={16} />
+          </button>
+        </div>
+      </Panel>
+    );
+  },
+);
+
+NotesWidget.displayName = "NotesWidget";

@@ -1,1 +1,1 @@
-export { KnowledgePage } from './KnowledgePage';
+export { KnowledgePage } from "./KnowledgePage";

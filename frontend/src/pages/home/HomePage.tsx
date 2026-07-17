@@ -1,25 +1,42 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { AppShell } from '../../layouts/AppShell';
-import { TopNavigation, PageTitleBar, TabBar, type NavModule, type TabItem } from '../../components/navigation';
-import { Panel, StatCard, Badge, StatusDot, Button, SuggestionCard, Icon } from '../../components/common';
-import { DataTable, type DataTableColumn } from '../../components/data';
-import { mockStats, mockVorgaenge, mockNextTask, mockSuggestions, getGreeting } from '../../mocks';
+import React, { useState, useMemo, useCallback } from "react";
+import { AppShell } from "../../layouts/AppShell";
+import {
+  TopNavigation,
+  PageTitleBar,
+  TabBar,
+  type NavModule,
+  type TabItem,
+} from "../../components/navigation";
+import {
+  Panel,
+  StatCard,
+  Badge,
+  StatusDot,
+  Button,
+  SuggestionCard,
+  Icon,
+} from "../../components/common";
+import { DataTable, type DataTableColumn } from "../../components/data";
+import { mockStats, mockVorgaenge, mockNextTask, mockSuggestions, getGreeting } from "../../mocks";
 
-import type { MockVorgang } from '../../mocks';
-import type { VorgangStatus } from '../../types';
-import styles from './HomePage.module.css';
+import type { MockVorgang } from "../../mocks";
+import type { VorgangStatus } from "../../types";
+import styles from "./HomePage.module.css";
 
-const STATUS_MAP: Record<VorgangStatus, { status: 'error' | 'warning' | 'info' | 'neutral'; label: string }> = {
-  NEW: { status: 'neutral', label: 'Erfasst' },
-  IN_REVIEW: { status: 'warning', label: 'In Prüfung' },
-  DECISION_SUPPORT: { status: 'info', label: 'In Bearbeitung' },
-  DRAFTING: { status: 'info', label: 'Entwurf' },
-  PENDING_APPROVAL: { status: 'warning', label: 'Genehmigung' },
-  READY_TO_SEND: { status: 'info', label: 'Versandbereit' },
-  ARCHIVED: { status: 'neutral', label: 'Archiviert' },
-  WAITING_FOR_CITIZEN: { status: 'neutral', label: 'Wartet Bürger' },
-  WAITING_FOR_AUTHORITY: { status: 'neutral', label: 'Wartet Behörde' },
-  WAITING_INTERNAL: { status: 'neutral', label: 'Wartet intern' },
+const STATUS_MAP: Record<
+  VorgangStatus,
+  { status: "error" | "warning" | "info" | "neutral"; label: string }
+> = {
+  NEW: { status: "neutral", label: "Erfasst" },
+  IN_REVIEW: { status: "warning", label: "In Prüfung" },
+  DECISION_SUPPORT: { status: "info", label: "In Bearbeitung" },
+  DRAFTING: { status: "info", label: "Entwurf" },
+  PENDING_APPROVAL: { status: "warning", label: "Genehmigung" },
+  READY_TO_SEND: { status: "info", label: "Versandbereit" },
+  ARCHIVED: { status: "neutral", label: "Archiviert" },
+  WAITING_FOR_CITIZEN: { status: "neutral", label: "Wartet Bürger" },
+  WAITING_FOR_AUTHORITY: { status: "neutral", label: "Wartet Behörde" },
+  WAITING_INTERNAL: { status: "neutral", label: "Wartet intern" },
 };
 
 const STATUS_TEXT_CLASS: Record<string, string> = {
@@ -29,38 +46,38 @@ const STATUS_TEXT_CLASS: Record<string, string> = {
   neutral: styles.statusNeutral,
 };
 
-const OVERDUE_CASE_IDS = new Set(['BAU-2026-0092']);
-const TODAY_CASE_IDS = new Set(['ORD-2024-8812']);
+const OVERDUE_CASE_IDS = new Set(["BAU-2026-0092"]);
+const TODAY_CASE_IDS = new Set(["ORD-2024-8812"]);
 
 const NAV_MODULES: NavModule[] = [
-  { id: 'home', label: 'Startseite', href: '/home', active: true },
-  { id: 'work', label: 'Meine Arbeit', href: '/work' },
-  { id: 'knowledge', label: 'Wissen', href: '/knowledge' },
-  { id: 'documents', label: 'Dokumente', href: '/documents' },
-  { id: 'admin', label: 'Verwaltung', href: '/admin', visible: true },
+  { id: "home", label: "Startseite", href: "/home", active: true },
+  { id: "work", label: "Meine Arbeit", href: "/work" },
+  { id: "knowledge", label: "Wissen", href: "/knowledge" },
+  { id: "documents", label: "Dokumente", href: "/documents" },
+  { id: "admin", label: "Verwaltung", href: "/admin", visible: true },
 ];
 
 export const HomePage: React.FC = React.memo(() => {
-  const [caseFilter, setCaseFilter] = useState('alle');
+  const [caseFilter, setCaseFilter] = useState("alle");
   const [showAllCases, setShowAllCases] = useState(false);
 
   const greeting = useMemo(() => getGreeting(), []);
   const today = useMemo(
     () =>
-      new Date().toLocaleDateString('de-DE', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
+      new Date().toLocaleDateString("de-DE", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
       }),
     [],
   );
 
   const filteredCases = useMemo(() => {
     switch (caseFilter) {
-      case 'ueberfaellig':
+      case "ueberfaellig":
         return mockVorgaenge.filter((c) => OVERDUE_CASE_IDS.has(c.id));
-      case 'heute':
+      case "heute":
         return mockVorgaenge.filter((c) => TODAY_CASE_IDS.has(c.id));
       default:
         return mockVorgaenge;
@@ -71,14 +88,20 @@ export const HomePage: React.FC = React.memo(() => {
 
   const isOverdue = useCallback((v: MockVorgang) => OVERDUE_CASE_IDS.has(v.id), []);
 
-  const overdueCount = useMemo(() => mockVorgaenge.filter((c) => OVERDUE_CASE_IDS.has(c.id)).length, []);
-  const todayCount = useMemo(() => mockVorgaenge.filter((c) => TODAY_CASE_IDS.has(c.id)).length, []);
+  const overdueCount = useMemo(
+    () => mockVorgaenge.filter((c) => OVERDUE_CASE_IDS.has(c.id)).length,
+    [],
+  );
+  const todayCount = useMemo(
+    () => mockVorgaenge.filter((c) => TODAY_CASE_IDS.has(c.id)).length,
+    [],
+  );
 
   const filterTabs: TabItem[] = useMemo(
     () => [
-      { id: 'alle', label: 'Alle' },
-      { id: 'ueberfaellig', label: `Überfällig (${overdueCount})` },
-      { id: 'heute', label: `Heute (${todayCount})` },
+      { id: "alle", label: "Alle" },
+      { id: "ueberfaellig", label: `Überfällig (${overdueCount})` },
+      { id: "heute", label: `Heute (${todayCount})` },
     ],
     [overdueCount, todayCount],
   );
@@ -86,18 +109,18 @@ export const HomePage: React.FC = React.memo(() => {
   const columns: DataTableColumn<MockVorgang>[] = useMemo(
     () => [
       {
-        key: 'id',
-        header: 'ID / Aktenzeichen',
+        key: "id",
+        header: "ID / Aktenzeichen",
         render: (v) => <span className={styles.caseId}>{v.id}</span>,
       },
       {
-        key: 'title',
-        header: 'Titel / Art',
+        key: "title",
+        header: "Titel / Art",
         render: (v) => <span className={styles.caseTitle}>{v.title}</span>,
       },
       {
-        key: 'status',
-        header: 'Status',
+        key: "status",
+        header: "Status",
         render: (v) => {
           const { status, label } = STATUS_MAP[v.status];
           return (
@@ -109,19 +132,17 @@ export const HomePage: React.FC = React.memo(() => {
         },
       },
       {
-        key: 'dueDate',
-        header: 'Fälligkeit',
-        align: 'left',
+        key: "dueDate",
+        header: "Fälligkeit",
+        align: "left",
         render: (v) => (
-          <span className={isOverdue(v) ? styles.dueOverdue : styles.dueNormal}>
-            {v.dueDate}
-          </span>
+          <span className={isOverdue(v) ? styles.dueOverdue : styles.dueNormal}>{v.dueDate}</span>
         ),
       },
       {
-        key: 'actionText',
-        header: 'Aktion',
-        align: 'left',
+        key: "actionText",
+        header: "Aktion",
+        align: "left",
         render: () => (
           <button type="button" className={styles.actionBtn}>
             Bearbeiten
@@ -160,9 +181,9 @@ export const HomePage: React.FC = React.memo(() => {
           userDepartment="Bauaufsicht"
           userInitials="KM"
           userActions={[
-            { id: 'profile', label: 'Profil', onClick: () => {} },
-            { id: 'settings', label: 'Einstellungen', onClick: () => {} },
-            { id: 'logout', label: 'Abmelden', onClick: () => {} },
+            { id: "profile", label: "Profil", onClick: () => {} },
+            { id: "settings", label: "Einstellungen", onClick: () => {} },
+            { id: "logout", label: "Abmelden", onClick: () => {} },
           ]}
           notifications={[]}
           onNotificationClick={() => {}}
@@ -187,9 +208,7 @@ export const HomePage: React.FC = React.memo(() => {
             <Panel
               title="Vorgeschlagene nächste Aufgabe"
               icon={<Icon name="zap" size={16} />}
-              headerAction={
-                <Badge status="success">Priorität: Hoch</Badge>
-              }
+              headerAction={<Badge status="success">Priorität: Hoch</Badge>}
             >
               <div className={styles.nextTaskBody}>
                 <div className={styles.nextTaskIcon} aria-hidden="true">
@@ -199,7 +218,14 @@ export const HomePage: React.FC = React.memo(() => {
                   <span className={styles.nextTaskCaseId}>{mockNextTask.id}</span>
                   <span className={styles.nextTaskTitle}>{mockNextTask.title}</span>
                   <div className={styles.nextTaskMeta}>
-                    <span>Risiko: {mockNextTask.risk === 'gering' ? 'Gering' : mockNextTask.risk === 'mittel' ? 'Mittel' : 'Hoch'}</span>
+                    <span>
+                      Risiko:{" "}
+                      {mockNextTask.risk === "gering"
+                        ? "Gering"
+                        : mockNextTask.risk === "mittel"
+                          ? "Mittel"
+                          : "Hoch"}
+                    </span>
                     <span>Letzte Änderung: {mockNextTask.lastModified}</span>
                   </div>
                 </div>
@@ -214,11 +240,7 @@ export const HomePage: React.FC = React.memo(() => {
             <Panel
               title="Meine Vorgänge"
               headerAction={
-                <TabBar
-                  tabs={filterTabs}
-                  activeTab={caseFilter}
-                  onTabChange={setCaseFilter}
-                />
+                <TabBar tabs={filterTabs} activeTab={caseFilter} onTabChange={setCaseFilter} />
               }
             >
               <DataTable
@@ -234,7 +256,7 @@ export const HomePage: React.FC = React.memo(() => {
                   onClick={() => setShowAllCases((s) => !s)}
                 >
                   {showAllCases
-                    ? 'Weniger anzeigen'
+                    ? "Weniger anzeigen"
                     : `Vollständige Liste anzeigen (${filteredCases.length - 5} weitere)`}
                 </button>
               )}
@@ -261,8 +283,8 @@ export const HomePage: React.FC = React.memo(() => {
                 ))}
               </div>
               <p className={styles.disclaimer}>
-                Dies sind automatisierte Vorschläge zur Entscheidungsunterstützung.
-                Die abschließende Prüfung obliegt der Sachbearbeitung.
+                Dies sind automatisierte Vorschläge zur Entscheidungsunterstützung. Die
+                abschließende Prüfung obliegt der Sachbearbeitung.
               </p>
             </Panel>
           </aside>
@@ -283,12 +305,18 @@ export const HomePage: React.FC = React.memo(() => {
         <footer className={styles.footer}>
           <div>
             <span className={styles.footerBrand}>VerwaltungsPortal</span>
-            {' (c) 2026 Deutsche Kommunalverwaltung'}
+            {" (c) 2026 Deutsche Kommunalverwaltung"}
           </div>
           <nav className={styles.footerLinks} aria-label="Rechtliche Links">
-            <button type="button" className={styles.footerLink}>Impressum</button>
-            <button type="button" className={styles.footerLink}>Datenschutz</button>
-            <button type="button" className={styles.footerLink}>Kontakt</button>
+            <button type="button" className={styles.footerLink}>
+              Impressum
+            </button>
+            <button type="button" className={styles.footerLink}>
+              Datenschutz
+            </button>
+            <button type="button" className={styles.footerLink}>
+              Kontakt
+            </button>
           </nav>
         </footer>
       </div>
@@ -296,4 +324,4 @@ export const HomePage: React.FC = React.memo(() => {
   );
 });
 
-HomePage.displayName = 'HomePage';
+HomePage.displayName = "HomePage";

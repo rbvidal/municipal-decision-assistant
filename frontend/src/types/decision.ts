@@ -13,7 +13,7 @@ export interface EvidenceItem {
 export interface ReasoningStep {
   id: string;
   label: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: "pending" | "running" | "completed" | "failed";
   timestamp: string;
   duration?: string;
   detail?: string;
@@ -28,7 +28,7 @@ export interface Citation {
   page?: string;
   anchor?: string;
   excerpt?: string;
-  verificationStatus: 'verified' | 'unverified' | 'failed';
+  verificationStatus: "verified" | "unverified" | "failed";
 }
 
 export interface ConfidenceMetrics {
@@ -40,7 +40,7 @@ export interface ConfidenceMetrics {
 }
 
 export interface Recommendation {
-  action: 'APPROVE' | 'REJECT' | 'REVISE' | 'REQUEST_INFO';
+  action: "APPROVE" | "REJECT" | "REVISE" | "REQUEST_INFO";
   summary: string;
   requiredActions: string[];
   warnings: string[];
@@ -62,7 +62,7 @@ export interface DraftDocument {
 export interface ValidationResult {
   id: string;
   check: string;
-  status: 'success' | 'warning' | 'error';
+  status: "success" | "warning" | "error";
   detail: string;
 }
 

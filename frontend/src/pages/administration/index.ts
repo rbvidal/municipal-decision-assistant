@@ -1,1 +1,1 @@
-export { AdministrationPage } from './AdministrationPage';
+export { AdministrationPage } from "./AdministrationPage";

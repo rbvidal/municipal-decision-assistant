@@ -3,7 +3,7 @@ export {
   DOCUMENT_CATEGORIES,
   DOCUMENT_STATUS_LABELS,
   DOCUMENT_STATUS_COLORS,
-} from './data';
+} from "./data";
 
 export type {
   DocumentStatus,
@@ -12,4 +12,4 @@ export type {
   ReferenceInfo,
   HistoryEvent,
   DocumentItem,
-} from './data';
+} from "./data";

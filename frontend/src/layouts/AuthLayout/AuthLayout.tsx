@@ -1,6 +1,6 @@
-import React from 'react';
-import { Logo } from '../../components/common/Logo';
-import styles from './AuthLayout.module.css';
+import React from "react";
+import { Logo } from "../../components/common/Logo";
+import styles from "./AuthLayout.module.css";
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -25,4 +25,4 @@ export const AuthLayout: React.FC<AuthLayoutProps> = React.memo(({ children, sho
   </div>
 ));
 
-AuthLayout.displayName = 'AuthLayout';
+AuthLayout.displayName = "AuthLayout";

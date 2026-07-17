@@ -1,1 +1,1 @@
-export { SupervisorPage } from './SupervisorPage';
+export { SupervisorPage } from "./SupervisorPage";

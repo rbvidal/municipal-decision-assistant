@@ -1,71 +1,60 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { AppShell } from '../../layouts/AppShell';
-import { TopNavigation, type NavModule } from '../../components/navigation';
+import React, { useState, useCallback, useMemo } from "react";
+import { AppShell } from "../../layouts/AppShell";
+import { TopNavigation, type NavModule } from "../../components/navigation";
 import {
   SearchBar,
   FilterPanel,
   ResultCard,
   PreviewPane,
   SearchSummary,
-} from '../../components/search';
-import { EmptyState } from '../../components/common';
-import { initialDocuments } from '../../mocks/knowledge';
-import {
-  categories,
-  fachbereichOptions,
-  bundeslandOptions,
-} from '../../mocks/knowledge';
-import type {
-  KnowledgeDocument,
-  DocType,
-  Fachbereich,
-  Bundesland,
-  Zeitraum,
-} from '../../mocks/knowledge';
-import styles from './KnowledgePage.module.css';
+} from "../../components/search";
+import { EmptyState } from "../../components/common";
+import { initialDocuments } from "../../mocks/knowledge";
+import { categories, fachbereichOptions, bundeslandOptions } from "../../mocks/knowledge";
+import styles from "./KnowledgePage.module.css";
 
 const NAV_MODULES: NavModule[] = [
-  { id: 'home', label: 'Startseite', href: '/home' },
-  { id: 'work', label: 'Meine Arbeit', href: '/work' },
-  { id: 'knowledge', label: 'Wissen', href: '/knowledge', active: true },
-  { id: 'documents', label: 'Dokumente', href: '/documents' },
-  { id: 'admin', label: 'Verwaltung', href: '/admin' },
+  { id: "home", label: "Startseite", href: "/home" },
+  { id: "work", label: "Meine Arbeit", href: "/work" },
+  { id: "knowledge", label: "Wissen", href: "/knowledge", active: true },
+  { id: "documents", label: "Dokumente", href: "/documents" },
+  { id: "admin", label: "Verwaltung", href: "/admin" },
 ];
 
 const FILTER_GROUPS = [
   {
-    id: 'type',
-    label: 'Dokumenttyp',
+    id: "type",
+    label: "Dokumenttyp",
     options: categories.map((c) => ({ value: c.id, label: c.label, count: c.count })),
   },
   {
-    id: 'fachbereich',
-    label: 'Fachbereich',
+    id: "fachbereich",
+    label: "Fachbereich",
     options: fachbereichOptions.map((o) => ({ value: o.value, label: o.label })),
   },
   {
-    id: 'bundesland',
-    label: 'Bundesland',
+    id: "bundesland",
+    label: "Bundesland",
     options: bundeslandOptions.map((o) => ({ value: o.value, label: o.label })),
   },
   {
-    id: 'zeitraum',
-    label: 'Zeitraum',
+    id: "zeitraum",
+    label: "Zeitraum",
     options: [
-      { value: 'Alle', label: 'Alle' },
-      { value: 'Aktuell', label: 'Aktuell' },
-      { value: 'Archiv', label: 'Archiv' },
+      { value: "Alle", label: "Alle" },
+      { value: "Aktuell", label: "Aktuell" },
+      { value: "Archiv", label: "Archiv" },
     ],
   },
 ];
 
 export const KnowledgePage: React.FC = React.memo(() => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<Record<string, string>>({
-    type: 'Alle',
-    fachbereich: 'Alle',
-    bundesland: 'Alle',
-    zeitraum: 'Alle',
+    type: "Alle",
+    fachbereich: "Alle",
+    bundesland: "Alle",
+    zeitraum: "Alle",
   });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<Set<string>>(
@@ -77,8 +66,8 @@ export const KnowledgePage: React.FC = React.memo(() => {
   }, []);
 
   const handleClearFilters = useCallback(() => {
-    setFilters({ type: 'Alle', fachbereich: 'Alle', bundesland: 'Alle', zeitraum: 'Alle' });
-    setSearchQuery('');
+    setFilters({ type: "Alle", fachbereich: "Alle", bundesland: "Alle", zeitraum: "Alle" });
+    setSearchQuery("");
   }, []);
 
   const handleToggleFavorite = useCallback((id: string) => {
@@ -95,10 +84,10 @@ export const KnowledgePage: React.FC = React.memo(() => {
 
     return initialDocuments
       .filter((doc) => {
-        if (filters.type !== 'Alle' && doc.type !== filters.type) return false;
-        if (filters.fachbereich !== 'Alle' && doc.fachbereich !== filters.fachbereich) return false;
-        if (filters.bundesland !== 'Alle' && doc.bundesland !== filters.bundesland) return false;
-        if (filters.zeitraum !== 'Alle' && doc.zeitraum !== filters.zeitraum) return false;
+        if (filters.type !== "Alle" && doc.type !== filters.type) return false;
+        if (filters.fachbereich !== "Alle" && doc.fachbereich !== filters.fachbereich) return false;
+        if (filters.bundesland !== "Alle" && doc.bundesland !== filters.bundesland) return false;
+        if (filters.zeitraum !== "Alle" && doc.zeitraum !== filters.zeitraum) return false;
         return true;
       })
       .filter((doc) => {
@@ -121,11 +110,11 @@ export const KnowledgePage: React.FC = React.memo(() => {
   );
 
   const hasActiveFilters =
-    filters.type !== 'Alle' ||
-    filters.fachbereich !== 'Alle' ||
-    filters.bundesland !== 'Alle' ||
-    filters.zeitraum !== 'Alle' ||
-    searchQuery.trim() !== '';
+    filters.type !== "Alle" ||
+    filters.fachbereich !== "Alle" ||
+    filters.bundesland !== "Alle" ||
+    filters.zeitraum !== "Alle" ||
+    searchQuery.trim() !== "";
 
   const isPreviewVisible = selectedDoc !== null;
 
@@ -141,8 +130,8 @@ export const KnowledgePage: React.FC = React.memo(() => {
           userDepartment="Bauamt"
           userInitials="SM"
           userActions={[
-            { id: 'profile', label: 'Profil', onClick: () => {} },
-            { id: 'logout', label: 'Abmelden', onClick: () => {} },
+            { id: "profile", label: "Profil", onClick: () => {} },
+            { id: "logout", label: "Abmelden", onClick: () => {} },
           ]}
           notifications={[]}
           onNotificationClick={() => {}}
@@ -166,11 +155,7 @@ export const KnowledgePage: React.FC = React.memo(() => {
             query={searchQuery || undefined}
           />
           {hasActiveFilters && (
-            <button
-              type="button"
-              className={styles.clearFiltersBtn}
-              onClick={handleClearFilters}
-            >
+            <button type="button" className={styles.clearFiltersBtn} onClick={handleClearFilters}>
               Filter zurücksetzen
             </button>
           )}
@@ -194,8 +179,8 @@ export const KnowledgePage: React.FC = React.memo(() => {
                   title="Keine Ergebnisse gefunden"
                   description={
                     hasActiveFilters
-                      ? 'Keine Dokumente entsprechen den gewählten Filtern. Versuchen Sie, die Filter anzupassen.'
-                      : 'Es sind keine Dokumente in der Wissensdatenbank vorhanden.'
+                      ? "Keine Dokumente entsprechen den gewählten Filtern. Versuchen Sie, die Filter anzupassen."
+                      : "Es sind keine Dokumente in der Wissensdatenbank vorhanden."
                   }
                 />
               </div>
@@ -251,4 +236,4 @@ export const KnowledgePage: React.FC = React.memo(() => {
   );
 });
 
-KnowledgePage.displayName = 'KnowledgePage';
+KnowledgePage.displayName = "KnowledgePage";

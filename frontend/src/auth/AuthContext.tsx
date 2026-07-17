@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
-import { setAuthToken } from '../api';
+import React, { createContext, useContext, useState, useCallback, useMemo } from "react";
+import { setAuthToken } from "../api";
 
 interface AuthUser {
   id: string;
@@ -21,12 +21,12 @@ interface AuthState {
 const AuthContext = createContext<AuthState | null>(null);
 
 const MOCK_USER: AuthUser = {
-  id: 'u1',
-  name: 'Sabine Müller',
-  email: 's.mueller@verwaltung.de',
-  department: 'Bauaufsicht',
-  initials: 'SM',
-  role: 'Sachbearbeiter',
+  id: "u1",
+  name: "Sabine Müller",
+  email: "s.mueller@verwaltung.de",
+  department: "Bauaufsicht",
+  initials: "SM",
+  role: "Sachbearbeiter",
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -36,7 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = useCallback(async (_email: string, _password: string) => {
     setIsLoading(true);
     await new Promise((r) => setTimeout(r, 500));
-    setAuthToken('mock-token');
+    setAuthToken("mock-token");
     setUser(MOCK_USER);
     setIsLoading(false);
   }, []);
@@ -56,6 +56,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export function useAuth(): AuthState {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
 }

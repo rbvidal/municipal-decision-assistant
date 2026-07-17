@@ -1,1 +1,1 @@
-export { DocumentListWidget } from './DocumentListWidget';
+export { DocumentListWidget } from "./DocumentListWidget";

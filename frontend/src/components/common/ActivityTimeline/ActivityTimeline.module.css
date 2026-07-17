@@ -12,7 +12,7 @@
 }
 
 .entry:not(:last-child)::after {
-  content: '';
+  content: "";
   position: absolute;
   left: 11px;
   top: 28px;

@@ -1,2 +1,2 @@
-export { Workspace } from './Workspace';
-export { WorkspaceSection } from './WorkspaceSection';
+export { Workspace } from "./Workspace";
+export { WorkspaceSection } from "./WorkspaceSection";

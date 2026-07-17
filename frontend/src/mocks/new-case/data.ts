@@ -10,24 +10,38 @@ export interface CaseFormData {
   description: string;
 }
 
-export const CASE_TYPES = ['Bauantrag', 'Bauvoranfrage', 'Nutzungsänderung', 'Abbruchgenehmigung', 'Vorbescheid', 'Sonstiges'] as const;
+export const CASE_TYPES = [
+  "Bauantrag",
+  "Bauvoranfrage",
+  "Nutzungsänderung",
+  "Abbruchgenehmigung",
+  "Vorbescheid",
+  "Sonstiges",
+] as const;
 
-export const DEPARTMENTS = ['Bauaufsicht', 'Ordnungsamt', 'Umweltamt', 'Sozialamt'] as const;
+export const DEPARTMENTS = ["Bauaufsicht", "Ordnungsamt", "Umweltamt", "Sozialamt"] as const;
 
 export const DOCUMENT_OPTIONS = [
-  'Lageplan M 1:500', 'Grundriss', 'Ansichten', 'Schnitt',
-  'Baubeschreibung', 'Statik-Nachweis', 'Brandschutznachweis',
-  'Energieausweis', 'Entwässerungsplan', 'Freiflächenplan',
+  "Lageplan M 1:500",
+  "Grundriss",
+  "Ansichten",
+  "Schnitt",
+  "Baubeschreibung",
+  "Statik-Nachweis",
+  "Brandschutznachweis",
+  "Energieausweis",
+  "Entwässerungsplan",
+  "Freiflächenplan",
 ] as const;
 
 export const initialFormData: CaseFormData = {
-  caseType: '',
-  applicantName: '',
-  applicantEmail: '',
-  applicantAddress: '',
+  caseType: "",
+  applicantName: "",
+  applicantEmail: "",
+  applicantAddress: "",
   documents: [],
-  department: '',
-  priority: '',
-  risk: '',
-  description: '',
+  department: "",
+  priority: "",
+  risk: "",
+  description: "",
 };

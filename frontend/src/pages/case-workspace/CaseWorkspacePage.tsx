@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { CaseWorkspaceLayout } from '../../layouts/CaseWorkspaceLayout';
+import React, { useState, useCallback, useMemo } from "react";
+import { CaseWorkspaceLayout } from "../../layouts/CaseWorkspaceLayout";
 import {
   TopNavigation,
   Breadcrumb,
@@ -7,16 +7,14 @@ import {
   type NavModule,
   type BreadcrumbItem,
   type TabItem,
-} from '../../components/navigation';
+} from "../../components/navigation";
 import {
   CaseHeader,
   Panel,
   CitationCard,
   Icon,
-  ActivityTimeline,
   type TimelineEvent,
-} from '../../components/common';
-import { WorkflowStepper } from '../../components/workflow';
+} from "../../components/common";
 import {
   mockCase,
   mockWorkflowSteps,
@@ -27,13 +25,9 @@ import {
   mockChecklistProposals,
   mockCaseNotes,
   DOCUMENT_TYPES,
-} from '../../mocks/case-workspace';
-import type {
-  ChecklistItemData,
-  DocumentItemData,
-  CaseNoteData,
-} from '../../mocks/case-workspace';
-import { VORGANG_STATUS_LABELS } from '../../types';
+} from "../../mocks/case-workspace";
+import type { ChecklistItemData, DocumentItemData, CaseNoteData } from "../../mocks/case-workspace";
+import { VORGANG_STATUS_LABELS } from "../../types";
 import {
   OverviewTab,
   ChecklistTab,
@@ -43,39 +37,39 @@ import {
   DecisionSupportTab,
   DraftTab,
   SendTab,
-} from './tabs';
-import styles from './CaseWorkspacePage.module.css';
+} from "./tabs";
+import styles from "./CaseWorkspacePage.module.css";
 
 const NAV_MODULES: NavModule[] = [
-  { id: 'home', label: 'Startseite', href: '/home' },
-  { id: 'work', label: 'Meine Arbeit', href: '/work', active: true },
-  { id: 'knowledge', label: 'Wissen', href: '/knowledge' },
-  { id: 'documents', label: 'Dokumente', href: '/documents' },
-  { id: 'admin', label: 'Verwaltung', href: '/admin' },
+  { id: "home", label: "Startseite", href: "/home" },
+  { id: "work", label: "Meine Arbeit", href: "/work", active: true },
+  { id: "knowledge", label: "Wissen", href: "/knowledge" },
+  { id: "documents", label: "Dokumente", href: "/documents" },
+  { id: "admin", label: "Verwaltung", href: "/admin" },
 ];
 
 const BREADCRUMB_ITEMS: BreadcrumbItem[] = [
-  { label: 'Startseite', href: '/home' },
-  { label: 'Meine Arbeit', href: '/work' },
+  { label: "Startseite", href: "/home" },
+  { label: "Meine Arbeit", href: "/work" },
   { label: `Vorgang ${mockCase.id}`, href: `/work/${mockCase.id}` },
 ];
 
 const WORKSPACE_TABS: TabItem[] = [
-  { id: 'overview', label: 'Übersicht' },
-  { id: 'checklist', label: 'Checkliste' },
-  { id: 'documents', label: 'Dokumente' },
-  { id: 'notes', label: 'Interne Notizen' },
-  { id: 'activity', label: 'Aktivität' },
-  { id: 'decision-support', label: 'Entscheidungshilfe' },
-  { id: 'draft', label: 'Entwurf' },
-  { id: 'send', label: 'Versand' },
+  { id: "overview", label: "Übersicht" },
+  { id: "checklist", label: "Checkliste" },
+  { id: "documents", label: "Dokumente" },
+  { id: "notes", label: "Interne Notizen" },
+  { id: "activity", label: "Aktivität" },
+  { id: "decision-support", label: "Entscheidungshilfe" },
+  { id: "draft", label: "Entwurf" },
+  { id: "send", label: "Versand" },
 ];
 
 export const CaseWorkspacePage: React.FC = React.memo(() => {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState("overview");
   const [checklistItems, setChecklistItems] = useState<ChecklistItemData[]>(mockChecklistItems);
   const [documents, setDocuments] = useState<DocumentItemData[]>(mockDocuments);
-  const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>(
+  const [timelineEvents, _setTimelineEvents] = useState<TimelineEvent[]>(
     mockTimelineEvents.map((e) => ({ ...e })),
   );
   const [caseNotes, setCaseNotes] = useState<CaseNoteData[]>(mockCaseNotes);
@@ -90,9 +84,9 @@ export const CaseWorkspacePage: React.FC = React.memo(() => {
     const newItem: ChecklistItemData = {
       id: `c${Date.now()}`,
       title,
-      description: description ?? '',
+      description: description ?? "",
       checked: false,
-      statusLabel: 'Offen',
+      statusLabel: "Offen",
     };
     setChecklistItems((prev) => [...prev, newItem]);
   }, []);
@@ -102,47 +96,39 @@ export const CaseWorkspacePage: React.FC = React.memo(() => {
       id: `d${Date.now()}`,
       name,
       type,
-      date: new Date().toLocaleDateString('de-DE'),
-      status: 'Offen',
+      date: new Date().toLocaleDateString("de-DE"),
+      status: "Offen",
     };
     setDocuments((prev) => [...prev, newDoc]);
-  }, []);
-
-  const handleAddTimelineNote = useCallback((content: string) => {
-    const newEvent: TimelineEvent = {
-      id: `t${Date.now()}`,
-      author: 'Sabine Müller',
-      time: 'Jetzt',
-      content,
-      type: 'edit',
-    };
-    setTimelineEvents((prev) => [newEvent, ...prev]);
   }, []);
 
   const handleAddCaseNote = useCallback((content: string) => {
     const newNote: CaseNoteData = {
       id: `n${Date.now()}`,
-      author: 'Sabine Müller',
-      time: 'Jetzt',
+      author: "Sabine Müller",
+      time: "Jetzt",
       content,
     };
     setCaseNotes((prev) => [newNote, ...prev]);
   }, []);
 
-  const handleAddChecklistProposal = useCallback((text: string) => {
-    const exists = checklistItems.some((item) => item.title === text);
-    if (!exists) {
-      handleAddChecklistItem(text);
-    }
-  }, [checklistItems, handleAddChecklistItem]);
+  const handleAddChecklistProposal = useCallback(
+    (text: string) => {
+      const exists = checklistItems.some((item) => item.title === text);
+      if (!exists) {
+        handleAddChecklistItem(text);
+      }
+    },
+    [checklistItems, handleAddChecklistItem],
+  );
 
   const statusLabel = useMemo(() => VORGANG_STATUS_LABELS[mockCase.status], []);
 
   const renderActiveTab = useCallback(() => {
     switch (activeTab) {
-      case 'overview':
+      case "overview":
         return <OverviewTab caseData={mockCase} workflowSteps={mockWorkflowSteps} />;
-      case 'checklist':
+      case "checklist":
         return (
           <ChecklistTab
             items={checklistItems}
@@ -150,7 +136,7 @@ export const CaseWorkspacePage: React.FC = React.memo(() => {
             onAddItem={handleAddChecklistItem}
           />
         );
-      case 'documents':
+      case "documents":
         return (
           <DocumentsTab
             documents={documents}
@@ -158,15 +144,15 @@ export const CaseWorkspacePage: React.FC = React.memo(() => {
             onUploadDocument={handleUploadDocument}
           />
         );
-      case 'notes':
+      case "notes":
         return <InternalNotesTab notes={caseNotes} onAddNote={handleAddCaseNote} />;
-      case 'activity':
+      case "activity":
         return <ActivityTab events={timelineEvents} />;
-      case 'decision-support':
+      case "decision-support":
         return <DecisionSupportTab regulations={mockRegulations} caseId={mockCase.id} />;
-      case 'draft':
+      case "draft":
         return <DraftTab />;
-      case 'send':
+      case "send":
         return <SendTab />;
       default:
         return <OverviewTab caseData={mockCase} workflowSteps={mockWorkflowSteps} />;
@@ -188,10 +174,9 @@ export const CaseWorkspacePage: React.FC = React.memo(() => {
       <div className={styles.sidebarContent}>
         <Panel title="Zusammenfassung">
           <p className={styles.sidebarSummary}>
-            Bauantrag für einen Carport auf Flurstück 102/5. Antragsteller Thomas Becker.
-            Erste Prüfung zeigt Konformität mit Bebauungsplan, jedoch fehlt der
-            Brandschutznachweis (§ 65 BauO NRW). Keine nachbarschaftlichen Einwände
-            dokumentiert.
+            Bauantrag für einen Carport auf Flurstück 102/5. Antragsteller Thomas Becker. Erste
+            Prüfung zeigt Konformität mit Bebauungsplan, jedoch fehlt der Brandschutznachweis (§ 65
+            BauO NRW). Keine nachbarschaftlichen Einwände dokumentiert.
           </p>
         </Panel>
 
@@ -219,8 +204,8 @@ export const CaseWorkspacePage: React.FC = React.memo(() => {
 
         <hr className={styles.sidebarDivider} />
         <p className={styles.disclaimer}>
-          Dies sind automatisierte Vorschläge zur Entscheidungsunterstützung.
-          Die abschließende Prüfung obliegt der Sachbearbeitung.
+          Dies sind automatisierte Vorschläge zur Entscheidungsunterstützung. Die abschließende
+          Prüfung obliegt der Sachbearbeitung.
         </p>
       </div>
     ),
@@ -239,8 +224,8 @@ export const CaseWorkspacePage: React.FC = React.memo(() => {
           userDepartment="Bauamt"
           userInitials="SM"
           userActions={[
-            { id: 'profile', label: 'Profil', onClick: () => {} },
-            { id: 'logout', label: 'Abmelden', onClick: () => {} },
+            { id: "profile", label: "Profil", onClick: () => {} },
+            { id: "logout", label: "Abmelden", onClick: () => {} },
           ]}
           notifications={[]}
           onNotificationClick={() => {}}
@@ -262,9 +247,7 @@ export const CaseWorkspacePage: React.FC = React.memo(() => {
           deadline={mockCase.deadline}
         />
       }
-      tabBar={
-        <TabBar tabs={WORKSPACE_TABS} activeTab={activeTab} onTabChange={setActiveTab} />
-      }
+      tabBar={<TabBar tabs={WORKSPACE_TABS} activeTab={activeTab} onTabChange={setActiveTab} />}
       sidebar={sidebarContent}
     >
       {renderActiveTab()}
@@ -272,4 +255,4 @@ export const CaseWorkspacePage: React.FC = React.memo(() => {
   );
 });
 
-CaseWorkspacePage.displayName = 'CaseWorkspacePage';
+CaseWorkspacePage.displayName = "CaseWorkspacePage";

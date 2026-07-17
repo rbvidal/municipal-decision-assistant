@@ -1,5 +1,5 @@
-import React from 'react';
-import { AppShell } from '../AppShell';
+import React from "react";
+import { AppShell } from "../AppShell";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -8,19 +8,12 @@ interface AdminLayoutProps {
   breadcrumb?: React.ReactNode;
 }
 
-export const AdminLayout: React.FC<AdminLayoutProps> = React.memo(({
-  children,
-  topNavigation,
-  subNavigation,
-  breadcrumb,
-}) => (
-  <AppShell
-    topNavigation={topNavigation}
-    subNavigation={subNavigation}
-    breadcrumb={breadcrumb}
-  >
-    {children}
-  </AppShell>
-));
+export const AdminLayout: React.FC<AdminLayoutProps> = React.memo(
+  ({ children, topNavigation, subNavigation, breadcrumb }) => (
+    <AppShell topNavigation={topNavigation} subNavigation={subNavigation} breadcrumb={breadcrumb}>
+      {children}
+    </AppShell>
+  ),
+);
 
-AdminLayout.displayName = 'AdminLayout';
+AdminLayout.displayName = "AdminLayout";

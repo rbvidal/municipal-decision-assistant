@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
-import { mockStats, mockVorgaenge, mockNextTask, mockSuggestions } from '../mocks/home';
-import type { MockVorgang, MockStat, MockNextTask, MockSuggestion } from '../mocks/home';
+import { useQuery } from "@tanstack/react-query";
+import { mockStats, mockVorgaenge, mockNextTask, mockSuggestions } from "../mocks/home";
+import type { MockVorgang, MockStat, MockNextTask, MockSuggestion } from "../mocks/home";
 
 interface HomeData {
   stats: MockStat[];
@@ -11,7 +11,7 @@ interface HomeData {
 
 export function useHomeDashboard() {
   return useQuery<HomeData>({
-    queryKey: ['home', 'dashboard'],
+    queryKey: ["home", "dashboard"],
     queryFn: async () => ({
       stats: mockStats,
       vorgaenge: mockVorgaenge,

@@ -69,11 +69,11 @@
 }
 
 .favoriteActive {
-  color: #E8B730;
+  color: #e8b730;
 }
 
 .favoriteActive:hover {
-  color: #C99A20;
+  color: #c99a20;
 }
 
 .meta {

@@ -1,1 +1,1 @@
-export { SearchSummary } from './SearchSummary';
+export { SearchSummary } from "./SearchSummary";

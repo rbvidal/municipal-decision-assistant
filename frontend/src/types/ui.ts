@@ -1,4 +1,11 @@
-import type { Size, Variant, Status, Priority, Risk, Position, Alignment, Orientation } from './common';
+import type {
+  Size,
+  Variant,
+  Status,
+  Priority,
+  Risk,
+  Orientation,
+} from "./common";
 
 export interface ButtonProps {
   variant?: Variant;
@@ -6,7 +13,7 @@ export interface ButtonProps {
   loading?: boolean;
   disabled?: boolean;
   fullWidth?: boolean;
-  type?: 'button' | 'submit' | 'reset';
+  type?: "button" | "submit" | "reset";
   onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   children: React.ReactNode;
   className?: string;
@@ -32,7 +39,7 @@ export interface BadgeProps {
   status?: Status;
   priority?: Priority;
   risk?: Risk;
-  variant?: 'dot' | 'pill';
+  variant?: "dot" | "pill";
   children?: React.ReactNode;
   className?: string;
   ariaLabel?: string;
@@ -40,19 +47,19 @@ export interface BadgeProps {
 
 export interface StatusDotProps {
   status: Status;
-  size?: 'sm' | 'md';
+  size?: "sm" | "md";
   ariaLabel?: string;
   className?: string;
 }
 
 export interface SpinnerProps {
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   ariaLabel?: string;
   className?: string;
 }
 
 export interface SkeletonProps {
-  variant?: 'text' | 'card' | 'table-row' | 'circle';
+  variant?: "text" | "card" | "table-row" | "circle";
   width?: string;
   height?: string;
   count?: number;
@@ -70,7 +77,7 @@ export interface ProgressIndicatorProps {
   max?: number;
   label?: string;
   showPercentage?: boolean;
-  size?: 'sm' | 'md';
+  size?: "sm" | "md";
   status?: Status;
   className?: string;
   ariaLabel?: string;

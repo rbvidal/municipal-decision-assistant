@@ -1,1 +1,1 @@
-export { mockDecisionPackage } from './data';
+export { mockDecisionPackage } from "./data";

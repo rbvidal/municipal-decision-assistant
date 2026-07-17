@@ -1,1 +1,1 @@
-export { CaseWorkspacePage } from './CaseWorkspacePage';
+export { CaseWorkspacePage } from "./CaseWorkspacePage";

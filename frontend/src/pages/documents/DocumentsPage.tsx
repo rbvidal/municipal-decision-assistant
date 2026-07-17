@@ -1,44 +1,45 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { AppShell } from '../../layouts/AppShell';
-import { TopNavigation, TabBar, type NavModule, type TabItem } from '../../components/navigation';
-import { SearchBar, FilterPanel } from '../../components/search';
-import { DataTable, type DataTableColumn } from '../../components/data';
-import { DocumentVersionHistory } from '../../components/documents';
-import {
-  Panel, Badge, Button, Icon, PropertyGrid, ActionToolbar,
-} from '../../components/common';
-import {
-  mockDocuments, DOCUMENT_CATEGORIES, DOCUMENT_STATUS_COLORS,
-} from '../../mocks/documents';
-import type { DocumentItem } from '../../mocks/documents';
-import styles from './DocumentsPage.module.css';
+import React, { useState, useCallback, useMemo } from "react";
+import { AppShell } from "../../layouts/AppShell";
+import { TopNavigation, TabBar, type NavModule, type TabItem } from "../../components/navigation";
+import { SearchBar, FilterPanel } from "../../components/search";
+import { DataTable, type DataTableColumn } from "../../components/data";
+import { DocumentVersionHistory } from "../../components/documents";
+import { Badge, Icon, PropertyGrid, ActionToolbar } from "../../components/common";
+import { mockDocuments, DOCUMENT_CATEGORIES, DOCUMENT_STATUS_COLORS } from "../../mocks/documents";
+import type { DocumentItem } from "../../mocks/documents";
+import styles from "./DocumentsPage.module.css";
 
 const NAV_MODULES: NavModule[] = [
-  { id: 'home', label: 'Startseite', href: '/home' },
-  { id: 'work', label: 'Meine Arbeit', href: '/work' },
-  { id: 'knowledge', label: 'Wissen', href: '/knowledge' },
-  { id: 'documents', label: 'Dokumente', href: '/documents', active: true },
-  { id: 'admin', label: 'Verwaltung', href: '/admin' },
+  { id: "home", label: "Startseite", href: "/home" },
+  { id: "work", label: "Meine Arbeit", href: "/work" },
+  { id: "knowledge", label: "Wissen", href: "/knowledge" },
+  { id: "documents", label: "Dokumente", href: "/documents", active: true },
+  { id: "admin", label: "Verwaltung", href: "/admin" },
 ];
 
 const SUB_TABS: TabItem[] = [
-  { id: 'all', label: 'Alle Dokumente' },
-  { id: 'upload', label: 'Hochladen' },
-  { id: 'index_status', label: 'Index-Status' },
+  { id: "all", label: "Alle Dokumente" },
+  { id: "upload", label: "Hochladen" },
+  { id: "index_status", label: "Index-Status" },
 ];
 
 const TYPE_OPTIONS = [
-  'Alle Dokumenttypen', 'Antrag', 'Lageplan', 'Nachweis', 'Beilage', 'Vorlage', 'Formular', 'Sonstiges',
+  "Alle Dokumenttypen",
+  "Antrag",
+  "Lageplan",
+  "Nachweis",
+  "Beilage",
+  "Vorlage",
+  "Formular",
+  "Sonstiges",
 ];
 
-const STATUS_OPTIONS = [
-  'Status: Alle', 'Aktiv', 'In Prüfung', 'Fehlend', 'Archiviert',
-];
+const STATUS_OPTIONS = ["Status: Alle", "Aktiv", "In Prüfung", "Fehlend", "Archiviert"];
 
 const FILTER_GROUPS = [
   {
-    id: 'category',
-    label: 'Kategorien',
+    id: "category",
+    label: "Kategorien",
     options: DOCUMENT_CATEGORIES.map((c) => ({
       value: c.id,
       label: c.label,
@@ -48,19 +49,19 @@ const FILTER_GROUPS = [
 ];
 
 export const DocumentsPage: React.FC = React.memo(() => {
-  const [subTab, setSubTab] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState('Alle Dokumenttypen');
-  const [statusFilter, setStatusFilter] = useState('Status: Alle');
-  const [activeCategory, setActiveCategory] = useState('vorgangsdokumente');
-  const [selectedId, setSelectedId] = useState<string | null>('doc-1');
+  const [subTab, setSubTab] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState("Alle Dokumenttypen");
+  const [statusFilter, setStatusFilter] = useState("Status: Alle");
+  const [activeCategory, setActiveCategory] = useState("vorgangsdokumente");
+  const [selectedId, setSelectedId] = useState<string | null>("doc-1");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const filteredDocuments = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
     return mockDocuments.filter((doc) => {
-      if (typeFilter !== 'Alle Dokumenttypen' && doc.typ !== typeFilter) return false;
-      if (statusFilter !== 'Status: Alle' && doc.status !== statusFilter) return false;
+      if (typeFilter !== "Alle Dokumenttypen" && doc.typ !== typeFilter) return false;
+      if (statusFilter !== "Status: Alle" && doc.status !== statusFilter) return false;
       if (query) {
         return (
           doc.name.toLowerCase().includes(query) ||
@@ -85,44 +86,46 @@ export const DocumentsPage: React.FC = React.memo(() => {
   const columns: DataTableColumn<DocumentItem>[] = useMemo(
     () => [
       {
-        key: 'name',
-        header: 'Dokument',
+        key: "name",
+        header: "Dokument",
         render: (doc) => (
           <span
             className={styles.docName}
             onClick={() => setSelectedId(doc.id)}
             role="button"
             tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter') setSelectedId(doc.id); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") setSelectedId(doc.id);
+            }}
           >
-            <Icon name={doc.name.endsWith('.pdf') ? 'file-text' : 'image'} size={14} />
+            <Icon name={doc.name.endsWith(".pdf") ? "file-text" : "image"} size={14} />
             {doc.name}
           </span>
         ),
       },
       {
-        key: 'vorgangId',
-        header: 'Vorgang',
+        key: "vorgangId",
+        header: "Vorgang",
         render: (doc) => <span className={styles.monoCell}>{doc.vorgangId}</span>,
       },
       {
-        key: 'buerger',
-        header: 'Bürger',
+        key: "buerger",
+        header: "Bürger",
         render: (doc) => <span className={styles.monoCell}>{doc.buerger}</span>,
       },
       {
-        key: 'typ',
-        header: 'Typ',
+        key: "typ",
+        header: "Typ",
         render: (doc) => <span className={styles.monoCell}>{doc.typ}</span>,
       },
       {
-        key: 'version',
-        header: 'Vers.',
+        key: "version",
+        header: "Vers.",
         render: (doc) => <span className={styles.monoCell}>{doc.version}</span>,
       },
       {
-        key: 'status',
-        header: 'Status',
+        key: "status",
+        header: "Status",
         render: (doc) => (
           <Badge status={DOCUMENT_STATUS_COLORS[doc.status]} variant="pill">
             {doc.status}
@@ -130,8 +133,8 @@ export const DocumentsPage: React.FC = React.memo(() => {
         ),
       },
       {
-        key: 'geaendert',
-        header: 'Geändert',
+        key: "geaendert",
+        header: "Geändert",
         render: (doc) => <span className={styles.monoCell}>{doc.geaendert}</span>,
       },
     ],
@@ -152,8 +155,8 @@ export const DocumentsPage: React.FC = React.memo(() => {
           userDepartment="Bauamt"
           userInitials="SM"
           userActions={[
-            { id: 'profile', label: 'Profil', onClick: () => {} },
-            { id: 'logout', label: 'Abmelden', onClick: () => {} },
+            { id: "profile", label: "Profil", onClick: () => {} },
+            { id: "logout", label: "Abmelden", onClick: () => {} },
           ]}
           notifications={[]}
           onNotificationClick={() => {}}
@@ -183,7 +186,9 @@ export const DocumentsPage: React.FC = React.memo(() => {
               aria-label="Dokumenttyp filtern"
             >
               {TYPE_OPTIONS.map((o) => (
-                <option key={o} value={o}>{o}</option>
+                <option key={o} value={o}>
+                  {o}
+                </option>
               ))}
             </select>
             <select
@@ -193,14 +198,16 @@ export const DocumentsPage: React.FC = React.memo(() => {
               aria-label="Status filtern"
             >
               {STATUS_OPTIONS.map((o) => (
-                <option key={o} value={o}>{o}</option>
+                <option key={o} value={o}>
+                  {o}
+                </option>
               ))}
             </select>
           </div>
           <ActionToolbar
             actions={[
-              { id: 'upload', label: 'Hochladen', onClick: () => {}, variant: 'primary' },
-              { id: 'new', label: 'Neues Dokument', onClick: () => {}, variant: 'secondary' },
+              { id: "upload", label: "Hochladen", onClick: () => {}, variant: "primary" },
+              { id: "new", label: "Neues Dokument", onClick: () => {}, variant: "secondary" },
             ]}
           />
         </div>
@@ -210,15 +217,17 @@ export const DocumentsPage: React.FC = React.memo(() => {
             <span className={styles.bulkCount}>{bulkCount} ausgewählt</span>
             <ActionToolbar
               actions={[
-                { id: 'compare', label: 'Vergleichen', onClick: () => {}, variant: 'secondary' },
-                { id: 'export', label: 'Exportieren', onClick: () => {}, variant: 'secondary' },
-                { id: 'archive', label: 'Archivieren', onClick: () => {}, variant: 'secondary' },
+                { id: "compare", label: "Vergleichen", onClick: () => {}, variant: "secondary" },
+                { id: "export", label: "Exportieren", onClick: () => {}, variant: "secondary" },
+                { id: "archive", label: "Archivieren", onClick: () => {}, variant: "secondary" },
               ]}
             />
           </div>
         )}
 
-        <div className={`${styles.layout} ${selectedDoc ? styles.layoutThreeCol : styles.layoutTwoCol}`}>
+        <div
+          className={`${styles.layout} ${selectedDoc ? styles.layoutThreeCol : styles.layoutTwoCol}`}
+        >
           <div className={styles.filterCol}>
             <FilterPanel
               groups={FILTER_GROUPS}
@@ -249,7 +258,11 @@ export const DocumentsPage: React.FC = React.memo(() => {
                   <Badge status={DOCUMENT_STATUS_COLORS[selectedDoc.status]} variant="pill">
                     {selectedDoc.status}
                   </Badge>
-                  <button type="button" className={styles.previewActionBtn} aria-label="Herunterladen">
+                  <button
+                    type="button"
+                    className={styles.previewActionBtn}
+                    aria-label="Herunterladen"
+                  >
                     <Icon name="download" size={16} />
                   </button>
                   <button type="button" className={styles.previewActionBtn} aria-label="Drucken">
@@ -271,10 +284,10 @@ export const DocumentsPage: React.FC = React.memo(() => {
                   <h3 className={styles.previewSectionTitle}>Metadaten</h3>
                   <PropertyGrid
                     items={[
-                      { label: 'Dokumenten-ID', value: selectedDoc.dokumentId, valueMono: true },
-                      { label: 'Typ', value: selectedDoc.detailedTyp },
-                      { label: 'Dateigröße', value: selectedDoc.dateigroesse },
-                      { label: 'Hochgeladen', value: selectedDoc.hochgeladenAm },
+                      { label: "Dokumenten-ID", value: selectedDoc.dokumentId, valueMono: true },
+                      { label: "Typ", value: selectedDoc.detailedTyp },
+                      { label: "Dateigröße", value: selectedDoc.dateigroesse },
+                      { label: "Hochgeladen", value: selectedDoc.hochgeladenAm },
                     ]}
                   />
                 </div>
@@ -307,7 +320,7 @@ export const DocumentsPage: React.FC = React.memo(() => {
                     <h3 className={styles.previewSectionTitle}>Referenzen & Rechtsgrundlagen</h3>
                     {selectedDoc.references.map((ref) => (
                       <div key={ref.id} className={styles.referenceItem}>
-                        <Icon name={ref.type === 'gavel' ? 'scale' : 'file-text'} size={14} />
+                        <Icon name={ref.type === "gavel" ? "scale" : "file-text"} size={14} />
                         <span>{ref.title}</span>
                       </div>
                     ))}
@@ -320,7 +333,13 @@ export const DocumentsPage: React.FC = React.memo(() => {
                     {selectedDoc.history.map((event) => (
                       <div key={event.id} className={styles.referenceItem}>
                         <Icon
-                          name={event.status === 'completed' ? 'check-circle' : event.status === 'info' ? 'info' : 'settings'}
+                          name={
+                            event.status === "completed"
+                              ? "check-circle"
+                              : event.status === "info"
+                                ? "info"
+                                : "settings"
+                          }
                           size={14}
                         />
                         <div>
@@ -342,4 +361,4 @@ export const DocumentsPage: React.FC = React.memo(() => {
   );
 });
 
-DocumentsPage.displayName = 'DocumentsPage';
+DocumentsPage.displayName = "DocumentsPage";

@@ -1,1 +1,1 @@
-export { CitationCard } from './CitationCard';
+export { CitationCard } from "./CitationCard";

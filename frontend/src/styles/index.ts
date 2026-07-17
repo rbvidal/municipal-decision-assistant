@@ -1,1 +1,1 @@
-export { default as globals } from './globals.css';
+export { default as globals } from "./globals.css";

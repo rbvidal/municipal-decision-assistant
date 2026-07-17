@@ -1,1 +1,1 @@
-export { ChecklistWidget } from './ChecklistWidget';
+export { ChecklistWidget } from "./ChecklistWidget";

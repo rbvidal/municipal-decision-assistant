@@ -1,1 +1,1 @@
-export { DecisionWorkspace } from './DecisionWorkspace';
+export { DecisionWorkspace } from "./DecisionWorkspace";

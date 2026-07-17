@@ -47,7 +47,7 @@
 }
 
 .checkbox:checked + .checkmark::after {
-  content: '';
+  content: "";
   width: 5px;
   height: 9px;
   border: solid white;

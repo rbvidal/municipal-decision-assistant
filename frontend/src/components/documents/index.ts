@@ -1,1 +1,1 @@
-export { DocumentVersionHistory } from './DocumentVersionHistory';
+export { DocumentVersionHistory } from "./DocumentVersionHistory";

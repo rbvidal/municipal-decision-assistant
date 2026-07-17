@@ -1,1 +1,1 @@
-export { PrecedentCard } from './PrecedentCard';
+export { PrecedentCard } from "./PrecedentCard";

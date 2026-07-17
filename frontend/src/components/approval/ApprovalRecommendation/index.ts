@@ -1,1 +1,1 @@
-export { ApprovalRecommendation } from './ApprovalRecommendation';
+export { ApprovalRecommendation } from "./ApprovalRecommendation";

@@ -1,7 +1,7 @@
-import React from 'react';
-import { cn } from '../../../utils';
-import { Badge } from '../../common/Badge';
-import styles from './TagList.module.css';
+import React from "react";
+import { cn } from "../../../utils";
+import { Badge } from "../../common/Badge";
+import styles from "./TagList.module.css";
 
 interface TagListProps {
   tags: string[];
@@ -18,4 +18,4 @@ export const TagList: React.FC<TagListProps> = React.memo(({ tags, className }) 
   </div>
 ));
 
-TagList.displayName = 'TagList';
+TagList.displayName = "TagList";

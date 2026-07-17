@@ -205,8 +205,12 @@
   gap: var(--space-3);
 }
 
-.mt3 { margin-top: var(--space-3); }
-.mt4 { margin-top: var(--space-4); }
+.mt3 {
+  margin-top: var(--space-3);
+}
+.mt4 {
+  margin-top: var(--space-4);
+}
 
 @media (max-width: 1280px) {
   .statsGrid {

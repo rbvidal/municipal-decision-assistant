@@ -1,1 +1,1 @@
-export { PropertyGrid } from './PropertyGrid';
+export { PropertyGrid } from "./PropertyGrid";

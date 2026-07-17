@@ -4,7 +4,7 @@ export {
   fachbereichOptions,
   bundeslandOptions,
   DOC_TYPE_LABELS,
-} from './data';
+} from "./data";
 
 export type {
   DocType,
@@ -17,4 +17,4 @@ export type {
   KnowledgeDocument,
   CategoryItem,
   FilterState,
-} from './data';
+} from "./data";

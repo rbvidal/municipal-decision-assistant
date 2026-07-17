@@ -1,8 +1,8 @@
-import React from 'react';
-import { cn } from '../../../utils';
-import { Button } from '../Button';
-import type { Variant } from '../../../types';
-import styles from './ActionToolbar.module.css';
+import React from "react";
+import { cn } from "../../../utils";
+import { Button } from "../Button";
+import type { Variant } from "../../../types";
+import styles from "./ActionToolbar.module.css";
 
 interface ActionToolbarAction {
   id: string;
@@ -22,7 +22,7 @@ export const ActionToolbar: React.FC<ActionToolbarProps> = React.memo(({ actions
     {actions.map((action) => (
       <Button
         key={action.id}
-        variant={action.variant ?? 'primary'}
+        variant={action.variant ?? "primary"}
         size="sm"
         onClick={action.onClick}
       >
@@ -33,4 +33,4 @@ export const ActionToolbar: React.FC<ActionToolbarProps> = React.memo(({ actions
   </div>
 ));
 
-ActionToolbar.displayName = 'ActionToolbar';
+ActionToolbar.displayName = "ActionToolbar";

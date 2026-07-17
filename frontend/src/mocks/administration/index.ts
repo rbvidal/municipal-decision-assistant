@@ -4,10 +4,5 @@ export {
   mockAuditLogs,
   mockDepartments,
   ADMIN_TABS,
-} from './data';
-export type {
-  SystemHealth,
-  BackgroundJob,
-  AuditLogEntry,
-  DepartmentConfig,
-} from './data';
+} from "./data";
+export type { SystemHealth, BackgroundJob, AuditLogEntry, DepartmentConfig } from "./data";

@@ -49,11 +49,21 @@
   color: var(--color-gray-600);
 }
 
-.info .value { color: var(--color-primary-700); }
-.warning .value { color: var(--color-warning-700); }
-.error .value { color: var(--color-error-700); }
-.success .value { color: var(--color-success-700); }
-.neutral .value { color: var(--color-gray-700); }
+.info .value {
+  color: var(--color-primary-700);
+}
+.warning .value {
+  color: var(--color-warning-700);
+}
+.error .value {
+  color: var(--color-error-700);
+}
+.success .value {
+  color: var(--color-success-700);
+}
+.neutral .value {
+  color: var(--color-gray-700);
+}
 
 .value {
   font-size: var(--text-stat-size);
@@ -76,8 +86,18 @@
   transition: width var(--duration-slow) var(--ease-out);
 }
 
-.barFill.info { background: var(--color-primary-500); }
-.barFill.warning { background: var(--color-dot-amber); }
-.barFill.error { background: var(--color-dot-red); }
-.barFill.success { background: var(--color-dot-green); }
-.barFill.neutral { background: var(--color-gray-400); }
+.barFill.info {
+  background: var(--color-primary-500);
+}
+.barFill.warning {
+  background: var(--color-dot-amber);
+}
+.barFill.error {
+  background: var(--color-dot-red);
+}
+.barFill.success {
+  background: var(--color-dot-green);
+}
+.barFill.neutral {
+  background: var(--color-gray-400);
+}

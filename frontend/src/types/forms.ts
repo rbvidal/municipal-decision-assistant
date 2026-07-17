@@ -1,10 +1,8 @@
-import type { Size } from './common';
-
 export interface TextInputProps {
   label?: string;
   value: string;
   onChange: (value: string) => void;
-  type?: 'text' | 'email' | 'password' | 'number' | 'search' | 'url';
+  type?: "text" | "email" | "password" | "number" | "search" | "url";
   placeholder?: string;
   error?: string;
   helpText?: string;
@@ -34,7 +32,7 @@ export interface TextAreaProps {
   readOnly?: boolean;
   rows?: number;
   maxLength?: number;
-  resize?: 'none' | 'vertical' | 'horizontal' | 'both';
+  resize?: "none" | "vertical" | "horizontal" | "both";
   id?: string;
   name?: string;
   className?: string;

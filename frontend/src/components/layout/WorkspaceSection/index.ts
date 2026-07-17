@@ -1,1 +1,1 @@
-export { WorkspaceSection } from './WorkspaceSection';
+export { WorkspaceSection } from "./WorkspaceSection";
