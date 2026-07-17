@@ -14,12 +14,16 @@ import com.cognitera.platform.search.model.ChunkPosition;
 import com.cognitera.platform.search.model.ChunkType;
 import com.cognitera.platform.search.model.DocumentChunk;
 import com.cognitera.platform.search.model.MetadataFilter;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -34,6 +38,7 @@ public class DefaultIndexingOrchestrationService implements IndexingOrchestratio
     private final ChunkManagementService chunkManagementService;
     private final EmbeddingProvider embeddingProvider;
     private final VectorSearchProvider vectorSearchProvider;
+    private final MeterRegistry meterRegistry;
 
     public DefaultIndexingOrchestrationService(
             DocumentFacade documents,
@@ -41,7 +46,8 @@ public class DefaultIndexingOrchestrationService implements IndexingOrchestratio
             ChunkingStrategy chunkingStrategy,
             ChunkManagementService chunkManagementService,
             EmbeddingProvider embeddingProvider,
-            VectorSearchProvider vectorSearchProvider
+            VectorSearchProvider vectorSearchProvider,
+            MeterRegistry meterRegistry
     ) {
         this.documents = documents;
         this.textExtractionService = textExtractionService;
@@ -49,28 +55,58 @@ public class DefaultIndexingOrchestrationService implements IndexingOrchestratio
         this.chunkManagementService = chunkManagementService;
         this.embeddingProvider = embeddingProvider;
         this.vectorSearchProvider = vectorSearchProvider;
+        this.meterRegistry = meterRegistry;
     }
 
     @Override
     public void indexDocument(UUID documentId) {
         Document document = documents.getDocument(documentId, "system");
+        String docType = document.metadata().type() != null ? document.metadata().type().name() : "UNKNOWN";
         DocumentVersion version = document.versions().stream()
                 .filter(v -> v.versionNumber() == document.currentVersion())
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("Document has no current version"));
 
+        // Phase 1: Text extraction
+        log.debug("Starting text extraction for document {}", documentId);
+        Timer.Sample extractionSample = Timer.start(meterRegistry);
         String extractedText = textExtractionService.extractText(document.metadata().type(), version);
+        extractionSample.stop(Timer.builder("ingestion.extraction.duration")
+                .description("Text extraction duration per document")
+                .tag("document_type", docType)
+                .register(meterRegistry));
+        log.debug("Text extraction complete for document {} ({} chars)", documentId, extractedText.length());
+
+        // Phase 2: Chunking
+        log.debug("Starting chunking for document {}", documentId);
+        Timer.Sample chunkSample = Timer.start(meterRegistry);
         List<DocumentChunk> rawChunks = chunkingStrategy.chunk(
                 document.id(), version.versionNumber(), document.metadata().title(), extractedText);
+        chunkSample.stop(Timer.builder("ingestion.chunking.duration")
+                .description("Text chunking duration per document")
+                .tag("document_type", docType)
+                .register(meterRegistry));
+        log.debug("Chunking complete for document {} ({} chunks)", documentId, rawChunks.size());
 
         if (rawChunks.isEmpty()) {
             log.warn("No chunks produced for document {}", documentId);
             return;
         }
 
+        // Phase 3: Embedding generation
+        log.debug("Starting embedding generation for document {} ({} chunks)", documentId, rawChunks.size());
+        Timer.Sample embedSample = Timer.start(meterRegistry);
         List<String> chunkTexts = rawChunks.stream().map(DocumentChunk::text).toList();
         List<float[]> embeddings = embeddingProvider.embedBatch(chunkTexts);
+        embedSample.stop(Timer.builder("ingestion.embedding.duration")
+                .description("Embedding generation duration per document")
+                .tag("document_type", docType)
+                .register(meterRegistry));
+        log.debug("Embedding generation complete for document {} ({} vectors)", documentId, embeddings.size());
 
+        // Phase 4: Chunk persistence + vector indexing
+        log.debug("Starting indexing for document {} ({} chunks)", documentId, rawChunks.size());
+        Timer.Sample indexSample = Timer.start(meterRegistry);
         List<DocumentChunk> enrichedChunks = new ArrayList<>();
         for (int i = 0; i < rawChunks.size(); i++) {
             DocumentChunk raw = rawChunks.get(i);
@@ -79,6 +115,24 @@ public class DefaultIndexingOrchestrationService implements IndexingOrchestratio
         }
 
         vectorSearchProvider.indexBatch(enrichedChunks, embeddings);
+        indexSample.stop(Timer.builder("ingestion.indexing.duration")
+                .description("Chunk persistence and vector indexing duration per document")
+                .tag("document_type", docType)
+                .register(meterRegistry));
+        log.debug("Indexing complete for document {}", documentId);
+
+        // Pipeline-level counters
+        Counter.builder("ingestion.documents.total")
+                .description("Total number of documents ingested")
+                .tag("document_type", docType)
+                .register(meterRegistry)
+                .increment();
+        Counter.builder("ingestion.chunks.total")
+                .description("Total number of chunks created")
+                .tag("document_type", docType)
+                .register(meterRegistry)
+                .increment(enrichedChunks.size());
+
         log.info("Indexed {} chunks for document {} ({}d vectors)", enrichedChunks.size(), documentId, embeddingProvider.dimension());
     }
 

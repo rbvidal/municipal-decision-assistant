@@ -11,6 +11,7 @@ import com.cognitera.platform.search.application.ollama.OllamaRerankingProvider;
 import com.cognitera.platform.search.application.qdrant.QdrantCollectionManager;
 import com.cognitera.platform.search.application.qdrant.QdrantProperties;
 import com.cognitera.platform.search.application.qdrant.QdrantVectorSearchProvider;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -103,10 +104,12 @@ public class SearchInfrastructureConfig {
             ChunkingStrategy chunkingStrategy,
             ChunkManagementService chunkManagementService,
             EmbeddingProvider embeddingProvider,
-            VectorSearchProvider vectorSearchProvider) {
+            VectorSearchProvider vectorSearchProvider,
+            MeterRegistry meterRegistry) {
         return new DefaultIndexingOrchestrationService(
                 documents, textExtractionService, chunkingStrategy,
-                chunkManagementService, embeddingProvider, vectorSearchProvider);
+                chunkManagementService, embeddingProvider, vectorSearchProvider,
+                meterRegistry);
     }
 
     /**
