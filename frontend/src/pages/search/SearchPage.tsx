@@ -1,10 +1,7 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback } from "react";
 import { AppShell } from "../../layouts/AppShell";
 import { TopNavigation, type NavModule } from "../../components/navigation";
-import { SearchBar } from "../../components/search";
-import { ResultCard } from "../../components/search";
-import { FilterPanel } from "../../components/search";
-import { SearchSummary } from "../../components/search";
+import { SearchBar, ResultCard, SearchSummary } from "../../components/search";
 import { EmptyState } from "../../components/common";
 import { searchService, type SearchResult, type SearchResponse } from "../../services/SearchService";
 import styles from "./SearchPage.module.css";
@@ -26,15 +23,18 @@ export const SearchPage: React.FC = React.memo(() => {
   const [hasSearched, setHasSearched] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [documentType, setDocumentType] = useState("all");
+  const [domain, setDomain] = useState("all");
 
   const handleSearch = useCallback(
-    async (searchQuery: string) => {
-      const q = searchQuery.trim();
+    async (searchQuery?: string) => {
+      const q = (searchQuery ?? query).trim();
       if (!q) return;
       setIsLoading(true);
       setError(null);
       try {
-        const response: SearchResponse = await searchService.search(q);
+        const typeParam = documentType !== "all" ? documentType : undefined;
+        const response: SearchResponse = await searchService.search(q, typeParam);
         setResults(response.results);
         setTotalElements(response.totalElements);
         setHasSearched(true);
@@ -44,7 +44,7 @@ export const SearchPage: React.FC = React.memo(() => {
         setIsLoading(false);
       }
     },
-    [],
+    [query, documentType],
   );
 
   const handleToggleFavorite = useCallback((id: string) => {
@@ -55,21 +55,6 @@ export const SearchPage: React.FC = React.memo(() => {
       return next;
     });
   }, []);
-
-  const filterGroups = useMemo(
-    () => [
-      {
-        id: "type",
-        label: "Dokumenttyp",
-        options: [
-          { value: "all", label: "Alle", count: results.length },
-          { value: "PDF", label: "PDF", count: 0 },
-          { value: "DOCX", label: "DOCX", count: 0 },
-        ],
-      },
-    ],
-    [results.length],
-  );
 
   return (
     <AppShell
@@ -101,6 +86,31 @@ export const SearchPage: React.FC = React.memo(() => {
             onSubmit={handleSearch}
             placeholder="Dokumente und Vorschriften durchsuchen..."
           />
+          <div className={styles.filterRow}>
+            <select
+              className={styles.filterSelect}
+              value={documentType}
+              onChange={(e) => setDocumentType(e.target.value)}
+              aria-label="Dokumenttyp filtern"
+            >
+              <option value="all">Alle Dokumenttypen</option>
+              <option value="PDF">PDF</option>
+              <option value="DOCX">DOCX</option>
+              <option value="TXT">TXT</option>
+              <option value="HTML">HTML</option>
+            </select>
+            <select
+              className={styles.filterSelect}
+              value={domain}
+              onChange={(e) => setDomain(e.target.value)}
+              aria-label="Fachbereich filtern"
+            >
+              <option value="all">Alle Fachbereiche</option>
+              <option value="building">Bauen & Stadtplanung</option>
+              <option value="procurement">Öffentliche Beschaffung</option>
+              <option value="hr">Personal & Verwaltung</option>
+            </select>
+          </div>
         </div>
 
         {isLoading && <p className={styles.status}>Suche läuft...</p>}
