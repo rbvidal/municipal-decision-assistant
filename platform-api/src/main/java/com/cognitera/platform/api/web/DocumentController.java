@@ -11,6 +11,7 @@ import com.cognitera.platform.document.api.AddDocumentVersionCommand;
 import com.cognitera.platform.document.api.CreateDocumentCommand;
 import com.cognitera.platform.document.api.DocumentFacade;
 import com.cognitera.platform.document.api.DocumentFilter;
+import com.cognitera.platform.document.api.DocumentIngestionService;
 import com.cognitera.platform.document.api.TextExtractionService;
 import com.cognitera.platform.document.api.UpdateDocumentMetadataCommand;
 import com.cognitera.platform.document.model.DocumentStatus;
@@ -21,9 +22,12 @@ import com.cognitera.platform.search.api.ChunkManagementService;
 import com.cognitera.platform.search.api.DocumentLifecycleHook;
 import com.cognitera.platform.search.model.SearchFilter;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -36,8 +40,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -52,23 +59,86 @@ import java.util.UUID;
 @RequestMapping("/api/documents")
 public class DocumentController {
 
+    private static final Logger log = LoggerFactory.getLogger(DocumentController.class);
+    private static final Path UPLOAD_DIR = Path.of("uploads");
+
     private final DocumentFacade documents;
     private final ObjectProvider<DocumentLifecycleHook> lifecycleHook;
     private final TextExtractionService textExtractionService;
     private final ChunkManagementService chunks;
     private final BatchImportService batchImportService;
+    private final DocumentIngestionService ingestionService;
 
-    /**
-     * Constructs the controller with required dependencies.
-     */
     public DocumentController(DocumentFacade documents, ObjectProvider<DocumentLifecycleHook> lifecycleHook,
                               TextExtractionService textExtractionService, ChunkManagementService chunks,
-                              BatchImportService batchImportService) {
+                              BatchImportService batchImportService,
+                              DocumentIngestionService ingestionService) {
         this.documents = documents;
         this.lifecycleHook = lifecycleHook;
         this.textExtractionService = textExtractionService;
         this.chunks = chunks;
         this.batchImportService = batchImportService;
+        this.ingestionService = ingestionService;
+    }
+
+    /**
+     * Uploads a document file, stores it locally, creates the document record,
+     * and triggers ingestion.
+     */
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public ResponseEntity<Map<String, Object>> upload(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "title", required = false) String title,
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "tags", required = false) String tags,
+            Authentication authentication) throws IOException {
+
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "File must not be empty"));
+        }
+
+        String originalName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "unknown";
+        String docTitle = title != null && !title.isBlank() ? title.trim() : originalName;
+        DocumentType type = detectType(originalName);
+        Set<String> tagSet = tags != null && !tags.isBlank()
+                ? Set.of(tags.split("\\s*,\\s*")) : Set.of();
+
+        Files.createDirectories(UPLOAD_DIR);
+        String storageKey = UPLOAD_DIR.resolve(UUID.randomUUID() + "_" + originalName).toString();
+        file.transferTo(Path.of(storageKey));
+
+        var command = new CreateDocumentCommand(
+                docTitle, type, originalName, file.getContentType(),
+                file.getSize(), "local-fs", storageKey, null,
+                category != null ? category.trim() : null,
+                tagSet, "PRIVATE", authentication.getName(), null);
+
+        Document doc = documents.createDocument(command);
+        log.info("Document {} uploaded: title={}, type={}, size={}",
+                doc.id(), docTitle, type, file.getSize());
+
+        ingestionService.createIngestionJob(doc.id(), authentication.getName());
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("id", doc.id());
+        response.put("title", docTitle);
+        response.put("type", type.name());
+        response.put("status", doc.status().name());
+        response.put("fileName", originalName);
+        response.put("sizeBytes", file.getSize());
+        response.put("ingestionPending", true);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    private static DocumentType detectType(String fileName) {
+        String lower = fileName.toLowerCase();
+        if (lower.endsWith(".pdf")) return DocumentType.PDF;
+        if (lower.endsWith(".docx")) return DocumentType.DOCX;
+        if (lower.endsWith(".txt")) return DocumentType.TXT;
+        if (lower.endsWith(".html") || lower.endsWith(".htm")) return DocumentType.HTML;
+        return DocumentType.PDF;
     }
 
     /**
