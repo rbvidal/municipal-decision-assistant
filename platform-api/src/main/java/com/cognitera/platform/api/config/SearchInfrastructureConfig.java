@@ -23,7 +23,7 @@ import org.springframework.context.annotation.Configuration;
  * chunking, indexing orchestration) based on property-driven conditional activation.
  */
 @Configuration
-@EnableConfigurationProperties({QdrantProperties.class, OllamaEmbeddingConfig.class})
+@EnableConfigurationProperties({QdrantProperties.class, OllamaEmbeddingConfig.class, ChunkingProperties.class})
 public class SearchInfrastructureConfig {
 
     /**
@@ -86,11 +86,14 @@ public class SearchInfrastructureConfig {
     }
 
     /**
-     * Provides the default sentence-aware chunking strategy.
+     * Provides the chunking strategy selected by {@code platform.search.chunking.strategy}.
      */
     @Bean
-    public ChunkingStrategy chunkingStrategy() {
-        return new SentenceAwareChunkingStrategy();
+    public ChunkingStrategy chunkingStrategy(ChunkingProperties chunkingProperties) {
+        return switch (chunkingProperties.getStrategy()) {
+            case FIXED -> new FixedSizeChunkingStrategy(chunkingProperties);
+            case SENTENCE -> new SentenceAwareChunkingStrategy(chunkingProperties);
+        };
     }
 
     /**

@@ -80,3 +80,7 @@ platform:
       ollama:
         base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
         model: ${OLLAMA_EMBEDDING_MODEL:nomic-embed-text}
+    chunking:
+      max-chunk-size: ${CHUNKING_MAX_SIZE:500}
+      overlap: ${CHUNKING_OVERLAP:50}
+      strategy: ${CHUNKING_STRATEGY:SENTENCE}

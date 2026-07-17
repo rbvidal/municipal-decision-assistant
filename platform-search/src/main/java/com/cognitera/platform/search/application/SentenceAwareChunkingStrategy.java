@@ -15,10 +15,22 @@ import java.util.regex.Pattern;
 /** Chunks text at sentence boundaries with configurable target chunk size and overlap. */
 public class SentenceAwareChunkingStrategy implements ChunkingStrategy {
 
-    private static final int TARGET_CHUNK_SIZE = 1200;
-    private static final int MIN_CHUNK_SIZE = 200;
     private static final Pattern SENTENCE_BOUNDARY = Pattern.compile(
             "(?<=[.!?])\\s+(?=[A-Z\\u0410-\\u042F\\n])|(?<=\\n\\n)|(?<=[:;])\\s+(?=[A-Z\\u0410-\\u042F])");
+
+    private final int maxChunkSize;
+    private final int overlap;
+
+    public SentenceAwareChunkingStrategy(ChunkingProperties properties) {
+        this.maxChunkSize = Math.max(properties.getMaxChunkSize(), 100);
+        this.overlap = clampOverlap(properties.getOverlap());
+    }
+
+    private int clampOverlap(int value) {
+        if (value < 0) return 0;
+        if (value >= maxChunkSize) return maxChunkSize / 4;
+        return value;
+    }
 
     @Override
     public List<DocumentChunk> chunk(UUID documentId, int documentVersion, String title, String text) {
@@ -33,31 +45,46 @@ public class SentenceAwareChunkingStrategy implements ChunkingStrategy {
         int chunkIndex = 0;
 
         while (start < normalized.length()) {
-            int idealEnd = Math.min(start + TARGET_CHUNK_SIZE, normalized.length());
+            int idealEnd = Math.min(start + maxChunkSize, normalized.length());
             int end = findBestSplitPoint(normalized, boundaries, start, idealEnd);
             String slice = normalized.substring(start, end).trim();
             if (!slice.isBlank()) {
-                chunks.add(new DocumentChunk(
-                        UUID.randomUUID(),
-                        documentId,
-                        documentVersion,
-                        ChunkType.TEXT,
-                        slice,
-                        new ChunkPosition(null, null, chunkIndex, start, end),
-                        new ChunkMetadata(title, null, null, null, null, null, null, null, null),
-                        null,
-                        null
-                ));
+                chunks.add(createChunk(documentId, documentVersion, title, slice, chunkIndex, start, end));
                 chunkIndex++;
             }
             if (end >= normalized.length()) {
                 break;
             }
-            // Advance start, with overlap
-            start = Math.max(start + TARGET_CHUNK_SIZE - 150, findPreviousBoundary(boundaries, end));
+            start = Math.max(start + maxChunkSize - overlap, findPreviousBoundary(boundaries, end));
             start = Math.min(start, normalized.length());
         }
         return chunks;
+    }
+
+    private int findBestSplitPoint(String text, List<Integer> boundaries, int start, int idealEnd) {
+        if (idealEnd >= text.length()) {
+            return text.length();
+        }
+        int minSize = maxChunkSize / 3;
+        for (int boundary : boundaries) {
+            if (boundary > start + minSize && boundary <= idealEnd + 200) {
+                return Math.min(boundary, text.length());
+            }
+        }
+        int fallback = text.indexOf('\n', idealEnd - 100);
+        if (fallback > start + minSize && fallback < idealEnd + 200) {
+            return fallback + 1;
+        }
+        return Math.min(idealEnd, text.length());
+    }
+
+    private int findPreviousBoundary(List<Integer> boundaries, int position) {
+        for (int i = boundaries.size() - 1; i >= 0; i--) {
+            if (boundaries.get(i) < position) {
+                return boundaries.get(i);
+            }
+        }
+        return position;
     }
 
     private List<Integer> findSentenceBoundaries(String text) {
@@ -69,31 +96,18 @@ public class SentenceAwareChunkingStrategy implements ChunkingStrategy {
         return boundaries;
     }
 
-    private int findBestSplitPoint(String text, List<Integer> boundaries, int start, int idealEnd) {
-        if (idealEnd >= text.length()) {
-            return text.length();
-        }
-        // Prefer splitting at a sentence boundary after the minimum chunk size
-        for (int boundary : boundaries) {
-            if (boundary > start + MIN_CHUNK_SIZE && boundary <= idealEnd + 200) {
-                return Math.min(boundary, text.length());
-            }
-        }
-        // Fall back to splitting at a reasonable point
-        int fallback = text.indexOf('\n', idealEnd - 100);
-        if (fallback > start + MIN_CHUNK_SIZE && fallback < idealEnd + 200) {
-            return fallback + 1;
-        }
-        // Last resort: just use the ideal end
-        return Math.min(idealEnd, text.length());
-    }
-
-    private int findPreviousBoundary(List<Integer> boundaries, int position) {
-        for (int i = boundaries.size() - 1; i >= 0; i--) {
-            if (boundaries.get(i) < position) {
-                return boundaries.get(i);
-            }
-        }
-        return position;
+    static DocumentChunk createChunk(UUID documentId, int documentVersion, String title,
+                                      String text, int chunkIndex, int start, int end) {
+        return new DocumentChunk(
+                UUID.randomUUID(),
+                documentId,
+                documentVersion,
+                ChunkType.TEXT,
+                text,
+                new ChunkPosition(null, null, chunkIndex, start, end),
+                new ChunkMetadata(title, null, null, null, null, null, null, null, null),
+                null,
+                null
+        );
     }
 }
