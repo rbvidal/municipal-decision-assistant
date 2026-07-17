@@ -1,0 +1,31 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.skeleton {
+  background: var(--color-gray-200);
+  border-radius: var(--radius-sm);
+  animation: var(--anim-pulse);
+}
+
+.text {
+  height: 14px;
+  width: 100%;
+}
+
+.card {
+  height: 120px;
+  width: 100%;
+  border-radius: var(--radius-lg);
+}
+
+.table-row {
+  height: 40px;
+  width: 100%;
+}
+
+.circle {
+  border-radius: 50%;
+}

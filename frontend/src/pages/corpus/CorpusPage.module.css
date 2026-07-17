@@ -1,0 +1,224 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.headerTitle {
+  font-size: var(--text-h2-size);
+  font-weight: 600;
+  color: var(--color-gray-900);
+  margin: 0;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+.overviewGrid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-4);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: var(--space-4);
+}
+
+.mainCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.sideCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ── Metrics ── */
+
+.metricsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.metricRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-caption-size);
+}
+
+.metricLabel {
+  color: var(--color-gray-500);
+}
+
+.metricValue {
+  font-weight: 600;
+  color: var(--color-gray-900);
+}
+
+.metricValueMono {
+  font-family: var(--font-mono);
+}
+
+.storageBar {
+  height: 8px;
+  background: var(--color-gray-200);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.storageFill {
+  height: 100%;
+  border-radius: 4px;
+}
+
+/* ── Job card ── */
+
+.jobCard {
+  padding: var(--space-3);
+  border: var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+}
+
+.jobHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.jobName {
+  font-size: var(--text-caption-size);
+  font-weight: 600;
+  color: var(--color-gray-900);
+}
+
+.jobMeta {
+  font-size: 11px;
+  color: var(--color-gray-400);
+  margin-top: var(--space-1);
+}
+
+/* ── Benchmark ── */
+
+.benchForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.benchSelect {
+  height: var(--size-button-sm);
+  padding: 0 var(--space-3);
+  border: var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: var(--text-caption-size);
+  font-family: var(--font-sans);
+  color: var(--color-gray-700);
+  background: var(--color-white);
+}
+
+.benchInput {
+  height: var(--size-button-sm);
+  padding: 0 var(--space-3);
+  border: var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: var(--text-caption-size);
+  font-family: var(--font-sans);
+  color: var(--color-gray-700);
+  width: 100%;
+}
+
+.benchResults {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+
+.benchResult {
+  padding: var(--space-3);
+  background: var(--color-gray-50);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.benchResultValue {
+  font-size: var(--text-stat-size);
+  font-weight: 700;
+  color: var(--color-primary-700);
+  line-height: var(--text-stat-line);
+}
+
+.benchResultLabel {
+  font-size: var(--text-caption-size);
+  color: var(--color-gray-500);
+}
+
+/* ── Semantic search ── */
+
+.searchForm {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.packageName {
+  font-weight: 500;
+  color: var(--color-gray-900);
+  cursor: pointer;
+}
+
+.packageName:hover {
+  color: var(--color-primary-500);
+  text-decoration: underline;
+}
+
+.emptySearch {
+  padding: var(--space-10);
+  text-align: center;
+  border: 2px dashed var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  color: var(--color-gray-400);
+  font-size: var(--text-caption-size);
+}
+
+.stackCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.mt3 { margin-top: var(--space-3); }
+.mt4 { margin-top: var(--space-4); }
+
+@media (max-width: 1280px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1024px) {
+  .overviewGrid {
+    grid-template-columns: 1fr;
+  }
+}

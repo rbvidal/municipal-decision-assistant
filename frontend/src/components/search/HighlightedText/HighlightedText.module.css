@@ -1,0 +1,10 @@
+.container {
+  line-height: inherit;
+}
+
+.mark {
+  background: #FFF3BF;
+  color: var(--color-gray-900);
+  border-radius: 2px;
+  padding: 0 1px;
+}

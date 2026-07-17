@@ -1,0 +1,6 @@
+.bar { display: flex; gap: 0; border-bottom: 1px solid var(--color-gray-200); height: 44px; overflow-x: auto; }
+.tab { display: inline-flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-4); height: 100%; font-size: var(--text-small-size); font-weight: var(--font-medium, 500); color: var(--color-gray-600); background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; transition: color var(--duration-fast), border-color var(--duration-fast); }
+.tab:hover:not(:disabled) { color: var(--color-gray-900); background: var(--color-gray-50); }
+.tab:focus-visible { outline: var(--focus-outline); outline-offset: -2px; }
+.tab:disabled { opacity: var(--opacity-disabled); cursor: not-allowed; }
+.active { color: var(--color-primary-700); border-bottom-color: var(--color-primary-700); }

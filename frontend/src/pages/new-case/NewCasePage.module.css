@@ -1,0 +1,25 @@
+.page { display: flex; flex-direction: column; gap: var(--space-4); }
+.wizardWrap { background: var(--color-white); border: var(--border-default); border-radius: var(--radius-lg); overflow: hidden; }
+.stepContent { display: flex; flex-direction: column; gap: var(--space-4); }
+.stepTitle { font-size: var(--text-h3-size); font-weight: 600; color: var(--color-gray-900); margin: 0 0 var(--space-1); }
+.stepDesc { font-size: var(--text-small-size); color: var(--color-gray-500); margin: 0; }
+.formGroup { display: flex; flex-direction: column; gap: var(--space-3); }
+.formRow { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.formLabel { font-size: var(--text-caption-size); font-weight: 500; color: var(--color-gray-700); margin-bottom: var(--space-1); display: block; }
+.formInput { height: var(--size-input-height); padding: 0 var(--space-3); border: var(--border-default); border-radius: var(--radius-md); font-size: var(--text-small-size); font-family: var(--font-sans); color: var(--color-gray-900); width: 100%; }
+.formInput:focus { outline: none; border-color: var(--color-primary-500); box-shadow: 0 0 0 3px var(--color-primary-100); }
+.formSelect { height: var(--size-input-height); padding: 0 var(--space-3); border: var(--border-default); border-radius: var(--radius-md); font-size: var(--text-small-size); font-family: var(--font-sans); color: var(--color-gray-900); background: var(--color-white); width: 100%; cursor: pointer; }
+.formTextarea { padding: var(--space-3); border: var(--border-default); border-radius: var(--radius-md); font-size: var(--text-small-size); font-family: var(--font-sans); color: var(--color-gray-900); width: 100%; resize: vertical; min-height: 100px; }
+.formTextarea:focus { outline: none; border-color: var(--color-primary-500); box-shadow: 0 0 0 3px var(--color-primary-100); }
+.docCheckGrid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+.docCheckItem { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-small-size); color: var(--color-gray-700); }
+.docCheckItem input { accent-color: var(--color-primary-500); }
+.summaryGrid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.summaryItem { display: flex; flex-direction: column; gap: 2px; }
+.summaryLabel { font-size: var(--text-caption-size); color: var(--color-gray-400); }
+.summaryValue { font-size: var(--text-small-size); color: var(--color-gray-900); font-weight: 500; }
+.successBanner { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); padding: var(--space-8); text-align: center; }
+.successIcon { color: var(--color-success-700); }
+.successTitle { font-size: var(--text-h2-size); font-weight: 600; color: var(--color-gray-900); }
+.successText { font-size: var(--text-small-size); color: var(--color-gray-500); }
+@media (max-width: 640px) { .formRow { grid-template-columns: 1fr; } .docCheckGrid { grid-template-columns: 1fr; } .summaryGrid { grid-template-columns: 1fr; } }

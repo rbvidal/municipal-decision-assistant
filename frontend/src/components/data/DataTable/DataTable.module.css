@@ -1,0 +1,87 @@
+.container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-small-size);
+  line-height: var(--text-small-line);
+}
+
+.table thead {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-base);
+}
+
+.table th {
+  background: var(--color-gray-100);
+  color: var(--color-gray-700);
+  font-weight: 500;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--border-default);
+  white-space: nowrap;
+  user-select: none;
+  height: 36px;
+}
+
+.sortable {
+  cursor: pointer;
+}
+
+.sortable:hover {
+  background: var(--color-gray-200);
+}
+
+.table td {
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-gray-900);
+  border-bottom: var(--border-light);
+  height: 40px;
+  vertical-align: middle;
+}
+
+.striped {
+  background: var(--color-gray-50);
+}
+
+.clickableRow {
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-default);
+}
+
+.clickableRow:hover {
+  background: var(--color-primary-50);
+}
+
+.clickableRow:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: -2px;
+}
+
+.loadingRows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-4) 0;
+}
+
+.checkCell {
+  width: 40px;
+  padding: var(--space-2) var(--space-2) !important;
+  text-align: center;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--color-primary-500);
+}
+
+.selectedRow {
+  background: var(--color-primary-50) !important;
+}

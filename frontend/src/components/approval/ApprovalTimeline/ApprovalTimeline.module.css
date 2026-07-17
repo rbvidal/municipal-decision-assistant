@@ -1,0 +1,79 @@
+.container {
+  display: flex;
+  flex-direction: column;
+}
+
+.heading {
+  font-size: var(--text-caption-size);
+  font-weight: 600;
+  color: var(--color-gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 var(--space-3);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.step {
+  display: flex;
+  gap: var(--space-3);
+  position: relative;
+}
+
+.connector {
+  position: absolute;
+  left: 11px;
+  top: 24px;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-gray-300);
+}
+
+.step + .step {
+  padding-top: var(--space-3);
+}
+
+.icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.completed {
+  color: var(--color-success-700);
+}
+
+.pending {
+  color: var(--color-warning-700);
+}
+
+.failed {
+  color: var(--color-error-700);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: var(--space-3);
+}
+
+.stepTitle {
+  font-size: var(--text-caption-size);
+  font-weight: 600;
+  line-height: var(--text-caption-line);
+}
+
+.stepDesc {
+  font-size: 11px;
+  color: var(--color-gray-500);
+  line-height: 16px;
+}

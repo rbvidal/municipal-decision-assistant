@@ -1,0 +1,15 @@
+.pane {
+  display: grid;
+  gap: var(--space-4);
+  min-height: 0;
+}
+
+.left {
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.right {
+  min-width: 0;
+  overflow-y: auto;
+}

@@ -1,0 +1,1 @@
+export { CorpusPage } from './CorpusPage';

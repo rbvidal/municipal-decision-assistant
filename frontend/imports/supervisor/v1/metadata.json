@@ -1,0 +1,6 @@
+{
+  "name": "Kommunale Entscheidungsplattform",
+  "description": "Supervisor approval workspace for municipal construction permit decisions including automatic verification and decision support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

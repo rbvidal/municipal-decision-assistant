@@ -1,0 +1,16 @@
+.summary {
+  font-size: var(--text-caption-size);
+  color: var(--color-gray-500);
+  margin: 0;
+  line-height: var(--text-caption-line);
+}
+
+.count {
+  font-weight: 600;
+  color: var(--color-gray-700);
+}
+
+.query {
+  color: var(--color-gray-700);
+  font-style: italic;
+}

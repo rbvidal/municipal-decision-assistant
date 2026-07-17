@@ -1,0 +1,25 @@
+.overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.blocking {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-dialog);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.message {
+  font-size: var(--text-small-size);
+  color: var(--color-gray-600);
+  margin: 0;
+}

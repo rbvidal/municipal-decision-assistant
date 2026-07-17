@@ -1,0 +1,4 @@
+.workspace { display: flex; flex-direction: column; height: 100%; }
+.caseHeader { padding: var(--space-3) var(--space-4); background: var(--color-white); border: var(--border-default); border-radius: var(--radius-lg); margin-bottom: var(--space-3); display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
+.tabBar { margin-bottom: var(--space-4); }
+.content { flex: 1; min-height: 0; }

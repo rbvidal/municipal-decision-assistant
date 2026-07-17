@@ -1,0 +1,18 @@
+.wrapper { position: relative; display: inline-flex; }
+.trigger { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2); border-radius: var(--radius-md); cursor: pointer; background: none; border: none; font-family: inherit; font-size: var(--text-body-size); color: var(--color-gray-700); }
+.trigger:hover { background: var(--color-gray-100); }
+.trigger:focus-visible { outline: var(--focus-outline); outline-offset: var(--focus-outline-offset); }
+.avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--color-primary-700); color: var(--color-white); font-size: var(--text-caption-size); font-weight: var(--font-semibold, 600); display: flex; align-items: center; justify-content: center; }
+.name { display: none; }
+@media (min-width: 1280px) { .name { display: inline; } }
+.dropdown { position: absolute; top: 100%; right: 0; margin-top: var(--space-2); width: 280px; background: var(--color-white); border: var(--border-default); border-radius: var(--radius-lg); box-shadow: var(--shadow-dialog); z-index: var(--z-dropdown); }
+.userInfo { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4); }
+.avatarLarge { width: 40px; height: 40px; border-radius: 50%; background: var(--color-primary-700); color: var(--color-white); font-size: var(--text-body-size); font-weight: var(--font-semibold, 600); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.userName { font-size: var(--text-body-size); font-weight: var(--font-semibold, 600); color: var(--color-gray-900); }
+.userEmail { font-size: var(--text-caption-size); color: var(--color-gray-500); }
+.userDept { font-size: var(--text-caption-size); color: var(--color-gray-500); }
+.divider { height: 1px; background: var(--color-gray-200); }
+.menuItem { display: block; width: 100%; padding: var(--space-2) var(--space-4); text-align: left; border: none; background: none; font-family: inherit; font-size: var(--text-body-size); color: var(--color-gray-700); cursor: pointer; }
+.menuItem:hover { background: var(--color-gray-50); }
+.danger { color: var(--color-error-700); }
+.danger:hover { background: var(--color-error-100); }

@@ -1,0 +1,78 @@
+.sidebarContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sidebarTitle {
+  font-size: var(--text-small-size);
+  font-weight: 600;
+  color: var(--color-gray-900);
+  margin: 0;
+  line-height: var(--text-small-line);
+}
+
+.sidebarSectionTitle {
+  font-size: var(--text-caption-size);
+  font-weight: 600;
+  color: var(--color-gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.sidebarSummary {
+  font-size: var(--text-caption-size);
+  line-height: var(--text-caption-line);
+  color: var(--color-gray-600);
+  margin: 0;
+}
+
+.sidebarDivider {
+  border: none;
+  border-top: var(--border-light);
+  margin: 0;
+}
+
+.proposalItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px dashed var(--color-gray-300);
+}
+
+.proposalItem:last-child {
+  border-bottom: none;
+}
+
+.proposalText {
+  flex: 1;
+  font-size: var(--text-caption-size);
+  line-height: var(--text-caption-line);
+  color: var(--color-gray-700);
+  margin: 0;
+}
+
+.proposalBtn {
+  background: none;
+  border: none;
+  color: var(--color-primary-500);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.proposalBtn:hover {
+  color: var(--color-primary-700);
+}
+
+.disclaimer {
+  font-size: 11px;
+  color: var(--color-gray-400);
+  font-style: italic;
+  line-height: 16px;
+  margin: 0;
+}

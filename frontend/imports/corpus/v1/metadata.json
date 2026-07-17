@@ -1,0 +1,6 @@
+{
+  "name": "Kommunale Entscheidungsplattform",
+  "description": "Zentrale Verwaltung der semantischen Wissensbasis und Vektordatenbank für den kommunalen Entscheidungs-Support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

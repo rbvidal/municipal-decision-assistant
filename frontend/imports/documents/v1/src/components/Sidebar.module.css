@@ -1,0 +1,175 @@
+.sidebar {
+  width: 20%;
+  min-width: 250px;
+  border-right: 1px solid var(--border-standard);
+  background-color: var(--surface-container-low);
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.navGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.navButton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  color: var(--on-surface-variant);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  width: 100%;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  text-align: left;
+}
+
+.navButton:hover {
+  background-color: rgba(226, 224, 252, 0.5); /* surface-variant 50% opacity */
+}
+
+.activeNavButton {
+  background-color: var(--secondary-container);
+  color: var(--on-secondary-container);
+  font-weight: 600;
+}
+
+.activeNavButton:hover {
+  background-color: var(--secondary-container);
+}
+
+.labelWrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.activeNavButton .icon {
+  color: var(--on-secondary-container);
+}
+
+.badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--outline);
+}
+
+.activeNavButton .badge {
+  color: var(--on-secondary-container);
+  font-weight: 700;
+}
+
+.badgeSpecial {
+  background-color: var(--secondary-fixed);
+  color: var(--on-secondary-fixed);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  line-height: 1;
+}
+
+.separator {
+  margin: 8px 0;
+  border: none;
+  border-top: 1px solid var(--border-standard);
+}
+
+/* Upload Status Card */
+.uploadCard {
+  margin-top: auto;
+  padding: 12px;
+  background-color: var(--surface);
+  border: 1px solid var(--border-standard);
+  border-radius: 8px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.syncIcon {
+  color: var(--secondary);
+  width: 14px;
+  height: 14px;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.cardTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--on-surface);
+}
+
+.progressBarContainer {
+  width: 100%;
+  background-color: var(--surface-variant);
+  border-radius: 9999px;
+  height: 6px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.progressBar {
+  background-color: var(--secondary);
+  height: 100%;
+  border-radius: 9999px;
+}
+
+.cardDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detailRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.detailLabel {
+  color: var(--on-surface-variant);
+}
+
+.successVal {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.warningVal {
+  color: var(--warning);
+  font-weight: 600;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}

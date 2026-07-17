@@ -1,0 +1,16 @@
+.spinner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dot {
+  border-radius: 50%;
+  border: 2px solid var(--color-gray-200);
+  border-top-color: var(--color-primary-500);
+  animation: var(--anim-spin);
+}
+
+.sm .dot { width: 16px; height: 16px; }
+.md .dot { width: 20px; height: 20px; }
+.lg .dot { width: 32px; height: 32px; }

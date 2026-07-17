@@ -1,0 +1,25 @@
+.wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.popover {
+  position: absolute;
+  z-index: var(--z-dropdown);
+  background: var(--color-white);
+  border: var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-dialog);
+  min-width: 200px;
+  animation: popoverIn var(--duration-fast) var(--ease-out);
+}
+
+.bottom { top: calc(100% + 4px); left: 0; }
+.top    { bottom: calc(100% + 4px); left: 0; }
+.left   { right: calc(100% + 4px); top: 0; }
+.right  { left: calc(100% + 4px); top: 0; }
+
+@keyframes popoverIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

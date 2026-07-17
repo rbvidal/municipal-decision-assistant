@@ -1,0 +1,102 @@
+.form-label {
+  display: block;
+  font-size: var(--text-body-size);
+  font-weight: var(--font-medium, 500);
+  color: var(--color-gray-900);
+  margin-bottom: var(--space-1);
+}
+
+.form-label.required::after {
+  content: ' *';
+  color: var(--color-error-700);
+}
+
+.form-input {
+  width: 100%;
+  height: var(--size-input-height);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-body-size);
+  font-family: var(--font-sans);
+  color: var(--color-gray-900);
+  background: var(--color-white);
+  border: var(--border-default);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--duration-fast) var(--ease-default),
+              box-shadow var(--duration-fast) var(--ease-default);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+  box-shadow: var(--focus-ring);
+}
+
+.form-input.error {
+  border-color: var(--color-error-700);
+  background: var(--color-error-50);
+}
+
+.form-input:disabled {
+  background: var(--color-gray-100);
+  color: var(--color-gray-500);
+  cursor: not-allowed;
+}
+
+.form-input::placeholder {
+  color: var(--color-gray-500);
+}
+
+.form-input[type="password"] {
+  letter-spacing: 0.2em;
+}
+
+.form-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23718096' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
+  padding-right: var(--space-8);
+}
+
+.form-textarea {
+  min-height: 80px;
+  resize: vertical;
+  line-height: var(--text-body-line);
+}
+
+.form-help {
+  font-size: var(--text-caption-size);
+  color: var(--color-gray-500);
+  margin-top: var(--space-1);
+}
+
+.form-error {
+  font-size: var(--text-caption-size);
+  color: var(--color-error-700);
+  margin-top: var(--space-1);
+}
+
+.form-field {
+  margin-bottom: var(--space-4);
+}
+
+.form-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  font-size: var(--text-body-size);
+  color: var(--color-gray-900);
+}
+
+.form-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary-700);
+  cursor: pointer;
+}
+
+.form-checkbox.disabled {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+}

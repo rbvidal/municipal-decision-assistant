@@ -1,0 +1,6 @@
+{
+  "name": "Operations Center",
+  "description": "Systemstatus und operative Verwaltung der Kommunalen Entscheidungsplattform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

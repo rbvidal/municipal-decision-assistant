@@ -1,0 +1,109 @@
+.panel {
+  background: var(--color-white);
+  border: var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-bottom: var(--border-light);
+  color: var(--color-gray-700);
+}
+
+.heading {
+  font-size: var(--text-body-size);
+  font-weight: 600;
+  margin: 0;
+  color: var(--color-gray-900);
+}
+
+.group {
+  border-bottom: var(--border-light);
+}
+
+.group:last-child {
+  border-bottom: none;
+}
+
+.groupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: background var(--duration-fast) var(--ease-default);
+}
+
+.groupHeader:hover {
+  background: var(--color-gray-50);
+}
+
+.groupLabel {
+  font-size: var(--text-caption-size);
+  font-weight: 600;
+  color: var(--color-gray-700);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.chevron {
+  color: var(--color-gray-400);
+  flex-shrink: 0;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--space-4) var(--space-3);
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-default);
+  font-size: var(--text-small-size);
+  color: var(--color-gray-700);
+}
+
+.option:hover {
+  background: var(--color-gray-50);
+}
+
+.optionActive {
+  background: var(--color-primary-50);
+  color: var(--color-primary-700);
+  font-weight: 500;
+}
+
+.radio {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.optionLabel {
+  flex: 1;
+}
+
+.optionCount {
+  font-size: var(--text-caption-size);
+  color: var(--color-gray-400);
+  font-weight: 400;
+}
+
+.optionActive .optionCount {
+  color: var(--color-primary-400);
+}

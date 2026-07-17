@@ -1,0 +1,6 @@
+{
+  "name": "Kommunale Entscheidungsplattform",
+  "description": "Erfassungsmaske zur Neuanlage eines Vorgangs in der Kommunalen Entscheidungsplattform",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

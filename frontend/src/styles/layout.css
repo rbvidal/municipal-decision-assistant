@@ -1,0 +1,66 @@
+.app-shell {
+  min-height: 100vh;
+  background: var(--color-bg-page);
+}
+
+.content-area {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-8);
+}
+
+.content-area.with-sidebar {
+  display: flex;
+  gap: var(--space-6);
+}
+
+.content-primary {
+  flex: 1;
+  min-width: 0;
+}
+
+.content-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  background: var(--color-gray-100);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.content-sidebar.wide {
+  width: 320px;
+}
+
+.content-sidebar.collapsed {
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.three-column {
+  display: grid;
+  grid-template-columns: 240px 1fr 320px;
+  gap: var(--space-6);
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+@media (max-width: 1366px) {
+  .card-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 1024px) {
+  .card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .three-column {
+    grid-template-columns: 1fr;
+  }
+}

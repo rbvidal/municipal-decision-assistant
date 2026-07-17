@@ -1,0 +1,75 @@
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: var(--space-4) 0;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.node {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.nodeText {
+  font-size: var(--text-caption-size);
+  font-weight: 600;
+}
+
+.step-completed .node {
+  background: var(--color-success-700);
+  color: var(--color-white);
+}
+
+.step-active .node {
+  border: 2px solid var(--color-primary-500);
+  color: var(--color-primary-500);
+  background: var(--color-white);
+}
+
+.step-inactive .node {
+  border: 2px solid var(--color-gray-300);
+  color: var(--color-gray-400);
+  background: transparent;
+}
+
+.label {
+  font-size: var(--text-caption-size);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.step-completed .label {
+  color: var(--color-gray-500);
+}
+
+.step-active .label {
+  color: var(--color-primary-700);
+  font-weight: 600;
+}
+
+.step-inactive .label {
+  color: var(--color-gray-400);
+}
+
+.connector {
+  flex: 1;
+  height: 1px;
+  background: var(--color-gray-300);
+  min-width: 24px;
+  max-width: 80px;
+  margin: 0 var(--space-2);
+}

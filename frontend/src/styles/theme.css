@@ -1,0 +1,17 @@
+/* Theme file — reserved for future dark mode support.
+   Currently provides the light theme (default).
+   Dark mode will use [data-theme="dark"] selector. */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+}
+
+/* Future:
+[data-theme="dark"] {
+  --color-bg-page: #0f172a;
+  --color-white: #1e293b;
+  --color-gray-900: #e2e8f0;
+  ...
+}
+*/

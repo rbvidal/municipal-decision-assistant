@@ -1,0 +1,80 @@
+.addLink {
+  background: none;
+  border: none;
+  color: var(--color-primary-500);
+  font-size: var(--text-caption-size);
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--font-sans);
+}
+
+.addLink:hover {
+  color: var(--color-primary-700);
+  text-decoration: underline;
+}
+
+.addForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  margin-bottom: var(--space-3);
+  border-bottom: var(--border-light);
+}
+
+.input {
+  height: var(--size-input-height);
+  padding: 0 var(--space-3);
+  border: var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: var(--text-small-size);
+  font-family: var(--font-sans);
+  color: var(--color-gray-900);
+  background: var(--color-white);
+}
+
+.input::placeholder {
+  color: var(--color-gray-400);
+}
+
+.input:focus {
+  outline: var(--focus-outline);
+  outline-offset: var(--focus-outline-offset);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: var(--border-light);
+}
+
+.progressText {
+  font-size: var(--text-caption-size);
+  color: var(--color-gray-500);
+  white-space: nowrap;
+}
+
+.progressBar {
+  flex: 1;
+  height: 5px;
+  background: var(--color-gray-200);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--color-primary-500);
+  border-radius: 3px;
+  transition: width var(--duration-slow) var(--ease-out);
+}

@@ -1,0 +1,165 @@
+/* ===================================================================
+   Design Tokens — Kommunale Entscheidungsplattform
+   Single source of truth for all visual properties.
+   Every component references these variables. Hardcoded values forbidden.
+   =================================================================== */
+
+:root {
+  /* ── Colors: Primary ── */
+  --color-primary-900: #1A365D;
+  --color-primary-700: #2B6CB0;
+  --color-primary-500: #3182CE;
+  --color-primary-100: #EBF8FF;
+  --color-primary-50: #F7FAFC;
+
+  /* ── Colors: Neutral / Gray ── */
+  --color-gray-900: #1A1A2E;
+  --color-gray-700: #4A5568;
+  --color-gray-600: #718096;
+  --color-gray-500: #A0AEC0;
+  --color-gray-400: #CBD5E0;
+  --color-gray-300: #E2E8F0;
+  --color-gray-200: #EDF2F7;
+  --color-gray-100: #F7FAFC;
+  --color-gray-50: #FAFBFC;
+
+  /* ── Colors: Semantic ── */
+  --color-success-700: #276749;
+  --color-success-100: #F0FFF4;
+  --color-success-50: #E6FFED;
+
+  --color-warning-700: #975A16;
+  --color-warning-100: #FFFFF0;
+  --color-warning-50: #FFFBEB;
+
+  --color-error-700: #9B2C2C;
+  --color-error-100: #FFF5F5;
+  --color-error-50: #FED7D7;
+
+  --color-info-700: #2B6CB0;
+  --color-info-100: #EBF8FF;
+  --color-info-50: #E3F2FD;
+
+  /* ── Colors: Background ── */
+  --color-white: #FFFFFF;
+  --color-bg-page: #FAFBFC;
+
+  /* ── Colors: Status Dots ── */
+  --color-dot-green: #38A169;
+  --color-dot-amber: #D69E2E;
+  --color-dot-red: #E53E3E;
+  --color-dot-gray: #A0AEC0;
+
+  /* ── Typography: Font Family ── */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', monospace;
+
+  /* ── Typography: Font Size ── */
+  --text-h1-size: 24px;
+  --text-h1-line: 32px;
+  --text-h1-weight: 600;
+
+  --text-h2-size: 20px;
+  --text-h2-line: 28px;
+  --text-h2-weight: 600;
+
+  --text-h3-size: 16px;
+  --text-h3-line: 24px;
+  --text-h3-weight: 600;
+
+  --text-body-size: 14px;
+  --text-body-line: 20px;
+  --text-body-weight: 400;
+
+  --text-small-size: 13px;
+  --text-small-line: 18px;
+  --text-small-weight: 400;
+
+  --text-caption-size: 12px;
+  --text-caption-line: 16px;
+  --text-caption-weight: 400;
+
+  --text-stat-size: 28px;
+  --text-stat-line: 36px;
+  --text-stat-weight: 700;
+
+  --text-code-size: 13px;
+  --text-code-line: 20px;
+  --text-code-weight: 400;
+
+  /* ── Spacing ── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-14: 56px;
+
+  /* ── Sizing ── */
+  --size-input-height: 40px;
+  --size-button-height: 36px;
+  --size-button-sm: 32px;
+  --size-button-lg: 44px;
+  --size-icon-sm: 16px;
+  --size-icon-md: 20px;
+  --size-icon-lg: 24px;
+  --size-touch-min: 36px;
+
+  /* ── Border Radius ── */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  /* ── Borders ── */
+  --border-default: 1px solid var(--color-gray-300);
+  --border-light: 1px solid var(--color-gray-200);
+  --border-focus: 2px solid var(--color-primary-500);
+
+  /* ── Transitions ── */
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --ease-default: ease;
+  --ease-out: ease-out;
+
+  /* ── Animation ── */
+  --anim-spin: spin 0.6s linear infinite;
+  --anim-pulse: pulse 1.5s ease-in-out infinite;
+
+  /* ── Z-Index ── */
+  --z-base: 1;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-dialog: 500;
+  --z-toast: 1000;
+
+  /* ── Opacity ── */
+  --opacity-disabled: 0.5;
+  --opacity-overlay: 0.5;
+
+  /* ── Breakpoints ── */
+  --bp-desktop-fhd: 1920px;
+  --bp-desktop: 1280px;
+  --bp-laptop: 1024px;
+  --bp-tablet: 768px;
+
+  /* ── Shadows (only for dialogs) ── */
+  --shadow-dialog: 0 4px 24px rgba(0, 0, 0, 0.12);
+
+  /* ── Focus Ring ── */
+  --focus-ring: 0 0 0 3px var(--color-primary-100);
+  --focus-outline: 2px solid var(--color-primary-500);
+  --focus-outline-offset: 2px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
