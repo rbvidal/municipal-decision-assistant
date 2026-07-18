@@ -31,21 +31,57 @@ public class ThresholdTable {
 
     /**
      * Normalizes a procurement category string to the canonical categories
-     * used by the threshold tables. IT-related categories (IT-Dienstleistung,
-     * Software, Cloud, etc.) map to "Lieferung/Dienstleistung". Bau-related
+     * used by the threshold tables. All VgV/DVO categories except
+     * Bauleistung map to "Lieferung/Dienstleistung". Bauleistung
      * categories map to "Bauleistung".
+     *
+     * <p>VgV §2 categories: Lieferung, Dienstleistung, Bauleistung.
+     * DVO (Unterschwellenvergabeordnung) uses the same taxonomy.
+     * IT-related, software, cloud, planning services, freelance services,
+     * and other non-construction categories all normalize to
+     * Lieferung/Dienstleistung.
      */
     public static String normalizeCategory(String category) {
         if (category == null) return null;
-        String lower = category.toLowerCase();
-        if (lower.startsWith("it") || lower.contains("software") || lower.contains("cloud")
-                || lower.contains("digital")) {
-            return "Lieferung/Dienstleistung";
-        }
-        if (lower.startsWith("bau") && !lower.equals("bauleistung")) {
+
+        String lower = category.toLowerCase().trim();
+
+        // ── Bauleistung / Construction ──
+        if (lower.equals("bauleistung") || lower.equals("bauleistungen")
+                || lower.equals("bau")) {
             return "Bauleistung";
         }
-        return category;
+        if (lower.startsWith("bau")) {
+            return "Bauleistung";
+        }
+
+        // ── Everything else → Lieferung/Dienstleistung ──
+        // IT-related categories
+        if (lower.startsWith("it") || lower.contains("software") || lower.contains("cloud")
+                || lower.contains("digital") || lower.contains("hardware")
+                || lower.contains("server") || lower.contains("netzwerk")
+                || lower.contains("it-")) {
+            return "Lieferung/Dienstleistung";
+        }
+
+        // Canonical VgV/DVO categories
+        if (lower.equals("lieferung") || lower.equals("dienstleistung")
+                || lower.equals("liefer- und dienstleistung")
+                || lower.equals("lieferung/dienstleistung")) {
+            return "Lieferung/Dienstleistung";
+        }
+
+        // DVO-specific: planungsleistung, freiberufliche dienstleistung,
+        // beratungsleistung, supportleistung, wartungsleistung
+        if (lower.contains("planungsleistung") || lower.contains("freiberuflich")
+                || lower.contains("beratung") || lower.contains("support")
+                || lower.contains("wartung")) {
+            return "Lieferung/Dienstleistung";
+        }
+
+        // Generic catch-all: any category that isn't explicitly Bauleistung
+        // is treated as Lieferung/Dienstleistung per VgV taxonomy
+        return "Lieferung/Dienstleistung";
     }
 
     /**

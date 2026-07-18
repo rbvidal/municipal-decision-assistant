@@ -10,12 +10,59 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests for procurement category normalization and threshold lookup.
- * IT-related categories must normalize to Lieferung/Dienstleistung
- * so they match the structured threshold table.
+ * All VgV/DVO categories except Bauleistung must normalize to
+ * Lieferung/Dienstleistung. 100% branch coverage on normalizeCategory().
  */
 class ThresholdTableTest {
 
-    // ── Category normalization ──
+    // ── null / blank ──
+
+    @Test
+    void shouldReturnNullForNullInput() {
+        assertNull(ThresholdTable.normalizeCategory(null));
+    }
+
+    // ── Bauleistung (construction) ──
+
+    @Test
+    void shouldKeepBauleistungUnchanged() {
+        assertEquals("Bauleistung",
+                ThresholdTable.normalizeCategory("Bauleistung"));
+    }
+
+    @Test
+    void shouldNormalizeBauleistungenToBauleistung() {
+        assertEquals("Bauleistung",
+                ThresholdTable.normalizeCategory("Bauleistungen"));
+    }
+
+    @Test
+    void shouldNormalizeBauToBauleistung() {
+        assertEquals("Bauleistung",
+                ThresholdTable.normalizeCategory("Bau"));
+    }
+
+    @Test
+    void shouldNormalizeBauauftragToBauleistung() {
+        assertEquals("Bauleistung",
+                ThresholdTable.normalizeCategory("Bauauftrag"));
+    }
+
+    @Test
+    void shouldNormalizeBauvertragToBauleistung() {
+        assertEquals("Bauleistung",
+                ThresholdTable.normalizeCategory("Bauvertrag"));
+    }
+
+    // ── Bauleistung with whitespace ──
+
+    @Test
+    void shouldNormalizeBauWithWhitespace() {
+        assertEquals("Bauleistung",
+                ThresholdTable.normalizeCategory(" Bau "));
+    }
+
+    // ── IT categories → Lieferung/Dienstleistung ──
 
     @Test
     void shouldNormalizeITDienstleistungToLieferungDienstleistung() {
@@ -54,26 +101,99 @@ class ThresholdTableTest {
     }
 
     @Test
-    void shouldNormalizeBauToBauleistung() {
-        assertEquals("Bauleistung",
-                ThresholdTable.normalizeCategory("Bau"));
+    void shouldNormalizeHardwareToLieferungDienstleistung() {
+        assertEquals("Lieferung/Dienstleistung",
+                ThresholdTable.normalizeCategory("Hardware"));
     }
 
     @Test
-    void shouldKeepBauleistungUnchanged() {
-        assertEquals("Bauleistung",
-                ThresholdTable.normalizeCategory("Bauleistung"));
+    void shouldNormalizeDigitalToLieferungDienstleistung() {
+        assertEquals("Lieferung/Dienstleistung",
+                ThresholdTable.normalizeCategory("Digitale Lösungen"));
     }
 
     @Test
-    void shouldKeepLieferungDienstleistungUnchanged() {
+    void shouldNormalizeServerToLieferungDienstleistung() {
+        assertEquals("Lieferung/Dienstleistung",
+                ThresholdTable.normalizeCategory("Server-Bereitstellung"));
+    }
+
+    @Test
+    void shouldNormalizeNetzwerkToLieferungDienstleistung() {
+        assertEquals("Lieferung/Dienstleistung",
+                ThresholdTable.normalizeCategory("Netzwerk-Infrastruktur"));
+    }
+
+    // ── VgV canonical categories → Lieferung/Dienstleistung ──
+
+    @Test
+    void shouldNormalizeLieferungToLieferungDienstleistung() {
+        assertEquals("Lieferung/Dienstleistung",
+                ThresholdTable.normalizeCategory("Lieferung"));
+    }
+
+    @Test
+    void shouldNormalizeDienstleistungToLieferungDienstleistung() {
+        assertEquals("Lieferung/Dienstleistung",
+                ThresholdTable.normalizeCategory("Dienstleistung"));
+    }
+
+    @Test
+    void shouldNormalizeLieferUndDienstleistung() {
+        assertEquals("Lieferung/Dienstleistung",
+                ThresholdTable.normalizeCategory("Liefer- und Dienstleistung"));
+    }
+
+    @Test
+    void shouldKeepCanonicalLieferungDienstleistung() {
         assertEquals("Lieferung/Dienstleistung",
                 ThresholdTable.normalizeCategory("Lieferung/Dienstleistung"));
     }
 
+    // ── DVO-specific categories → Lieferung/Dienstleistung ──
+
     @Test
-    void shouldReturnNullForNullInput() {
-        assertNull(ThresholdTable.normalizeCategory(null));
+    void shouldNormalizePlanungsleistungToLieferungDienstleistung() {
+        assertEquals("Lieferung/Dienstleistung",
+                ThresholdTable.normalizeCategory("Planungsleistung"));
+    }
+
+    @Test
+    void shouldNormalizeFreiberuflicheDienstleistung() {
+        assertEquals("Lieferung/Dienstleistung",
+                ThresholdTable.normalizeCategory("Freiberufliche Dienstleistungen"));
+    }
+
+    @Test
+    void shouldNormalizeBeratungsleistung() {
+        assertEquals("Lieferung/Dienstleistung",
+                ThresholdTable.normalizeCategory("Beratungsleistung"));
+    }
+
+    @Test
+    void shouldNormalizeSupportleistung() {
+        assertEquals("Lieferung/Dienstleistung",
+                ThresholdTable.normalizeCategory("Supportleistung"));
+    }
+
+    @Test
+    void shouldNormalizeWartungsleistung() {
+        assertEquals("Lieferung/Dienstleistung",
+                ThresholdTable.normalizeCategory("Wartungsleistung"));
+    }
+
+    // ── Generic fallback → Lieferung/Dienstleistung ──
+
+    @Test
+    void shouldDefaultUnknownCategoryToLieferungDienstleistung() {
+        assertEquals("Lieferung/Dienstleistung",
+                ThresholdTable.normalizeCategory("Büromaterial"));
+    }
+
+    @Test
+    void shouldDefaultEmptyStringToLieferungDienstleistung() {
+        String result = ThresholdTable.normalizeCategory("");
+        assertNotNull(result);
     }
 
     // ── Lookup with IT categories ──
@@ -81,8 +201,6 @@ class ThresholdTableTest {
     @Test
     void shouldMatchITQueryAgainstLieferungDienstleistungThresholds() {
         var table = createAv55Table();
-
-        // 18.000 € IT-Dienstleistung → Beschränkte Ausschreibung (10k-100k)
         var entry = table.lookup(18_000.0, ThresholdTable.normalizeCategory("IT-Dienstleistung"));
         assertTrue(entry.isPresent());
         assertEquals("Beschränkte Ausschreibung", entry.get().procedure());
@@ -91,8 +209,6 @@ class ThresholdTableTest {
     @Test
     void shouldMatchSoftwareQueryAgainstLieferungDienstleistungThresholds() {
         var table = createAv55Table();
-
-        // 800 € Software → Direktauftrag mit Genehmigung (500-1000)
         var entry = table.lookup(800.0, ThresholdTable.normalizeCategory("Software"));
         assertTrue(entry.isPresent());
         assertEquals("Direktauftrag mit Genehmigung", entry.get().procedure());
@@ -101,8 +217,6 @@ class ThresholdTableTest {
     @Test
     void shouldMatchITBeratungAtHighAmount() {
         var table = createAv55Table();
-
-        // 150.000 € IT-Beratung → Öffentliche Ausschreibung (100k+)
         var entry = table.lookup(150_000.0, ThresholdTable.normalizeCategory("IT-Beratung"));
         assertTrue(entry.isPresent());
         assertEquals("Öffentliche Ausschreibung / EU-weit", entry.get().procedure());
@@ -111,8 +225,6 @@ class ThresholdTableTest {
     @Test
     void shouldMatchCloudAtLowAmount() {
         var table = createAv55Table();
-
-        // 300 € Cloud → Kein formelles Verfahren (0-500)
         var entry = table.lookup(300.0, ThresholdTable.normalizeCategory("Cloud"));
         assertTrue(entry.isPresent());
         assertEquals("Kein formelles Verfahren", entry.get().procedure());
@@ -121,12 +233,18 @@ class ThresholdTableTest {
     @Test
     void shouldMatchBauQueryAgainstBauleistungThresholds() {
         var table = createAv55Table();
-
-        // 15.000 € Bau → Direktauftrag (0-20k for Bauleistung)
         var entry = table.lookup(15_000.0, ThresholdTable.normalizeCategory("Bau"));
         assertTrue(entry.isPresent());
         assertEquals("Direktauftrag", entry.get().procedure());
         assertEquals("Bauleistung", entry.get().category());
+    }
+
+    @Test
+    void shouldMatchPlanningServiceAgainstLieferungDienstleistung() {
+        var table = createAv55Table();
+        var entry = table.lookup(50_000.0, ThresholdTable.normalizeCategory("Planungsleistung"));
+        assertTrue(entry.isPresent());
+        assertEquals("Beschränkte Ausschreibung", entry.get().procedure());
     }
 
     // ── Without normalization (regression guard) ──
@@ -134,7 +252,6 @@ class ThresholdTableTest {
     @Test
     void shouldMatchStandardLieferungDienstleistung() {
         var table = createAv55Table();
-
         var entry = table.lookup(5_000.0, "Lieferung/Dienstleistung");
         assertTrue(entry.isPresent());
         assertEquals("Direktauftrag", entry.get().procedure());
@@ -143,7 +260,6 @@ class ThresholdTableTest {
     @Test
     void shouldMatchStandardBauleistung() {
         var table = createAv55Table();
-
         var entry = table.lookup(50_000.0, "Bauleistung");
         assertTrue(entry.isPresent());
         assertEquals("Beschränkte Ausschreibung", entry.get().procedure());
