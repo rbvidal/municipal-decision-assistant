@@ -1,0 +1,19 @@
+# ──────────────────────────────────────────────────────────
+# DEVELOPMENT PROFILE — NOT FOR PRODUCTION
+# Contains safe defaults for local development.
+# Activate with: --spring.profiles.active=dev
+# ──────────────────────────────────────────────────────────
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/municipal_decision_assistant
+    username: platform
+    password: platform
+
+platform:
+  auth:
+    jwt-secret: dev-secret-change-in-production-use-at-least-32-bytes
+  neo4j:
+    uri: bolt://localhost:7687
+    username: neo4j
+    password: password

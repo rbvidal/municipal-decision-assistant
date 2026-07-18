@@ -9,7 +9,7 @@ import java.time.Duration;
 public class AuthProperties {
 
     private String issuer = "municipal-decision-assistant";
-    private String jwtSecret = "change-this-development-secret-change-this-development-secret";
+    private String jwtSecret;
     private Duration accessTokenTtl = Duration.ofMinutes(15);
     private Duration refreshTokenTtl = Duration.ofDays(30);
 

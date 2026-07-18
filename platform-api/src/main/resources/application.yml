@@ -9,9 +9,9 @@ spring:
     basename: messages
     encoding: UTF-8
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5433/municipal_decision_assistant}
-    username: ${DB_USERNAME:platform}
-    password: ${DB_PASSWORD:platform}
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
   flyway:
     enabled: false
   jpa:
@@ -41,7 +41,7 @@ server:
 platform:
   auth:
     issuer: ${AUTH_JWT_ISSUER:municipal-decision-assistant}
-    jwt-secret: ${AUTH_JWT_SECRET:change-this-development-secret-change-this-development-secret}
+    jwt-secret: ${AUTH_JWT_SECRET}
     access-token-ttl: ${AUTH_ACCESS_TOKEN_TTL:15m}
     refresh-token-ttl: ${AUTH_REFRESH_TOKEN_TTL:30d}
   ai:
@@ -62,8 +62,8 @@ platform:
       max-mismatched-documents: ${AI_MAX_MISMATCHED_DOCS:0}
   neo4j:
     uri: ${NEO4J_URI:bolt://localhost:7687}
-    username: ${NEO4J_USERNAME:neo4j}
-    password: ${NEO4J_PASSWORD:password}
+    username: ${NEO4J_USERNAME}
+    password: ${NEO4J_PASSWORD}
 
 #   openai:
 #     api-key: ${OPENAI_API_KEY}
