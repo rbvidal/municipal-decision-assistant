@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { AppShell } from "../../layouts/AppShell";
-import { TopNavigation, type NavModule } from "../../components/navigation";
+import { AppTopNavigation, type NavModule } from "../../components/navigation";
 import { SearchBar, ResultCard, SearchSummary } from "../../components/search";
 import { EmptyState } from "../../components/common";
 import { searchService, type SearchResult, type SearchResponse } from "../../services/SearchService";
@@ -59,23 +59,7 @@ export const SearchPage: React.FC = React.memo(() => {
   return (
     <AppShell
       topNavigation={
-        <TopNavigation
-          modules={NAV_MODULES}
-          activeModule="documents"
-          onNavigate={() => {}}
-          userName="Sabine Müller"
-          userEmail="s.mueller@verwaltung.de"
-          userDepartment="Bauamt"
-          userInitials="SM"
-          userActions={[
-            { id: "profile", label: "Profil", onClick: () => {} },
-            { id: "logout", label: "Abmelden", onClick: () => {} },
-          ]}
-          notifications={[]}
-          onNotificationClick={() => {}}
-          onMarkAllNotificationsRead={() => {}}
-          onViewAllNotifications={() => {}}
-        />
+        <AppTopNavigation modules={NAV_MODULES} activeModule="documents" />
       }
     >
       <div className={styles.page}>
