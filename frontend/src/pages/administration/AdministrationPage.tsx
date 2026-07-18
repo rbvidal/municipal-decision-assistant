@@ -1,26 +1,8 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React from "react";
+import { useNavigate } from "react-router-dom";
 import { AppShell } from "../../layouts/AppShell";
-import { TopNavigation, TabBar, type NavModule } from "../../components/navigation";
-import { DataTable, type DataTableColumn } from "../../components/data";
-import {
-  Panel,
-  StatCard,
-  Badge,
-  Button,
-  ProgressIndicator,
-  PropertyGrid,
-  ActionToolbar,
-  EmptyState,
-} from "../../components/common";
-import { ConfirmDialog } from "../../components/interaction";
-import {
-  mockSystemHealth,
-  mockBackgroundJobs,
-  mockAuditLogs,
-  mockDepartments,
-  ADMIN_TABS,
-} from "../../mocks/administration";
-import type { BackgroundJob, AuditLogEntry, DepartmentConfig } from "../../mocks/administration";
+import { AppTopNavigation, type NavModule } from "../../components/navigation";
+import { Panel, StatCard, Icon } from "../../components/common";
 import styles from "./AdministrationPage.module.css";
 
 const NAV_MODULES: NavModule[] = [
@@ -31,300 +13,103 @@ const NAV_MODULES: NavModule[] = [
   { id: "admin", label: "Verwaltung", href: "/admin", active: true },
 ];
 
-const JOB_STATUS: Record<string, "success" | "info" | "error" | "neutral"> = {
-  Completed: "success",
-  Running: "info",
-  Failed: "error",
-  Queued: "neutral",
-};
+interface ToolCard {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  href: string;
+  color: string;
+}
+
+const TOOLS: ToolCard[] = [
+  {
+    id: "corpus", title: "Corpus-Verwaltung", icon: "database",
+    description: "Dokumenten-Health, Embedding-Abdeckung, Qdrant-Status und Corpus-Inventar.",
+    href: "/admin/corpus", color: "#1a4cd4",
+  },
+  {
+    id: "audit", title: "Audit-Log", icon: "shield",
+    description: "Sicherheitsrelevante Ereignisse, Benutzeraktionen und System-Logs durchsuchen.",
+    href: "/admin/audit", color: "#22b07d",
+  },
+  {
+    id: "users", title: "Benutzerverwaltung", icon: "users",
+    description: "Benutzerkonten verwalten, Rollen zuweisen, Account-Status ändern.",
+    href: "/admin/users", color: "#7c5ce7",
+  },
+  {
+    id: "knowledge", title: "Wissensbasis", icon: "book-open",
+    description: "Regulationen nach Rechtsbereich durchsuchen, Dokumente und Vorschriften einsehen.",
+    href: "/knowledge", color: "#f5a623",
+  },
+  {
+    id: "jobs", title: "Hintergrundjobs", icon: "refresh-cw",
+    description: "Ingestion-Jobs, Indexierung und Embedding-Generierung überwachen.",
+    href: "/admin/jobs", color: "#e54545",
+  },
+  {
+    id: "documents", title: "Dokumentenverwaltung", icon: "file-text",
+    description: "Dokumente hochladen, versionieren, archivieren und durchsuchen.",
+    href: "/documents", color: "#0ea5e9",
+  },
+];
 
 export const AdministrationPage: React.FC = React.memo(() => {
-  const [activeTab, setActiveTab] = useState("overview");
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  const [auditLogs, setAuditLogs] = useState(mockAuditLogs);
-
-  const handleClearAudit = useCallback(() => setAuditLogs([]), []);
-
-  const jobColumns: DataTableColumn<BackgroundJob>[] = useMemo(
-    () => [
-      {
-        key: "name",
-        header: "Auftrag",
-        render: (j) => <span className={styles.jobName}>{j.name}</span>,
-      },
-      {
-        key: "status",
-        header: "Status",
-        render: (j) => <Badge status={JOB_STATUS[j.status] ?? "neutral"}>{j.status}</Badge>,
-      },
-      {
-        key: "progress",
-        header: "Fortschritt",
-        render: (j) => (
-          <ProgressIndicator
-            value={j.progress}
-            max={100}
-            size="sm"
-            status={j.status === "Failed" ? "error" : j.status === "Completed" ? "success" : "info"}
-          />
-        ),
-      },
-      {
-        key: "startedAt",
-        header: "Gestartet",
-        render: (j) => <span className={styles.monoCell}>{j.startedAt}</span>,
-      },
-      {
-        key: "duration",
-        header: "Dauer",
-        render: (j) => <span className={styles.monoCell}>{j.duration}</span>,
-      },
-    ],
-    [],
-  );
-
-  const auditColumns: DataTableColumn<AuditLogEntry>[] = useMemo(
-    () => [
-      {
-        key: "timestamp",
-        header: "Zeitstempel",
-        render: (l) => <span className={styles.monoCell}>{l.timestamp}</span>,
-      },
-      {
-        key: "user",
-        header: "Benutzer",
-        render: (l) => <span className={styles.monoCell}>{l.user}</span>,
-      },
-      {
-        key: "action",
-        header: "Aktion",
-        render: (l) => <span className={styles.monoCell}>{l.action}</span>,
-      },
-      {
-        key: "target",
-        header: "Zielobjekt",
-        render: (l) => <span className={styles.monoCell}>{l.target}</span>,
-      },
-      { key: "ip", header: "IP", render: (l) => <span className={styles.monoCell}>{l.ip}</span> },
-    ],
-    [],
-  );
-
-  const deptColumns: DataTableColumn<DepartmentConfig>[] = useMemo(
-    () => [
-      {
-        key: "name",
-        header: "Dezernat",
-        render: (d) => <span className={styles.jobName}>{d.name}</span>,
-      },
-      {
-        key: "shortCode",
-        header: "Kürzel",
-        render: (d) => (
-          <Badge status="info" variant="pill">
-            {d.shortCode}
-          </Badge>
-        ),
-      },
-      {
-        key: "activeUsers",
-        header: "Aktive Benutzer",
-        render: (d) => <span className={styles.monoCell}>{String(d.activeUsers)}</span>,
-      },
-      {
-        key: "totalCases",
-        header: "Vorgänge",
-        render: (d) => <span className={styles.monoCell}>{String(d.totalCases)}</span>,
-      },
-    ],
-    [],
-  );
+  const navigate = useNavigate();
 
   return (
-    <AppShell
-      topNavigation={
-        <TopNavigation
-          modules={NAV_MODULES}
-          activeModule="admin"
-          onNavigate={() => {}}
-          userName="Joachim Dehmel"
-          userEmail="j.dehmel@verwaltung.de"
-          userDepartment="Amt für Digitalisierung"
-          userInitials="JD"
-          userActions={[
-            { id: "profile", label: "Profil", onClick: () => {} },
-            { id: "logout", label: "Abmelden", onClick: () => {} },
-          ]}
-          notifications={[]}
-          onNotificationClick={() => {}}
-          onMarkAllNotificationsRead={() => {}}
-          onViewAllNotifications={() => {}}
-        />
-      }
-    >
-      <div className={styles.page}>
-        <div className={styles.header}>
-          <h1 className={styles.headerTitle}>Verwaltung</h1>
-          <ActionToolbar
-            actions={[
-              { id: "sync", label: "Sync starten", onClick: () => {}, variant: "primary" },
-              { id: "export", label: "Export", onClick: () => {}, variant: "secondary" },
-            ]}
-          />
-        </div>
-        <TabBar tabs={ADMIN_TABS} activeTab={activeTab} onTabChange={setActiveTab} />
+    <AppShell topNavigation={<AppTopNavigation modules={NAV_MODULES} activeModule="admin" />}>
+      <h1 style={{ fontSize: "1.3rem", fontWeight: 600, marginBottom: "var(--space-2)" }}>
+        Verwaltung
+      </h1>
+      <p style={{ fontSize: "0.85rem", color: "var(--color-gray-500)", marginBottom: "var(--space-5)" }}>
+        Administrationswerkzeuge für die Kommunale Entscheidungsplattform.
+      </p>
 
-        {activeTab === "overview" && (
-          <>
-            <div className={styles.statsGrid}>
-              <StatCard
-                label="CPU"
-                value={mockSystemHealth.cpuPercent}
-                percentage={mockSystemHealth.cpuPercent}
-                status="info"
-              />
-              <StatCard
-                label="Speicher"
-                value={mockSystemHealth.memoryPercent}
-                percentage={mockSystemHealth.memoryPercent}
-                status="warning"
-              />
-              <StatCard
-                label="Festplatte"
-                value={mockSystemHealth.diskPercent}
-                percentage={mockSystemHealth.diskPercent}
-                status="success"
-              />
-              <StatCard label="Uptime" value={14} status="neutral" />
-            </div>
-            <div className={styles.overviewGrid}>
-              <Panel title="System-Status">
-                <PropertyGrid
-                  items={[
-                    { label: "API", value: mockSystemHealth.apiStatus, valueHighlight: true },
-                    { label: "Datenbank", value: mockSystemHealth.dbStatus, valueHighlight: true },
-                    { label: "Qdrant", value: mockSystemHealth.qdrantStatus, valueHighlight: true },
-                    { label: "Version", value: mockSystemHealth.version, valueMono: true },
-                    { label: "Uptime", value: mockSystemHealth.uptime, valueMono: true },
-                  ]}
-                />
-              </Panel>
-              <Panel title="Schnellaktionen">
-                <ActionToolbar
-                  actions={[
-                    {
-                      id: "reindex",
-                      label: "Re-Indizierung starten",
-                      onClick: () => {},
-                      variant: "primary",
-                    },
-                    {
-                      id: "clearcache",
-                      label: "Cache leeren",
-                      onClick: () => {},
-                      variant: "secondary",
-                    },
-                    {
-                      id: "restart",
-                      label: "Dienst neustarten",
-                      onClick: () => {},
-                      variant: "danger",
-                    },
-                  ]}
-                />
-              </Panel>
-            </div>
-          </>
-        )}
-
-        {activeTab === "jobs" && (
-          <Panel title="Hintergrundaufträge">
-            <DataTable columns={jobColumns} data={mockBackgroundJobs} keyField="id" />
-          </Panel>
-        )}
-
-        {activeTab === "audit" && (
-          <Panel
-            title="Audit-Protokoll"
-            headerAction={
-              <Button variant="ghost" size="sm" onClick={() => setConfirmDelete("audit")}>
-                Protokoll löschen
-              </Button>
-            }
-          >
-            {auditLogs.length === 0 ? (
-              <EmptyState title="Keine Audit-Einträge" />
-            ) : (
-              <DataTable columns={auditColumns} data={auditLogs} keyField="id" />
-            )}
-          </Panel>
-        )}
-
-        {activeTab === "departments" && (
-          <Panel title="Dezernate & Fachbereiche">
-            <DataTable columns={deptColumns} data={mockDepartments} keyField="id" />
-          </Panel>
-        )}
-
-        {activeTab === "settings" && (
-          <Panel title="System-Einstellungen">
-            <div className={styles.settingsForm}>
-              <div>
-                <div className={styles.settingsRow}>
-                  <div>
-                    <span className={styles.settingsLabel}>Automatische Indizierung</span>
-                    <p className={styles.settingsDesc}>
-                      Neue Dokumente werden automatisch indiziert.
-                    </p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    defaultChecked
-                    className={styles.settingsInput}
-                    style={{ width: "auto" }}
-                  />
-                </div>
-                <hr className={styles.settingsDivider} />
-                <div className={styles.settingsRow}>
-                  <div>
-                    <span className={styles.settingsLabel}>Embedding-Modell</span>
-                    <p className={styles.settingsDesc}>
-                      Verwendetes Modell für Vektoreinbettungen.
-                    </p>
-                  </div>
-                  <select className={styles.settingsInput} defaultValue="text-embedding-004">
-                    <option>text-embedding-004</option>
-                    <option>text-embedding-003</option>
-                    <option>text-multilingual-embedding-002</option>
-                  </select>
-                </div>
-                <hr className={styles.settingsDivider} />
-                <div className={styles.settingsRow}>
-                  <div>
-                    <span className={styles.settingsLabel}>Chunk-Größe (Tokens)</span>
-                    <p className={styles.settingsDesc}>Maximale Tokens pro Text-Chunk.</p>
-                  </div>
-                  <input type="number" className={styles.settingsInput} defaultValue={512} />
-                </div>
-                <hr className={styles.settingsDivider} />
-                <Button variant="primary" size="sm">
-                  Einstellungen speichern
-                </Button>
-              </div>
-            </div>
-          </Panel>
-        )}
+      {/* System status */}
+      <div className={styles.statsGrid} style={{ marginBottom: "var(--space-5)" }}>
+        <StatCard label="API Status" value={1} icon="check-circle" />
+        <StatCard label="Datenbank" value={1} icon="database" />
+        <StatCard label="Qdrant" value={1} icon="server" />
+        <StatCard label="Uptime (Tage)" value={14} icon="clock" />
       </div>
 
-      <ConfirmDialog
-        open={confirmDelete === "audit"}
-        onClose={() => setConfirmDelete(null)}
-        onConfirm={handleClearAudit}
-        title="Audit-Protokoll löschen"
-        description="Möchten Sie wirklich das gesamte Audit-Protokoll löschen? Diese Aktion kann nicht rückgängig gemacht werden."
-        confirmLabel="Löschen"
-        mode="danger"
-      />
+      {/* Tool grid */}
+      <div className={styles.toolGrid}>
+        {TOOLS.map((tool) => (
+          <button
+            key={tool.id}
+            type="button"
+            className={styles.toolCard}
+            onClick={() => navigate(tool.href)}
+            style={{ borderTopColor: tool.color }}
+          >
+            <div className={styles.toolIcon} style={{ color: tool.color }}>
+              <Icon name={tool.icon} size={28} />
+            </div>
+            <h3 className={styles.toolTitle}>{tool.title}</h3>
+            <p className={styles.toolDesc}>{tool.description}</p>
+          </button>
+        ))}
+      </div>
+
+      <Panel title="System-Informationen">
+        <div style={{ display: "flex", gap: "var(--space-6)", flexWrap: "wrap", fontSize: "0.85rem" }}>
+          <div>
+            <strong>Version:</strong> 2.4.1
+          </div>
+          <div>
+            <strong>Letzter Health-Check:</strong> Vor 47 Minuten
+          </div>
+          <div>
+            <strong>Embedding-Modell:</strong> multilingual-e5-large
+          </div>
+          <div>
+            <strong>Java:</strong> 21
+          </div>
+        </div>
+      </Panel>
     </AppShell>
   );
 });

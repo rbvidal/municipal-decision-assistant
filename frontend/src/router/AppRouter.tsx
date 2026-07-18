@@ -39,6 +39,9 @@ const RegisterPage = lazy(() =>
 const SearchPage = lazy(() =>
   import("../pages/search").then((m) => ({ default: m.SearchPage })),
 );
+const AuditPage = lazy(() =>
+  import("../pages/audit").then((m) => ({ default: m.AuditPage })),
+);
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
@@ -70,6 +73,7 @@ export const AppRouter: React.FC = () => (
               <Route path="/supervisor" element={<ProtectedRoute><SupervisorPage /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute><AdministrationPage /></ProtectedRoute>} />
               <Route path="/admin/corpus" element={<ProtectedRoute><CorpusPage /></ProtectedRoute>} />
+              <Route path="/admin/audit" element={<ProtectedRoute><AuditPage /></ProtectedRoute>} />
               <Route path="/admin/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
               <Route path="/work/new" element={<ProtectedRoute><NewCasePage /></ProtectedRoute>} />
 

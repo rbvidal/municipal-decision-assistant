@@ -7,4 +7,6 @@ export const restCorpusService: CorpusService = {
   getMetrics: () => apiClient.get<QdrantMetrics>("/api/corpus/metrics"),
   getJobs: () => apiClient.get<BackgroundJob[]>("/api/corpus/jobs"),
   getAuditLogs: () => apiClient.get<AuditLog[]>("/api/corpus/audit"),
+  getHealth: () => apiClient.get("/api/admin/corpus/health"),
+  getManifestSummary: () => apiClient.get("/api/admin/corpus/manifest-summary"),
 };

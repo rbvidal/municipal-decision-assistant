@@ -14,6 +14,7 @@ export type { KnowledgeService } from "./KnowledgeService";
 export type { DocumentService } from "./DocumentService";
 export type { UserService } from "./UserService";
 export type { SupervisorService } from "./SupervisorService";
-export type { CorpusService } from "./CorpusService";
+export type { CorpusService, CorpusHealthResponse, CorpusHealthSummary, ManifestSummary }
+  from "./CorpusService";
 export type { AdminService } from "./AdminService";
 export type { DecisionService } from "./DecisionService";
