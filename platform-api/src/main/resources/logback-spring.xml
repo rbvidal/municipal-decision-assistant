@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!--
+        Municipal Decision Assistant — Logging Configuration
+        Profile-aware: console (dev) vs JSON (prod/non-dev).
+        trace_id and span_id populated via MDC from Micrometer Tracing.
+    -->
+
+    <!-- ── Dev profile: human-readable console output ── -->
+    <springProfile name="dev,default">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>
+                    %d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) [%thread] [%X{trace_id:-}] [%X{span_id:-}] %cyan(%logger{36}) [%X{correlationId:-}] - %msg%n
+                </pattern>
+            </encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- ── Production profile: JSON structured logging ── -->
+    <springProfile name="prod">
+        <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="ch.qos.logback.classic.encoder.JsonEncoder">
+                <jsonFormatter class="ch.qos.logback.contrib.jackson.JacksonJsonFormatter">
+                    <prettyPrint>false</prettyPrint>
+                </jsonFormatter>
+                <timestampFormat>yyyy-MM-dd HH:mm:ss.SSS</timestampFormat>
+            </encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="JSON"/>
+        </root>
+    </springProfile>
+
+    <!-- ── Async appender for non-blocking I/O ── -->
+    <appender name="ASYNC" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <appender-ref ref="${active.appender:-CONSOLE}"/>
+    </appender>
+</configuration>
