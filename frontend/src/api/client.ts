@@ -69,12 +69,17 @@ function mapSpringError(status: number, body: Record<string, unknown>): ApiError
 export class ApiClient {
   private baseUrl: string;
   private defaultTimeout: number;
-  private onUnauthorized?: () => void;
+  private _onUnauthorized?: () => void;
 
   constructor(baseUrl: string, options?: { timeout?: number; onUnauthorized?: () => void }) {
     this.baseUrl = baseUrl;
     this.defaultTimeout = options?.timeout ?? 30_000;
-    this.onUnauthorized = options?.onUnauthorized;
+    this._onUnauthorized = options?.onUnauthorized;
+  }
+
+  /** Sets a callback to invoke on 401 responses. */
+  set onUnauthorized(cb: (() => void) | undefined) {
+    this._onUnauthorized = cb;
   }
 
   private async request<T>(path: string, config: RequestConfig = {}): Promise<T> {
@@ -103,8 +108,8 @@ export class ApiClient {
         credentials: "same-origin",
       });
 
-      if (response.status === 401 && this.onUnauthorized) {
-        this.onUnauthorized();
+      if (response.status === 401 && this._onUnauthorized) {
+        this._onUnauthorized();
       }
 
       if (!response.ok) {
@@ -168,8 +173,8 @@ export class ApiClient {
     try {
       const response = await fetch(url.toString(), { headers, signal: effectiveSignal });
 
-      if (response.status === 401 && this.onUnauthorized) {
-        this.onUnauthorized();
+      if (response.status === 401 && this._onUnauthorized) {
+        this._onUnauthorized();
       }
 
       if (!response.ok) {
@@ -286,3 +291,39 @@ export const apiClient = new ApiClient(
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080",
   { timeout: 30_000 },
 );
+
+/** Registers a callback invoked when any API request receives a 401 response. */
+export function onUnauthorized(callback: () => void): void {
+  apiClient.onUnauthorized = callback;
+}
+
+/** Attempts a silent token refresh. Returns true if successful. */
+export async function trySilentRefresh(): Promise<boolean> {
+  const refreshToken = localStorage.getItem("refreshToken");
+  if (!refreshToken) return false;
+
+  try {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
+    const response = await fetch(`${baseUrl}/api/auth/refresh`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      },
+    );
+
+    if (!response.ok) {
+      localStorage.removeItem("refreshToken");
+      return false;
+    }
+
+    const data = await response.json();
+    setAuthToken(data.accessToken);
+    if (data.refreshToken) {
+      localStorage.setItem("refreshToken", data.refreshToken);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}

@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from "react";
-import { setAuthToken, getAuthToken, apiClient } from "../api";
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from "react";
+import { setAuthToken, apiClient, onUnauthorized, trySilentRefresh } from "../api";
 
 interface AuthUser {
   id: string;
@@ -41,7 +41,39 @@ function userFromResponse(data: { id: string; email: string; displayName: string
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Try silent token refresh on mount
+  useEffect(() => {
+    const init = async () => {
+      const hasRefreshToken = !!localStorage.getItem("refreshToken");
+      if (hasRefreshToken) {
+        const ok = await trySilentRefresh();
+        if (ok) {
+          try {
+            const me = await apiClient.get<{
+              id: string; email: string; displayName: string; roles: string[];
+            }>("/api/auth/me");
+            setUser(userFromResponse(me));
+          } catch {
+            setAuthToken(null);
+            localStorage.removeItem("refreshToken");
+          }
+        }
+      }
+      setIsLoading(false);
+    };
+    init();
+  }, []);
+
+  // Wire 401 interceptor to logout
+  useEffect(() => {
+    onUnauthorized(() => {
+      setAuthToken(null);
+      localStorage.removeItem("refreshToken");
+      setUser(null);
+    });
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);

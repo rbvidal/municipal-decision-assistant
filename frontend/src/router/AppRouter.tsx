@@ -1,7 +1,7 @@
 import React, { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AuthProvider } from "../auth";
+import { AuthProvider, ProtectedRoute } from "../auth";
 import { ErrorBoundary } from "../components/common/ErrorBoundary";
 import { LoadingOverlay } from "../components/interaction";
 
@@ -54,19 +54,23 @@ export const AppRouter: React.FC = () => (
         <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>
             <Routes>
+              {/* Public routes */}
               <Route path="/" element={<Navigate to="/home" replace />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
-              <Route path="/home" element={<HomePage />} />
-              <Route path="/work/:caseId" element={<CaseWorkspacePage />} />
-              <Route path="/knowledge" element={<KnowledgePage />} />
-              <Route path="/documents" element={<DocumentsPage />} />
-              <Route path="/search" element={<SearchPage />} />
-              <Route path="/supervisor" element={<SupervisorPage />} />
-              <Route path="/admin" element={<AdministrationPage />} />
-              <Route path="/admin/corpus" element={<CorpusPage />} />
-              <Route path="/admin/users" element={<UsersPage />} />
-              <Route path="/work/new" element={<NewCasePage />} />
+
+              {/* Protected routes */}
+              <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+              <Route path="/work/:caseId" element={<ProtectedRoute><CaseWorkspacePage /></ProtectedRoute>} />
+              <Route path="/knowledge" element={<ProtectedRoute><KnowledgePage /></ProtectedRoute>} />
+              <Route path="/documents" element={<ProtectedRoute><DocumentsPage /></ProtectedRoute>} />
+              <Route path="/search" element={<ProtectedRoute><SearchPage /></ProtectedRoute>} />
+              <Route path="/supervisor" element={<ProtectedRoute><SupervisorPage /></ProtectedRoute>} />
+              <Route path="/admin" element={<ProtectedRoute><AdministrationPage /></ProtectedRoute>} />
+              <Route path="/admin/corpus" element={<ProtectedRoute><CorpusPage /></ProtectedRoute>} />
+              <Route path="/admin/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
+              <Route path="/work/new" element={<ProtectedRoute><NewCasePage /></ProtectedRoute>} />
+
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </Suspense>

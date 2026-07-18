@@ -6,4 +6,6 @@ export {
   apiClient,
   setAuthToken,
   getAuthToken,
+  onUnauthorized,
+  trySilentRefresh,
 } from "./client";
