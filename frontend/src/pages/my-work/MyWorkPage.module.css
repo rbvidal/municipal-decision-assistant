@@ -1,0 +1,56 @@
+.filterBar {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.filterBtn {
+  padding: 6px 14px;
+  border: 1px solid var(--color-border, #e2e4eb);
+  border-radius: 20px;
+  background: var(--color-bg, #ffffff);
+  font-size: 0.82rem;
+  color: var(--color-text-secondary, #6f7585);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filterBtn:hover {
+  border-color: var(--color-primary, #1a4cd4);
+  color: var(--color-primary, #1a4cd4);
+}
+
+.filterActive {
+  background: var(--color-primary, #1a4cd4);
+  border-color: var(--color-primary, #1a4cd4);
+  color: #ffffff;
+}
+
+.caseLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--color-primary, #1a4cd4);
+  cursor: pointer;
+  padding: 2px 0;
+  font-family: inherit;
+}
+
+.caseLink:hover {
+  text-decoration: underline;
+}
+
+.loadingArea,
+.errorArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-8);
+  color: var(--color-text-secondary, #6f7585);
+}

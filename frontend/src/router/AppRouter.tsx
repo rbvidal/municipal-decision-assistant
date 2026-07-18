@@ -6,6 +6,7 @@ import { ErrorBoundary } from "../components/common/ErrorBoundary";
 import { LoadingOverlay } from "../components/interaction";
 
 const HomePage = lazy(() => import("../pages/home").then((m) => ({ default: m.HomePage })));
+const MyWorkPage = lazy(() => import("../pages/my-work").then((m) => ({ default: m.MyWorkPage })));
 const CaseWorkspacePage = lazy(() =>
   import("../pages/case-workspace").then((m) => ({ default: m.CaseWorkspacePage })),
 );
@@ -61,6 +62,7 @@ export const AppRouter: React.FC = () => (
 
               {/* Protected routes */}
               <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+              <Route path="/work" element={<ProtectedRoute><MyWorkPage /></ProtectedRoute>} />
               <Route path="/work/:caseId" element={<ProtectedRoute><CaseWorkspacePage /></ProtectedRoute>} />
               <Route path="/knowledge" element={<ProtectedRoute><KnowledgePage /></ProtectedRoute>} />
               <Route path="/documents" element={<ProtectedRoute><DocumentsPage /></ProtectedRoute>} />
