@@ -41,6 +41,23 @@ public class SecurityConfiguration {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+                .headers(headers -> headers
+                        .contentSecurityPolicy(csp -> csp
+                                .policyDirectives("default-src 'self'; "
+                                        + "script-src 'self' 'unsafe-inline'; "
+                                        + "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+                                        + "font-src 'self' https://fonts.gstatic.com; "
+                                        + "img-src 'self' data:; "
+                                        + "connect-src 'self'; "
+                                        + "frame-ancestors 'none'; "
+                                        + "form-action 'self'"))
+                        .frameOptions(frame -> frame.deny())
+                        .xssProtection(xss -> xss.disable()) // deprecated, CSP handles this
+                        .contentTypeOptions(contentType ->
+                                contentType.and().addHeaderWriter(
+                                        (request, response) ->
+                                                response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin")))
+                )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/refresh").permitAll()
                         .requestMatchers("/api/providers/**").permitAll()

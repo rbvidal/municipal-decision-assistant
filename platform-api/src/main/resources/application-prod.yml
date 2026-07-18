@@ -1,0 +1,22 @@
+# ──────────────────────────────────────────────────────────
+# PRODUCTION PROFILE — ACTIVATE WITH: --spring.profiles.active=prod
+# Requires: keystore.p12 in classpath, env vars for all secrets.
+# All credentials must be provided via environment variables.
+# ──────────────────────────────────────────────────────────
+
+server:
+  ssl:
+    enabled: true
+    key-store: ${SERVER_SSL_KEY_STORE:classpath:keystore.p12}
+    key-store-password: ${SERVER_SSL_KEY_STORE_PASSWORD}
+    key-alias: ${SERVER_SSL_KEY_ALIAS:mda}
+    key-store-type: PKCS12
+
+management:
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    com.cognitera.platform: INFO
