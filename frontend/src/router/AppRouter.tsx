@@ -29,6 +29,9 @@ const NewCasePage = lazy(() =>
 const NotFoundPage = lazy(() =>
   import("../pages/not-found").then((m) => ({ default: m.NotFoundPage })),
 );
+const LoginPage = lazy(() =>
+  import("../pages/auth").then((m) => ({ default: m.LoginPage })),
+);
 const SearchPage = lazy(() =>
   import("../pages/search").then((m) => ({ default: m.SearchPage })),
 );
@@ -49,6 +52,7 @@ export const AppRouter: React.FC = () => (
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<Navigate to="/home" replace />} />
+              <Route path="/login" element={<LoginPage />} />
               <Route path="/home" element={<HomePage />} />
               <Route path="/work/:caseId" element={<CaseWorkspacePage />} />
               <Route path="/knowledge" element={<KnowledgePage />} />
