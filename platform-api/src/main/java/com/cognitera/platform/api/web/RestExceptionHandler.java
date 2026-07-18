@@ -34,12 +34,39 @@ public class RestExceptionHandler {
     }
 
     /**
-     * Handles invalid arguments and validation failures, returning a 400 response.
+     * Handles invalid arguments and validation failures, returning a 400 response
+     * with German-translated field-level error messages.
      */
     @ExceptionHandler({IllegalArgumentException.class, MethodArgumentNotValidException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleBadRequest(Exception ex) {
-        return response(HttpStatus.BAD_REQUEST, "Bad Request", ex.getMessage());
+        if (ex instanceof MethodArgumentNotValidException vex) {
+            var fieldErrors = new java.util.LinkedHashMap<String, String>();
+            vex.getBindingResult().getFieldErrors().forEach(fe -> {
+                String msg = fe.getDefaultMessage();
+                fieldErrors.put(fe.getField(),
+                        msg != null ? translateValidationMessage(msg) : "Ungültiger Wert");
+            });
+            return new ErrorResponse(Instant.now(), 400,
+                    "Validierungsfehler",
+                    "Die Eingabe enthält ungültige Werte. Bitte korrigieren Sie die markierten Felder.",
+                    null, fieldErrors);
+        }
+        return response(HttpStatus.BAD_REQUEST, "Ungültige Anfrage", ex.getMessage());
+    }
+
+    /** Translates common Jakarta Validation messages to German. */
+    private static String translateValidationMessage(String msg) {
+        if (msg == null) return null;
+        return msg
+                .replace("must not be blank", "darf nicht leer sein")
+                .replace("must not be null", "darf nicht null sein")
+                .replace("must not be empty", "darf nicht leer sein")
+                .replace("size must be between", "die Größe muss zwischen")
+                .replace("must be a well-formed email address", "muss eine gültige E-Mail-Adresse sein")
+                .replace("must be greater than or equal to", "muss mindestens")
+                .replace("must be less than or equal to", "darf höchstens")
+                .replace("Failed to convert property value", "Ungültiger Wert für Feld");
     }
 
     /**
