@@ -1,20 +1,32 @@
 import React from "react";
 import { Workspace, WorkspaceSection } from "../../layout";
-import { Panel, Alert, Badge, Button, Icon, ConfidenceBar, ProgressIndicator } from "../../common";
+import { Panel, Alert, Badge, Button, Icon, Spinner, ConfidenceBar, ProgressIndicator } from "../../common";
 import type { DecisionPackage } from "../../../types/decision";
 import styles from "./DecisionWorkspace.module.css";
 
 interface DecisionWorkspaceProps {
   data: DecisionPackage;
   isLoading?: boolean;
+  isStreaming?: boolean;
   onRequestAnalysis?: () => void;
   onGenerateDraft?: () => void;
   className?: string;
 }
 
 export const DecisionWorkspace: React.FC<DecisionWorkspaceProps> = React.memo(
-  ({ data, isLoading, onRequestAnalysis, onGenerateDraft, className }) => (
+  ({ data, isLoading, isStreaming, onRequestAnalysis, onGenerateDraft, className }) => (
     <Workspace className={className}>
+      {isStreaming && (
+        <WorkspaceSection title="Streaming">
+          <Panel>
+            <div className={styles.streamingBar}>
+              <Spinner size="sm" ariaLabel="SSE-Daten werden empfangen" />
+              <span className={styles.streamingLabel}>SSE-Stream aktiv — Daten werden live aktualisiert</span>
+            </div>
+          </Panel>
+        </WorkspaceSection>
+      )}
+
       <WorkspaceSection title="Zusammenfassung">
         <Panel>
           <p className={styles.summary}>{data.summary}</p>

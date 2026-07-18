@@ -199,6 +199,18 @@
   margin-bottom: var(--space-3);
 }
 
+.streamingBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+.streamingLabel {
+  font-size: var(--text-caption-size);
+  color: var(--color-primary-600);
+  font-weight: 500;
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
