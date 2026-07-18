@@ -4,6 +4,15 @@
 # All credentials must be provided via environment variables.
 # ──────────────────────────────────────────────────────────
 
+spring:
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
 server:
   ssl:
     enabled: true
