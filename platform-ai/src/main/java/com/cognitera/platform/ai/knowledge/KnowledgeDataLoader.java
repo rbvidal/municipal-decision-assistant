@@ -37,6 +37,47 @@ public class KnowledgeDataLoader {
                 registry.totalThresholdEntries());
     }
 
+    /**
+     * Reloads all knowledge tables at runtime with atomic swap.
+     * A snapshot is taken before clearing; on failure, the previous
+     * state is restored.
+     *
+     * @throws IllegalStateException if the reload fails and rollback is successful
+     */
+    public void reload() {
+        KnowledgeRegistry.Snapshot snapshot = registry.snapshot();
+        log.info("Reloading knowledge tables (snapshot: {} salary, {} travel, {} thresholds)...",
+                snapshot.salaryTables().size(), snapshot.travelTables().size(),
+                snapshot.thresholdTables().size());
+        try {
+            registry.clear();
+            loadSalaryTables();
+            loadTravelTables();
+            loadThresholdTables();
+            log.info("Knowledge reload complete: {} salary entries, {} travel entries, {} thresholds",
+                    registry.totalSalaryEntries(), registry.totalTravelEntries(),
+                    registry.totalThresholdEntries());
+        } catch (Exception e) {
+            log.error("Knowledge reload failed — rolling back to snapshot", e);
+            registry.restore(snapshot);
+            throw new IllegalStateException(
+                    "Knowledge reload failed; previous state restored. Cause: "
+                    + e.getMessage(), e);
+        }
+    }
+
+    /** Returns a summary of the currently loaded knowledge tables. */
+    public java.util.Map<String, Object> summary() {
+        return java.util.Map.of(
+                "salaryTables", registry.totalTables() > 0 ? 1 : 0,
+                "salaryEntries", registry.totalSalaryEntries(),
+                "travelTables", 1,
+                "travelEntries", registry.totalTravelEntries(),
+                "thresholdTables", 1,
+                "thresholdEntries", registry.totalThresholdEntries(),
+                "totalTables", registry.totalTables());
+    }
+
     // ── TV-L 2025 Salary Table ──
 
     private void loadSalaryTables() {

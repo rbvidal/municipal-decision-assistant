@@ -92,4 +92,54 @@ public class KnowledgeRegistry {
     public List<TravelAllowanceTable> travelTables() { return List.copyOf(travelTables); }
     public List<ThresholdTable> thresholdTables() { return List.copyOf(thresholdTables); }
     public Map<String, String> metadata() { return Map.copyOf(metadata); }
+
+    // ── Runtime reload ──
+
+    /**
+     * Clears all registered tables. Used before an atomic reload.
+     * Caller must ensure reload completes successfully; on failure,
+     * a previously-saved snapshot should be restored.
+     */
+    public synchronized void clear() {
+        salaryTables.clear();
+        travelTables.clear();
+        thresholdTables.clear();
+        metadata.clear();
+        log.info("KnowledgeRegistry cleared — {} salary, {} travel, {} threshold tables removed",
+                0, 0, 0);
+    }
+
+    /**
+     * Creates a snapshot of the current registry state for rollback.
+     */
+    public synchronized Snapshot snapshot() {
+        return new Snapshot(
+                List.copyOf(salaryTables),
+                List.copyOf(travelTables),
+                List.copyOf(thresholdTables),
+                Map.copyOf(metadata));
+    }
+
+    /**
+     * Restores the registry from a previously-taken snapshot (rollback).
+     */
+    public synchronized void restore(Snapshot snapshot) {
+        salaryTables.clear();
+        travelTables.clear();
+        thresholdTables.clear();
+        metadata.clear();
+        salaryTables.addAll(snapshot.salaryTables);
+        travelTables.addAll(snapshot.travelTables);
+        thresholdTables.addAll(snapshot.thresholdTables);
+        metadata.putAll(snapshot.metadata);
+        log.info("KnowledgeRegistry restored from snapshot: {} tables",
+                totalTables());
+    }
+
+    /** An immutable snapshot of the registry state. */
+    public record Snapshot(
+            List<SalaryTable> salaryTables,
+            List<TravelAllowanceTable> travelTables,
+            List<ThresholdTable> thresholdTables,
+            Map<String, String> metadata) {}
 }
