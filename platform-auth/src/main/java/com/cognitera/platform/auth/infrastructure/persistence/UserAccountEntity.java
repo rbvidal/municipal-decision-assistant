@@ -97,8 +97,16 @@ public class UserAccountEntity {
         return enabled;
     }
 
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
     public boolean isLocked() {
         return locked;
+    }
+
+    public void setLocked(boolean locked) {
+        this.locked = locked;
     }
 
     public Set<Role> getRoles() {

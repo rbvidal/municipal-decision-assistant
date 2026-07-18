@@ -44,6 +44,9 @@ public class RefreshTokenSessionEntity {
     @Column(name = "user_agent")
     private String userAgent;
 
+    @jakarta.persistence.Version
+    private Long version;
+
     protected RefreshTokenSessionEntity() {
     }
 

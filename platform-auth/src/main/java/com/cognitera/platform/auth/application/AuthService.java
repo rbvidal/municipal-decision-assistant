@@ -104,6 +104,13 @@ public class AuthService implements AuthFacade {
         }
 
         UserAccountEntity user = session.getUser();
+        if (!user.isEnabled() || user.isLocked()) {
+            session.revoke(now, null);
+            auditPublisher.emit(user.getId().toString(), AuditEventType.TOKEN_REFRESH_FAILED, user.getId().toString(),
+                    Map.of("reason", "user_disabled_or_locked"));
+            throw new BadCredentialsException("Account is disabled or locked");
+        }
+
         String rawRefreshToken = tokenService.generateRefreshToken();
         RefreshTokenSessionEntity replacement = refreshTokens.save(new RefreshTokenSessionEntity(
                 user,
