@@ -32,6 +32,9 @@ const NotFoundPage = lazy(() =>
 const LoginPage = lazy(() =>
   import("../pages/auth").then((m) => ({ default: m.LoginPage })),
 );
+const RegisterPage = lazy(() =>
+  import("../pages/auth").then((m) => ({ default: m.RegisterPage })),
+);
 const SearchPage = lazy(() =>
   import("../pages/search").then((m) => ({ default: m.SearchPage })),
 );
@@ -53,6 +56,7 @@ export const AppRouter: React.FC = () => (
             <Routes>
               <Route path="/" element={<Navigate to="/home" replace />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
               <Route path="/home" element={<HomePage />} />
               <Route path="/work/:caseId" element={<CaseWorkspacePage />} />
               <Route path="/knowledge" element={<KnowledgePage />} />
