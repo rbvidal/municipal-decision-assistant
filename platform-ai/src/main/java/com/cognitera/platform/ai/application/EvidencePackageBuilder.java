@@ -115,17 +115,20 @@ public class EvidencePackageBuilder {
                     numerics.isEmpty() ? null : numerics));
         }
 
-        int dedupedCount = byDoc.size();
+        int totalDocs = Math.max(sources.size(), byDoc.size());
+        int relevantDocs = Math.min(byDoc.size(), maxSources);
+        int usedDocs = items.size();
+
         boolean insufficient = items.size() <= 1;
         CoverageStatus coverage = items.size() >= 2
                 ? CoverageStatus.SUFFICIENT
                 : (items.size() == 1 ? CoverageStatus.PARTIAL : CoverageStatus.INSUFFICIENT);
 
         log.info("EvidencePackage: {} documents (from {} sources, {} unique) | {} items | coverage={}",
-                items.size(), sources.size(), dedupedCount, items.size(), coverage);
+                usedDocs, sources.size(), byDoc.size(), usedDocs, coverage);
 
         return new EvidencePackage(items, insufficient, List.of(), coverage,
-                sources.size(), items.size(), dedupedCount);
+                totalDocs, relevantDocs, usedDocs);
     }
 
     /** Merges nearby paragraphs from the same document to reduce repetition. */
