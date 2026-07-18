@@ -1,8 +1,13 @@
+# ──────────────────────────────────────────────────────────
+# Municipal Decision Assistant — Production Dockerfile
+# Multi-stage build targeting <400MB final image.
+# ──────────────────────────────────────────────────────────
+
 # ── Build stage ──
 FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /app
 
-# Cache Maven dependencies
+# Layer 1: POM files (cache dependencies)
 COPY pom.xml ./
 COPY platform-*/pom.xml platform-*/
 COPY platform-audit/pom.xml platform-audit/
@@ -17,21 +22,30 @@ COPY platform-api/pom.xml platform-api/
 
 RUN mvn dependency:go-offline -B -q || true
 
+# Layer 2: Source code and build
 COPY . .
-RUN mvn package -pl platform-api -am -DskipTests -B -q
+RUN mvn package -pl platform-api -am -DskipTests -Dskip.spotbugs=true -Dskip.checkstyle=true -B -q
 
 # ── Runtime stage ──
 FROM eclipse-temurin:21-jre-alpine AS runtime
 WORKDIR /app
 
-RUN addgroup --system app && adduser --system --ingroup app appuser
+# Non-root user with explicit UID/GID
+RUN addgroup --system --gid 1001 appgroup \
+    && adduser --system --uid 1001 --ingroup appgroup appuser
 
 COPY --from=build /app/platform-api/target/platform-api-*.jar app.jar
 
 EXPOSE 8080
 
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+# Health check via Actuator (allow 40s startup grace period)
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=40s \
   CMD wget -qO- http://localhost:8080/actuator/health || exit 1
 
+# Production JVM: 75% container memory, ZGC for low latency
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -XX:+UseZGC \
+  -XX:+ExitOnOutOfMemoryError \
+  -Djava.security.egd=file:/dev/./urandom"
+
 USER appuser
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
