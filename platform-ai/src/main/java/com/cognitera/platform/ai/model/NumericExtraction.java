@@ -1,5 +1,7 @@
 package com.cognitera.platform.ai.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,6 +25,7 @@ public record NumericExtraction(
         salaryGrades = salaryGrades == null ? List.of() : List.copyOf(salaryGrades);
     }
 
+    @JsonIgnore
     public boolean isEmpty() {
         return moneyValues.isEmpty() && percentages.isEmpty()
                 && dates.isEmpty() && thresholds.isEmpty() && salaryGrades.isEmpty();

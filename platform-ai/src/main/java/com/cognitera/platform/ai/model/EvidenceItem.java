@@ -1,5 +1,7 @@
 package com.cognitera.platform.ai.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -24,6 +26,7 @@ public record EvidenceItem(
     }
 
     /** Returns true if this evidence item contains structured numeric data. */
+    @JsonIgnore
     public boolean hasNumericData() {
         return numericExtraction != null && !numericExtraction.isEmpty();
     }

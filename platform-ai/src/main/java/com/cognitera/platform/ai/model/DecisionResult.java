@@ -1,5 +1,8 @@
 package com.cognitera.platform.ai.model;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
 import java.util.List;
 import java.util.Map;
 
@@ -8,6 +11,13 @@ import java.util.Map;
  * When present, the LLM receives ONLY this object — no retrieval,
  * no evidence chunks, no document search.
  */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
+@JsonSubTypes({
+        @JsonSubTypes.Type(value = DecisionResult.SalaryDecision.class, name = "SALARY"),
+        @JsonSubTypes.Type(value = DecisionResult.TravelDecision.class, name = "TRAVEL"),
+        @JsonSubTypes.Type(value = DecisionResult.ProcurementDecision.class, name = "PROCUREMENT"),
+        @JsonSubTypes.Type(value = DecisionResult.FeeDecision.class, name = "FEE")
+})
 public sealed interface DecisionResult
         permits DecisionResult.SalaryDecision,
                 DecisionResult.TravelDecision,

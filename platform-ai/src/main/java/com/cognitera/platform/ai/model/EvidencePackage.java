@@ -1,5 +1,7 @@
 package com.cognitera.platform.ai.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.util.List;
 
 /**
@@ -47,10 +49,12 @@ public record EvidencePackage(
         }
     }
 
+    @JsonIgnore
     public boolean hasContradictions() {
         return !contradictions.isEmpty();
     }
 
+    @JsonIgnore
     public boolean isEmpty() {
         return items.isEmpty();
     }
