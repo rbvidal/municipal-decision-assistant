@@ -146,6 +146,98 @@ export class ApiClient {
     return this.request<T>(path, { method: "DELETE" });
   }
 
+  /**
+   * Server-Sent Events streaming request.
+   * Parses SSE lines ("data: {...}") and invokes onEvent for each.
+   * Uses the same auth, error handling, and timeout as other methods.
+   */
+  async stream<T>(
+    path: string,
+    onEvent: (data: T) => void,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    const url = new URL(`${this.baseUrl}${path}`);
+    const headers: Record<string, string> = {};
+    const token = inMemoryToken;
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.defaultTimeout);
+    const effectiveSignal = signal ?? controller.signal;
+
+    try {
+      const response = await fetch(url.toString(), { headers, signal: effectiveSignal });
+
+      if (response.status === 401 && this.onUnauthorized) {
+        this.onUnauthorized();
+      }
+
+      if (!response.ok) {
+        let errorBody: Record<string, unknown> = {};
+        try { errorBody = await response.json(); } catch { /* no body */ }
+        throw mapSpringError(response.status, errorBody);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new ApiError("Streaming wird nicht unterstützt", 0, "STREAM_UNSUPPORTED");
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              onEvent(JSON.parse(line.slice(6)));
+            } catch {
+              /* skip unparseable chunks */
+            }
+          }
+        }
+      }
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      if ((err as Error).name === "AbortError") {
+        throw new ApiError("Stream abgebrochen", 0, "ABORTED");
+      }
+      throw new ApiError((err as Error).message ?? "Stream-Fehler", 0, "STREAM_ERROR");
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  /**
+   * Retries a request up to `retries` times with exponential backoff.
+   * Only retries on network errors and 5xx responses.
+   */
+  async withRetry<T>(
+    fn: () => Promise<T>,
+    retries: number = 3,
+    backoffMs: number = 1000,
+  ): Promise<T> {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        return await fn();
+      } catch (err) {
+        if (attempt === retries) throw err;
+        if (err instanceof ApiError) {
+          if (err.status >= 500 || err.code === "NETWORK_ERROR" || err.code === "ABORTED") {
+            await new Promise((r) => setTimeout(r, backoffMs * Math.pow(2, attempt)));
+            continue;
+          }
+          throw err;
+        }
+        throw err;
+      }
+    }
+    throw new ApiError("Max retries exceeded", 0, "RETRY_EXHAUSTED");
+  }
+
   async upload<T>(path: string, file: File, onProgress?: (pct: number) => void): Promise<T> {
     const formData = new FormData();
     formData.append("file", file);

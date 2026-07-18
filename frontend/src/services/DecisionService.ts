@@ -1,7 +1,5 @@
 import type { DecisionPackage } from "../types/decision";
-import { apiClient, getAuthToken } from "../api";
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
+import { apiClient } from "../api";
 
 export interface DecisionService {
   getDecision(caseId: string): Promise<DecisionPackage>;
@@ -19,33 +17,8 @@ export const restDecisionService: DecisionService = {
   requestAnalysis: (caseId) => apiClient.post<DecisionPackage>(`/api/decision/${caseId}/analyze`),
   generateDraft: (caseId) =>
     apiClient.post<DecisionPackage["draft"]>(`/api/decision/${caseId}/draft`),
-  streamDecision: async (caseId, onChunk, signal) => {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE}/api/decision/${caseId}/stream`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      signal,
-    });
-    const reader = response.body?.getReader();
-    if (!reader) throw new Error("Streaming nicht unterstützt");
-    const decoder = new TextDecoder();
-    let buffer = "";
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-      for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          try {
-            onChunk(JSON.parse(line.slice(6)));
-          } catch {
-            /* skip */
-          }
-        }
-      }
-    }
-  },
+  streamDecision: (caseId, onChunk, signal) =>
+    apiClient.stream<Partial<DecisionPackage>>(`/api/decision/${caseId}/stream`, onChunk, signal),
 };
 
 export const mockDecisionService: DecisionService = {
