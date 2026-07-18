@@ -25,10 +25,31 @@ public class NumericExtractor {
 
     // ── Patterns ──
 
+    // German-formatted number: "1.234,56" or "1.234" or "1234,56"
+    private static final String GERMAN_NUMBER = "(\\d{1,3}(?:\\.\\d{3})*(?:,\\d{2})?)";
+
     // Money: "4.117,53 €", "10.000 Euro", "500 euros", "EUR 1000"
     private static final Pattern MONEY_PATTERN = Pattern.compile(
-            "(\\d{1,3}(?:\\.\\d{3})*(?:,\\d{2})?)\\s*(€|Euro|EUR|euros?)",
+            GERMAN_NUMBER + "\\s*(€|Euro|EUR|euros?)",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CHARACTER_CLASS);
+
+    // Money range: "5.000-10.000 Euro", "zwischen 5.000 und 10.000 Euro"
+    private static final Pattern MONEY_RANGE_PATTERN = Pattern.compile(
+            GERMAN_NUMBER + "\\s*[-–—]\\s*" + GERMAN_NUMBER + "\\s*(€|Euro|EUR|euros?)" +
+            "|(?:zwischen)\\s+" + GERMAN_NUMBER + "\\s+(?:und)\\s+" + GERMAN_NUMBER + "\\s*(€|Euro|EUR|euros?)",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CHARACTER_CLASS);
+
+    // Approximate money: "rund 10.000 Euro", "ca. 5.000 €", "etwa 3.000 EUR"
+    private static final Pattern APPROX_MONEY_PATTERN = Pattern.compile(
+            "(?:rund|ca\\.?|circa|etwa|ungefähr|zirka)\\s+" + GERMAN_NUMBER + "\\s*(€|Euro|EUR|euros?)",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CHARACTER_CLASS);
+
+    // Bare German number without currency (but looks like money): "1.234,56"
+    // Must NOT be followed by a currency marker (€, Euro, EUR) to avoid
+    // duplicating captures from MONEY_PATTERN. Also skip percentages.
+    private static final Pattern BARE_GERMAN_MONEY_PATTERN = Pattern.compile(
+            "(?<![\\d.,])(\\d{1,3}(?:\\.\\d{3})+(?:,\\d{2}))" +
+            "(?!\\s*(?:%|Prozent|€|Euro|EUR|euros?))");
 
     // Percentages: "5,5 %", "5.5%", "5,5 Prozent"
     private static final Pattern PERCENTAGE_PATTERN = Pattern.compile(
@@ -42,12 +63,23 @@ public class NumericExtractor {
 
     // Salary amounts near grades: "4.117,53 €" near "EG 9a"
     private static final Pattern SALARY_AMOUNT_PATTERN = Pattern.compile(
-            "(\\d{1,3}(?:\\.\\d{3})*(?:,\\d{2})?)\\s*(€|Euro|EUR)");
+            GERMAN_NUMBER + "\\s*(€|Euro|EUR)");
 
-    // Procurement thresholds: "bis 10.000 Euro", "up to 100.000 EUR", "Schwellenwert"
+    // Procurement thresholds: "bis 10.000 Euro", "up to 100.000 EUR"
     private static final Pattern THRESHOLD_PATTERN = Pattern.compile(
-            "(?:bis|up to|unter|below|ab|above|uber|Schwellenwert|Grenze)\\s*(?:zu)?\\s*" +
-            "(\\d{1,3}(?:\\.\\d{3})*(?:,\\d{2})?)\\s*(€|Euro|EUR|euros?)",
+            "(?:bis|up to|unter|below|ab|above|über|Schwellenwert|Grenze" +
+            "|mindestens|höchstens|maximal|minimal)\\s*(?:zu)?\\s*" +
+            GERMAN_NUMBER + "\\s*(€|Euro|EUR|euros?)?",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CHARACTER_CLASS);
+
+    // Threshold range: "5.000 bis 10.000 Euro"
+    private static final Pattern THRESHOLD_RANGE_PATTERN = Pattern.compile(
+            GERMAN_NUMBER + "\\s*(?:bis|–|—|-)\\s*" + GERMAN_NUMBER + "\\s*(€|Euro|EUR|euros?)?",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CHARACTER_CLASS);
+
+    // Thousand/Million words: "50 Tausend Euro", "2 Millionen €"
+    private static final Pattern WORD_NUMBER_PATTERN = Pattern.compile(
+            "(\\d+(?:[.,]\\d+)?)\\s*(Tausend|Millionen?|Mrd\\.?|Milliarden?)\\s*(€|Euro|EUR)?",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CHARACTER_CLASS);
 
     // Dates: "01.02.2025", "1. Februar 2025", "2025-02-01"
@@ -67,9 +99,14 @@ public class NumericExtractor {
         Builder builder = new Builder();
 
         extractMoney(text, builder);
+        extractMoneyRanges(text, builder);
+        extractApproxMoney(text, builder);
+        extractBareGermanMoney(text, builder);
+        extractWordNumbers(text, builder);
         extractPercentages(text, builder);
         extractSalaryGrades(text, builder);
         extractThresholds(text, builder);
+        extractThresholdRanges(text, builder);
         extractDates(text, builder);
 
         return builder.build();
@@ -96,13 +133,12 @@ public class NumericExtractor {
     private void extractMoney(String text, Builder builder) {
         Matcher m = MONEY_PATTERN.matcher(text);
         while (m.find()) {
-            String amountStr = m.group(1).replace(".", "").replace(",", ".");
             try {
-                double amount = Double.parseDouble(amountStr);
+                double amount = parseGermanNumber(m.group(1));
                 String context = getContext(text, m.start(), m.end());
-                builder.addMoney(new MoneyValue(amount, "EUR",
-                        amountStr + " " + (m.group(2) != null ? m.group(2) : "EUR"),
-                        context));
+                String currency = m.group(2) != null ? "EUR" : "EUR";
+                builder.addMoney(new MoneyValue(amount, currency,
+                        m.group(1) + " " + currency, context));
             } catch (NumberFormatException ignored) {}
         }
     }
@@ -151,13 +187,12 @@ public class NumericExtractor {
     private void extractThresholds(String text, Builder builder) {
         Matcher m = THRESHOLD_PATTERN.matcher(text);
         while (m.find()) {
-            String amountStr = m.group(1).replace(".", "").replace(",", ".");
             try {
-                double amount = Double.parseDouble(amountStr);
+                double amount = parseGermanNumber(m.group(1));
+                String currency = m.group(2) != null ? "EUR" : "EUR";
                 String context = getContext(text, m.start(), m.end());
-                builder.addThreshold(new ThresholdValue(amount, "EUR",
-                        amountStr + " " + (m.group(2) != null ? m.group(2) : "EUR"),
-                        null, context));
+                builder.addThreshold(new ThresholdValue(amount, currency,
+                        m.group(1) + " " + currency, null, context));
             } catch (NumberFormatException ignored) {}
         }
     }
@@ -170,6 +205,114 @@ public class NumericExtractor {
             builder.addDate(new DateValue(null, dateStr,
                     "gültig ab", context));
         }
+    }
+
+    private void extractMoneyRanges(String text, Builder builder) {
+        Matcher m = MONEY_RANGE_PATTERN.matcher(text);
+        while (m.find()) {
+            try {
+                String fullMatch = m.group(0);
+                String amount1Str, amount2Str, currency;
+                if (m.group(1) != null) {
+                    // dash range: "5.000-10.000 Euro"
+                    amount1Str = m.group(1);
+                    amount2Str = m.group(2);
+                    currency = m.group(3) != null ? "EUR" : "EUR";
+                } else {
+                    // "zwischen X und Y" range
+                    amount1Str = m.group(4);
+                    amount2Str = m.group(5);
+                    currency = m.group(6) != null ? "EUR" : "EUR";
+                }
+                double amount1 = parseGermanNumber(amount1Str);
+                double amount2 = parseGermanNumber(amount2Str);
+                String context = getContext(text, m.start(), m.end());
+                builder.addMoney(new MoneyValue(amount1, currency,
+                        "von " + amount1Str + " " + currency, context));
+                builder.addMoney(new MoneyValue(amount2, currency,
+                        "bis " + amount2Str + " " + currency, context));
+            } catch (NumberFormatException ignored) {}
+        }
+    }
+
+    private void extractApproxMoney(String text, Builder builder) {
+        Matcher m = APPROX_MONEY_PATTERN.matcher(text);
+        while (m.find()) {
+            try {
+                String amountStr = m.group(1);
+                double amount = parseGermanNumber(amountStr);
+                String currency = m.group(2) != null ? "EUR" : "EUR";
+                String context = getContext(text, m.start(), m.end());
+                builder.addMoney(new MoneyValue(amount, currency,
+                        "ca. " + amountStr + " " + currency, context));
+            } catch (NumberFormatException ignored) {}
+        }
+    }
+
+    /**
+     * Extracts bare German-formatted numbers like "1.234,56" that look
+     * like monetary amounts. These are NOT the same as "1.234" (thousands
+     * separator) — we require both dots as thousands separators AND
+     * comma decimal to qualify as a money-like number.
+     */
+    private void extractBareGermanMoney(String text, Builder builder) {
+        Matcher m = BARE_GERMAN_MONEY_PATTERN.matcher(text);
+        while (m.find()) {
+            try {
+                String amountStr = m.group(1);
+                double amount = parseGermanNumber(amountStr);
+                // Skip if this was already captured by the currency-pattern extractor
+                String context = getContext(text, m.start(), m.end());
+                if (!context.toLowerCase().contains("prozent") && !context.contains("%")) {
+                    builder.addMoney(new MoneyValue(amount, "EUR",
+                            amountStr + " EUR", context));
+                }
+            } catch (NumberFormatException ignored) {}
+        }
+    }
+
+    private void extractWordNumbers(String text, Builder builder) {
+        Matcher m = WORD_NUMBER_PATTERN.matcher(text);
+        while (m.find()) {
+            try {
+                double baseNum = Double.parseDouble(m.group(1).replace(",", "."));
+                String word = m.group(2).toLowerCase();
+                double multiplier = 1.0;
+                if (word.startsWith("tausend")) multiplier = 1_000.0;
+                else if (word.startsWith("million")) multiplier = 1_000_000.0;
+                else if (word.startsWith("mrd") || word.startsWith("milliard")) multiplier = 1_000_000_000.0;
+                double amount = baseNum * multiplier;
+                String currency = m.group(3) != null ? "EUR" : "EUR";
+                String context = getContext(text, m.start(), m.end());
+                builder.addMoney(new MoneyValue(amount, currency,
+                        m.group(1) + " " + m.group(2) + " " + currency, context));
+            } catch (NumberFormatException ignored) {}
+        }
+    }
+
+    private void extractThresholdRanges(String text, Builder builder) {
+        Matcher m = THRESHOLD_RANGE_PATTERN.matcher(text);
+        while (m.find()) {
+            try {
+                String amount1Str = m.group(1);
+                String amount2Str = m.group(2);
+                double amount1 = parseGermanNumber(amount1Str);
+                double amount2 = parseGermanNumber(amount2Str);
+                String currency = m.group(3) != null ? "EUR" : "EUR";
+                String context = getContext(text, m.start(), m.end());
+                builder.addThreshold(new ThresholdValue(amount1, currency,
+                        amount1Str + " - " + amount2Str + " " + currency,
+                        amount2Str, context));
+                builder.addThreshold(new ThresholdValue(amount2, currency,
+                        amount1Str + " - " + amount2Str + " " + currency,
+                        amount2Str, context));
+            } catch (NumberFormatException ignored) {}
+        }
+    }
+
+    /** Parses a German-formatted number like "1.234,56" → 1234.56. */
+    private static double parseGermanNumber(String s) {
+        return Double.parseDouble(s.replace(".", "").replace(",", "."));
     }
 
     private String getContext(String text, int start, int end) {
