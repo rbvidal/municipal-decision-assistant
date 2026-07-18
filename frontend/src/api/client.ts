@@ -82,11 +82,17 @@ export class ApiClient {
     this._onUnauthorized = cb;
   }
 
-  private async request<T>(path: string, config: RequestConfig = {}): Promise<T> {
-    const url = new URL(`${this.baseUrl}${path}`);
-    if (config.params) {
-      Object.entries(config.params).forEach(([k, v]) => url.searchParams.set(k, v));
+  private buildUrl(path: string, params?: Record<string, string>): string {
+    const base = this.baseUrl || window.location.origin;
+    const url = new URL(`${base}${path}`);
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
     }
+    return url.toString();
+  }
+
+  private async request<T>(path: string, config: RequestConfig = {}): Promise<T> {
+    const url = this.buildUrl(path, config.params);
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -161,7 +167,7 @@ export class ApiClient {
     onEvent: (data: T) => void,
     signal?: AbortSignal,
   ): Promise<void> {
-    const url = new URL(`${this.baseUrl}${path}`);
+    const url = this.buildUrl(path);
     const headers: Record<string, string> = {};
     const token = inMemoryToken;
     if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -253,7 +259,7 @@ export class ApiClient {
 
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      xhr.open("POST", `${this.baseUrl}${path}`);
+      xhr.open("POST", this.buildUrl(path));
       Object.entries(headers).forEach(([k, v]) => xhr.setRequestHeader(k, v));
       xhr.withCredentials = true;
 
@@ -303,8 +309,8 @@ export async function trySilentRefresh(): Promise<boolean> {
   if (!refreshToken) return false;
 
   try {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
-    const response = await fetch(`${baseUrl}/api/auth/refresh`,
+    const base = import.meta.env.VITE_API_BASE_URL || window.location.origin;
+    const response = await fetch(`${base}/api/auth/refresh`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

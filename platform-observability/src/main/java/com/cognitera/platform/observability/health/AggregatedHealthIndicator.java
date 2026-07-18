@@ -1,6 +1,5 @@
 package com.cognitera.platform.observability.health;
 
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.actuate.health.*;
 import org.springframework.stereotype.Component;
 
@@ -25,16 +24,16 @@ public class AggregatedHealthIndicator implements HealthIndicator {
     private final DataSource dataSource;
     private final QdrantHealthIndicator qdrantHealth;
     private final OllamaHealthIndicator ollamaHealth;
-    private final ObjectProvider<HealthIndicator> neo4jHealthProvider;
+    private final Map<String, HealthIndicator> healthIndicators;
 
     public AggregatedHealthIndicator(DataSource dataSource,
                                       QdrantHealthIndicator qdrantHealth,
                                       OllamaHealthIndicator ollamaHealth,
-                                      ObjectProvider<HealthIndicator> neo4jHealthProvider) {
+                                      Map<String, HealthIndicator> healthIndicators) {
         this.dataSource = dataSource;
         this.qdrantHealth = qdrantHealth;
         this.ollamaHealth = ollamaHealth;
-        this.neo4jHealthProvider = neo4jHealthProvider;
+        this.healthIndicators = healthIndicators;
     }
 
     @Override
@@ -74,16 +73,24 @@ public class AggregatedHealthIndicator implements HealthIndicator {
         }
 
         // Neo4j (non-critical, optional)
-        HealthIndicator neo4jHealth = neo4jHealthProvider.getIfAvailable();
-        if (neo4jHealth != null) {
+        String neo4jKey = null;
+        for (String key : healthIndicators.keySet()) {
+            if (key.toLowerCase().contains("neo4j")) {
+                neo4jKey = key;
+                break;
+            }
+        }
+        if (neo4jKey != null) {
             try {
-                Health nh = neo4jHealth.health();
+                Health nh = healthIndicators.get(neo4jKey).health();
                 components.put("neo4j", Map.of("status", nh.getStatus().getCode()));
                 if (!nh.getStatus().equals(Status.UP)) degraded = true;
             } catch (Exception e) {
                 components.put("neo4j", Map.of("status", "DOWN", "error", e.getMessage()));
                 degraded = true;
             }
+        } else {
+            components.put("neo4j", Map.of("status", "UNKNOWN", "note", "not configured"));
         }
 
         Status aggregate;
