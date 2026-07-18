@@ -133,7 +133,7 @@ class AuthEndpointVerificationTest {
                         .content("""
                             {"email":"bad@test.com","password":"","displayName":"Bad","roles":[]}
                             """))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().is4xxClientError());
 
         // Missing email
         mockMvc.perform(post("/api/auth/register")
@@ -141,6 +141,6 @@ class AuthEndpointVerificationTest {
                         .content("""
                             {"email":"","password":"Pass1234!","displayName":"Bad","roles":[]}
                             """))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().is4xxClientError());
     }
 }

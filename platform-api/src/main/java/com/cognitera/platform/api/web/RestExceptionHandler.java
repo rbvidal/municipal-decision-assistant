@@ -34,24 +34,30 @@ public class RestExceptionHandler {
     }
 
     /**
-     * Handles invalid arguments and validation failures, returning a 400 response
-     * with German-translated field-level error messages.
+     * Handles validation failures, returning a 422 response
+     * with German field-level error messages.
      */
-    @ExceptionHandler({IllegalArgumentException.class, MethodArgumentNotValidException.class})
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+    public ErrorResponse handleValidation(MethodArgumentNotValidException ex) {
+        var fieldErrors = new java.util.LinkedHashMap<String, String>();
+        ex.getBindingResult().getFieldErrors().forEach(fe -> {
+            String msg = fe.getDefaultMessage();
+            fieldErrors.put(fe.getField(),
+                    msg != null ? translateValidationMessage(msg) : "Ungültiger Wert");
+        });
+        return new ErrorResponse(Instant.now(), 422,
+                "Validierungsfehler",
+                "Die Eingabe enthält ungültige Werte. Bitte korrigieren Sie die markierten Felder.",
+                null, fieldErrors);
+    }
+
+    /**
+     * Handles illegal arguments, returning a 400 response.
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorResponse handleBadRequest(Exception ex) {
-        if (ex instanceof MethodArgumentNotValidException vex) {
-            var fieldErrors = new java.util.LinkedHashMap<String, String>();
-            vex.getBindingResult().getFieldErrors().forEach(fe -> {
-                String msg = fe.getDefaultMessage();
-                fieldErrors.put(fe.getField(),
-                        msg != null ? translateValidationMessage(msg) : "Ungültiger Wert");
-            });
-            return new ErrorResponse(Instant.now(), 400,
-                    "Validierungsfehler",
-                    "Die Eingabe enthält ungültige Werte. Bitte korrigieren Sie die markierten Felder.",
-                    null, fieldErrors);
-        }
+    public ErrorResponse handleBadRequest(IllegalArgumentException ex) {
         return response(HttpStatus.BAD_REQUEST, "Ungültige Anfrage", ex.getMessage());
     }
 
