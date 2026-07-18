@@ -43,10 +43,11 @@ class DocumentControllerUploadTest {
         var textExtraction = mock(com.cognitera.platform.document.api.TextExtractionService.class);
         var chunks = mock(com.cognitera.platform.search.api.ChunkManagementService.class);
         var batchImport = mock(com.cognitera.platform.api.ingestion.BatchImportService.class);
+        var manifestImport = mock(com.cognitera.platform.api.ingestion.ManifestImportService.class);
         ingestionService = mock(DocumentIngestionService.class);
 
         controller = new DocumentController(documents, lifecycleHook, textExtraction,
-                chunks, batchImport, ingestionService);
+                chunks, batchImport, manifestImport, ingestionService);
 
         auth = new TestingAuthenticationToken("test-user", null);
     }

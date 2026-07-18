@@ -7,6 +7,7 @@ import com.cognitera.platform.api.dto.document.DocumentResponse;
 import com.cognitera.platform.api.dto.document.UpdateDocumentMetadataRequest;
 import com.cognitera.platform.api.dto.document.DocumentContentResponse;
 import com.cognitera.platform.api.ingestion.BatchImportService;
+import com.cognitera.platform.api.ingestion.ManifestImportService;
 import com.cognitera.platform.document.api.AddDocumentVersionCommand;
 import com.cognitera.platform.document.api.CreateDocumentCommand;
 import com.cognitera.platform.document.api.DocumentFacade;
@@ -67,17 +68,20 @@ public class DocumentController {
     private final TextExtractionService textExtractionService;
     private final ChunkManagementService chunks;
     private final BatchImportService batchImportService;
+    private final ManifestImportService manifestImportService;
     private final DocumentIngestionService ingestionService;
 
     public DocumentController(DocumentFacade documents, ObjectProvider<DocumentLifecycleHook> lifecycleHook,
                               TextExtractionService textExtractionService, ChunkManagementService chunks,
                               BatchImportService batchImportService,
+                              ManifestImportService manifestImportService,
                               DocumentIngestionService ingestionService) {
         this.documents = documents;
         this.lifecycleHook = lifecycleHook;
         this.textExtractionService = textExtractionService;
         this.chunks = chunks;
         this.batchImportService = batchImportService;
+        this.manifestImportService = manifestImportService;
         this.ingestionService = ingestionService;
     }
 
@@ -343,6 +347,44 @@ public class DocumentController {
                         "documentId", f.documentId() != null ? f.documentId().toString() : "",
                         "title", f.title(),
                         "status", f.status()))
+                .toList());
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Imports documents from a MANIFEST.yaml file.
+     * Parses the manifest, locates document files, creates documents,
+     * and triggers ingestion (create → extract → chunk → embed → index).
+     * Each document is processed independently with failure isolation.
+     */
+    @PostMapping("/manifest-import")
+    public ResponseEntity<Map<String, Object>> manifestImport(
+            @RequestParam(defaultValue = "knowledge/MANIFEST.yaml") String manifestPath,
+            @RequestParam(defaultValue = "knowledge") String corpusBaseDir) throws IOException {
+
+        ManifestImportService.ManifestBatchResult result =
+                manifestImportService.importFromManifest(manifestPath, corpusBaseDir);
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("batchId", result.batchId());
+        response.put("knowledgeBase", result.knowledgeBase());
+        response.put("totalInManifest", result.totalInManifest());
+        response.put("created", result.created());
+        response.put("imported", result.imported());
+        response.put("skippedPlanned", result.skippedPlanned());
+        response.put("skippedMissingFile", result.skippedMissingFile());
+        response.put("failed", result.failed());
+        response.put("durationSeconds", result.durationSeconds());
+        response.put("errors", result.errors());
+        response.put("documents", result.documents().stream()
+                .map(d -> Map.of(
+                        "manifestId", d.manifestId(),
+                        "title", d.title(),
+                        "filePath", d.filePath(),
+                        "status", d.status(),
+                        "documentId", d.documentId() != null ? d.documentId().toString() : "",
+                        "error", d.error() != null ? d.error() : ""))
                 .toList());
 
         return ResponseEntity.ok(response);
