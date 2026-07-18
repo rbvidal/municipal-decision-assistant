@@ -7,6 +7,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 /** JPA entity representing a workspace with name, type, status, phase, and phase data. */
@@ -83,6 +84,19 @@ public class WorkspaceEntity {
 
     public String getPhaseData() { return phaseData; }
     public void setPhaseData(String phaseData) { this.phaseData = phaseData; }
+
+    /** Parses the phase data JSON into a mutable map. Returns empty map on parse failure. */
+    public Map<String, Object> getPhaseDataMap() {
+        if (phaseData == null || phaseData.isBlank() || "{}".equals(phaseData))
+            return new java.util.LinkedHashMap<>();
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readValue(phaseData, new com.fasterxml.jackson.core.type.TypeReference<
+                            java.util.LinkedHashMap<String, Object>>() {});
+        } catch (Exception e) {
+            return new java.util.LinkedHashMap<>();
+        }
+    }
 
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }

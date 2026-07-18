@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * REST controller for workspace CRUD, phase advancement, document linking, and timeline management.
@@ -61,14 +62,8 @@ public class WorkspaceController {
      */
     @PostMapping("/{workspaceId}/advance")
     public ResponseEntity<WorkspaceDto> advancePhase(@PathVariable String workspaceId) {
-        var ws = workspaceService.findById(workspaceId).orElseThrow();
-        int currentIdx = WorkspacePhase.SETUP.ordinal(); // simplified — full implementation would use orchestrator
-        WorkspacePhase[] phases = WorkspacePhase.values();
-        if (currentIdx < phases.length - 1) {
-            WorkspaceEntity updated = workspaceService.setPhase(workspaceId, phases[currentIdx + 1]);
-            return ResponseEntity.ok(workspaceService.toDto(updated));
-        }
-        return ResponseEntity.ok(workspaceService.toDto(ws));
+        WorkspaceEntity updated = workspaceService.advancePhase(workspaceId);
+        return ResponseEntity.ok(workspaceService.toDto(updated));
     }
 
     /**
@@ -151,6 +146,80 @@ public class WorkspaceController {
                         "status", s.getStatus(),
                         "completedAt", s.getCompletedAt().toString()))
                 .toList());
+    }
+
+    /**
+     * Updates the workspace status.
+     */
+    @PutMapping("/{workspaceId}/status")
+    public ResponseEntity<WorkspaceDto> updateStatus(@PathVariable String workspaceId,
+                                                      @RequestBody Map<String, String> body) {
+        WorkspaceStatus newStatus = WorkspaceStatus.valueOf(body.get("status"));
+        var ws = workspaceService.findById(workspaceId).orElseThrow();
+        ws.setStatus(newStatus);
+        workspaceService.save(ws);
+        return ResponseEntity.ok(workspaceService.toDto(ws));
+    }
+
+    /**
+     * Returns checklist items for a workspace from phase data.
+     */
+    @GetMapping("/{workspaceId}/checklist")
+    public ResponseEntity<List<Map<String, Object>>> getChecklist(@PathVariable String workspaceId) {
+        var ws = workspaceService.findById(workspaceId).orElse(null);
+        if (ws == null) return ResponseEntity.notFound().build();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> checklist = (List<Map<String, Object>>)
+                ws.getPhaseDataMap().getOrDefault("checklist", List.of());
+        return ResponseEntity.ok(checklist);
+    }
+
+    /**
+     * Updates checklist items for a workspace.
+     */
+    @PutMapping("/{workspaceId}/checklist")
+    public ResponseEntity<WorkspaceDto> updateChecklist(@PathVariable String workspaceId,
+                                                         @RequestBody List<Map<String, Object>> items) {
+        workspaceService.updatePhaseData(workspaceId, Map.of("checklist", items));
+        return workspaceService.findById(workspaceId)
+                .map(workspaceService::toDto)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Returns internal notes for a workspace from phase data.
+     */
+    @GetMapping("/{workspaceId}/notes")
+    public ResponseEntity<List<Map<String, Object>>> getNotes(@PathVariable String workspaceId) {
+        var ws = workspaceService.findById(workspaceId).orElse(null);
+        if (ws == null) return ResponseEntity.notFound().build();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> notes = (List<Map<String, Object>>)
+                ws.getPhaseDataMap().getOrDefault("notes", List.of());
+        return ResponseEntity.ok(notes);
+    }
+
+    /**
+     * Adds an internal note to a workspace.
+     */
+    @PostMapping("/{workspaceId}/notes")
+    public ResponseEntity<WorkspaceDto> addNote(@PathVariable String workspaceId,
+                                                 @RequestBody Map<String, String> body) {
+        var ws = workspaceService.findById(workspaceId).orElseThrow();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> notes = new java.util.ArrayList<>(
+                (List<Map<String, Object>>) ws.getPhaseDataMap().getOrDefault("notes", List.of()));
+        notes.addFirst(Map.of(
+                "id", UUID.randomUUID().toString(),
+                "author", body.getOrDefault("author", "System"),
+                "time", java.time.Instant.now().toString(),
+                "content", body.getOrDefault("content", "")));
+        workspaceService.updatePhaseData(workspaceId, Map.of("notes", notes));
+        return workspaceService.findById(workspaceId)
+                .map(workspaceService::toDto)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     private WorkspaceDocumentDto toDocDto(WorkspaceDocumentLinkEntity link) {

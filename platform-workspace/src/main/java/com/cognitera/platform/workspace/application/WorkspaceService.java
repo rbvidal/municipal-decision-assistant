@@ -68,6 +68,12 @@ public class WorkspaceService {
         return saved;
     }
 
+    /** Persists changes to an existing workspace entity. */
+    public WorkspaceEntity save(WorkspaceEntity entity) {
+        entity.setUpdatedAt(Instant.now());
+        return workspaceRepo.save(entity);
+    }
+
     /** Finds a workspace by its ID. */
     @Transactional(readOnly = true)
     public Optional<WorkspaceEntity> findById(String workspaceId) {
