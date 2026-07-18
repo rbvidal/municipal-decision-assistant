@@ -1,0 +1,17 @@
+target/
+node_modules/
+dist/
+.git/
+.idea/
+.vscode/
+*.log
+.env
+.env.local
+.env.*.local
+uploads/
+frontend/
+e2e-tests/
+k6-scripts/
+docs/
+*.md
+!docs/*.md
