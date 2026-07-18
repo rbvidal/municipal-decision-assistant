@@ -42,13 +42,31 @@ public class DecisionRouter {
         }
     }
 
+    private static final int MAX_QUESTION_LENGTH = 5000;
+
     /**
      * Routes a question to the appropriate strategy.
      * If the question is rule-answerable, returns a DecisionResult.
      * Otherwise, returns the strategy for retrieval.
+     *
+     * <p>Edge cases:
+     * <ul>
+     *   <li>null or blank → HYBRID_RETRIEVAL (cannot classify)</li>
+     *   <li>&gt;5000 chars → truncated before classification</li>
+     *   <li>German special chars (üöäẞ) → handled by CASE_INSENSITIVE + UNICODE_CHARACTER_CLASS</li>
+     * </ul>
      */
     public RoutingResult route(String question) {
+        if (question == null || question.isBlank()) {
+            log.info("DecisionRouter → HYBRID_RETRIEVAL (null/blank question)");
+            return new RoutingResult(DecisionStrategy.HYBRID_RETRIEVAL, null,
+                    "Cannot classify null or blank question");
+        }
+
         String lower = question.toLowerCase().trim();
+        if (lower.length() > MAX_QUESTION_LENGTH) {
+            lower = lower.substring(0, MAX_QUESTION_LENGTH);
+        }
         var domain = domainClassifier.classify(question);
 
         // ── Salary lookup ──
