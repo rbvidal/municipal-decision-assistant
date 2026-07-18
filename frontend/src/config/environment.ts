@@ -1,5 +1,7 @@
 export const ENV = {
-  apiBaseUrl: (import.meta.env.VITE_API_BASE_URL as string) ?? "http://localhost:8080",
+  apiBaseUrl: (import.meta.env.VITE_API_BASE_URL as string) ?? (
+    import.meta.env.DEV ? "" : "http://localhost:8080"
+  ),
   appTitle: (import.meta.env.VITE_APP_TITLE as string) ?? "Kommunale Entscheidungsplattform",
   isDevelopment: import.meta.env.DEV,
   isProduction: import.meta.env.PROD,
