@@ -5,11 +5,14 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  workflow_dispatch:
 
 jobs:
-  test:
-    name: Build & Test
+  # ── Backend build, test, static analysis, coverage ──
+  backend:
+    name: Backend (Java 21)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     services:
       postgres:
@@ -36,12 +39,16 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Build and test
-        run: mvn clean verify --batch-mode
+      - name: Build, test, verify
+        run: mvn clean verify --batch-mode -Dskip.spotbugs=false
         env:
           DB_URL: jdbc:postgresql://localhost:5433/municipal_decision_assistant
           DB_USERNAME: platform
           DB_PASSWORD: platform
+
+      - name: OWASP Dependency Check
+        run: mvn dependency-check:check --batch-mode -Dowasp.skip=false || true
+        continue-on-error: true
 
       - name: Archive test results
         if: always()
@@ -50,11 +57,56 @@ jobs:
           name: test-results
           path: '**/target/surefire-reports/*.xml'
 
-  ui-tests:
-    name: Browser Tests
+      - name: Archive coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: '**/target/site/jacoco/**'
+
+  # ── Frontend build and test ──
+  frontend:
+    name: Frontend (Node.js)
     runs-on: ubuntu-latest
-    needs: test
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Lint
+        run: npm run lint
+        working-directory: frontend
+
+      - name: Type check
+        run: npx tsc --noEmit
+        working-directory: frontend
+
+      - name: Unit tests
+        run: npm test
+        working-directory: frontend
+
+      - name: Build
+        run: npm run build
+        working-directory: frontend
+
+  # ── Playwright E2E tests ──
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
     if: github.event_name == 'push'
+    timeout-minutes: 15
 
     services:
       postgres:
