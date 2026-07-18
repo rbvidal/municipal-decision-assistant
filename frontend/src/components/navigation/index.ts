@@ -12,3 +12,4 @@ export type { Notification } from "./NotificationBell";
 export { UserMenu } from "./UserMenu";
 export type { UserMenuAction } from "./UserMenu";
 export { PageTitleBar } from "./PageTitleBar";
+export { AppTopNavigation } from "./AppTopNavigation";
