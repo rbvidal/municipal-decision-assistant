@@ -5,6 +5,7 @@ import com.cognitera.platform.document.api.DocumentFilter;
 import com.cognitera.platform.document.model.Document;
 import com.cognitera.platform.document.model.DocumentStatus;
 import com.cognitera.platform.workspace.infrastructure.persistence.JpaWorkspaceRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,6 +15,7 @@ import java.util.stream.Collectors;
 
 /** Page controllers for Regulations, Knowledge Graph, Analytics, Administration, and Cases. */
 @Controller
+@Profile("thymeleaf-legacy")
 public class PlatformPageController {
 
     private final DocumentFacade documentFacade;

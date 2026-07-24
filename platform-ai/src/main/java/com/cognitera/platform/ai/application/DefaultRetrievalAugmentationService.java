@@ -2,6 +2,7 @@ package com.cognitera.platform.ai.application;
 
 import com.cognitera.platform.ai.api.*;
 import com.cognitera.platform.ai.model.*;
+import com.cognitera.platform.search.api.GraphSearchProvider;
 import com.cognitera.platform.search.api.SearchFacade;
 import com.cognitera.platform.search.model.*;
 import org.slf4j.Logger;
@@ -14,8 +15,8 @@ import java.util.*;
  * Single-pass, diversity-aware retrieval. NO recursive searches.
  *
  * <p>One question → one retrieval → one set of results.
- * The old quota-enforced retrieval that launched targeted searches
- * for every "missing" source role is removed.
+ * When Neo4j graph is available, retrieval mode is upgraded to
+ * HYBRID_GRAPH so graph traversal results contribute to the candidate set.
  */
 @Service
 public class DefaultRetrievalAugmentationService implements RetrievalAugmentationService {
@@ -26,16 +27,22 @@ public class DefaultRetrievalAugmentationService implements RetrievalAugmentatio
     private final AuthorityGroundingService authorityGroundingService;
     private final RetrievalPlanner retrievalPlanner;
     private final DomainGate domainGate;
+    private final GraphSearchProvider graphSearchProvider;
+    private final SourceOrchestrationService sourceOrchestrationService;
 
     public DefaultRetrievalAugmentationService(
             SearchFacade searchFacade,
             AuthorityGroundingService authorityGroundingService,
             RetrievalPlanner retrievalPlanner,
-            DomainGate domainGate) {
+            DomainGate domainGate,
+            GraphSearchProvider graphSearchProvider,
+            SourceOrchestrationService sourceOrchestrationService) {
         this.searchFacade = searchFacade;
         this.authorityGroundingService = authorityGroundingService;
         this.retrievalPlanner = retrievalPlanner;
         this.domainGate = domainGate;
+        this.graphSearchProvider = graphSearchProvider;
+        this.sourceOrchestrationService = sourceOrchestrationService;
     }
 
     @Override
@@ -46,9 +53,12 @@ public class DefaultRetrievalAugmentationService implements RetrievalAugmentatio
         // ── Execute single hybrid search ──
         SearchFilter filter = new SearchFilter(
                 null, null, null, null, null, null, null, null, List.of());
+        boolean graphAvailable = graphSearchProvider != null && graphSearchProvider.isAvailable();
+        SearchMode searchMode = graphAvailable ? SearchMode.HYBRID_GRAPH : SearchMode.HYBRID;
+        log.info("Retrieval mode: {} (graphAvailable={})", searchMode, graphAvailable);
         var searchQuery = new SearchQuery(
                 request.question(),
-                SearchMode.HYBRID,
+                searchMode,
                 filter,
                 new SearchRequestContext("system", null, null, null),
                 0,
@@ -85,6 +95,14 @@ public class DefaultRetrievalAugmentationService implements RetrievalAugmentatio
                 page.results().size(), domainFiltered.size(), diverseResults.size(),
                 plan.maxChunksPerDocument(), plan.primaryDomain());
 
+        // ── Per-source breakdown ──
+        long keywordHits = page.results().stream().filter(r -> r.keywordScore() > 0).count();
+        long vectorHits = page.results().stream().filter(r -> r.vectorScore() > 0).count();
+        long graphHits = page.results().stream().filter(r -> "graph".equalsIgnoreCase(r.provider())).count();
+        long reranked = page.results().stream().filter(r -> r.rerankScore() > 0).count();
+        log.info("Retrieval breakdown: keyword={} vector={} graph={} reranked={}",
+                keywordHits, vectorHits, graphHits, reranked);
+
         // ── Build citations ──
         List<SourceCitation> sources = new ArrayList<>();
         for (var r : diverseResults) {
@@ -104,6 +122,12 @@ public class DefaultRetrievalAugmentationService implements RetrievalAugmentatio
         // ── Authority grounding ──
         var authorityResult = authorityGroundingService.ground(request.question());
 
+        // ── Build source dossier for coverage confidence ──
+        SourceDossier dossier = sourceOrchestrationService.buildDossier(
+                sources, request.question());
+        log.info("Source dossier: coverageScore={}, {} sources classified",
+                dossier.coverageScore(), sources.size());
+
         log.info("Retrieval diversity: {} docs across {} unique titles | {} authorities",
                 sources.size(), countUniqueDocs(sources), authorityResult.references().size());
 
@@ -112,7 +136,7 @@ public class DefaultRetrievalAugmentationService implements RetrievalAugmentatio
                 plan.retrievalStrategy(),
                 sources,
                 authorityResult.references(),
-                null, null, null, null);
+                null, dossier, null, null);
     }
 
     /**

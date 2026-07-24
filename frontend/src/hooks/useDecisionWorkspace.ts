@@ -15,7 +15,7 @@ export function useDecisionWorkspace(caseId: string) {
 export function useRequestAnalysis(caseId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => decisionService.requestAnalysis(caseId),
+    mutationFn: (question: string) => decisionService.requestAnalysis(caseId, question),
     onSuccess: (data) => {
       queryClient.setQueryData(["decision", caseId], data);
     },

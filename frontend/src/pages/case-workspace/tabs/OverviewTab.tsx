@@ -2,7 +2,7 @@ import React from "react";
 import { Workspace, WorkspaceSection } from "../../../components/layout";
 import { Panel, Alert, PropertyGrid } from "../../../components/common";
 import { WorkflowStepper } from "../../../components/workflow";
-import type { CaseDetails, WorkflowStep } from "../../../mocks/case-workspace";
+import type { CaseDetails, WorkflowStep } from "../../../types/domain";
 
 interface OverviewTabProps {
   caseData: CaseDetails;
@@ -11,7 +11,13 @@ interface OverviewTabProps {
 
 export const OverviewTab: React.FC<OverviewTabProps> = React.memo(({ caseData, workflowSteps }) => (
   <Workspace>
-    <WorkflowStepper steps={workflowSteps} />
+    <WorkflowStepper
+      steps={workflowSteps.map((s) => ({
+        id: s.id,
+        label: s.label,
+        state: s.state ?? (s.completed ? "completed" as const : s.current ? "active" as const : "inactive" as const),
+      }))}
+    />
 
     <Alert
       type="warning"
@@ -25,9 +31,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = React.memo(({ caseData, w
         <PropertyGrid
           items={[
             { label: "Aktenzeichen", value: caseData.id, valueMono: true },
-            { label: "Antragsteller", value: caseData.applicant },
-            { label: "Abteilung", value: caseData.department },
-            { label: "Bearbeiter", value: caseData.assignee, valueHighlight: true },
+            { label: "Status", value: caseData.status ?? "-" },
+            { label: "Antragsteller", value: caseData.applicant ?? "-" },
+            { label: "Abteilung", value: caseData.department ?? "-" },
+            { label: "Bearbeiter", value: caseData.assignee ?? "-", valueHighlight: true },
             {
               label: "Priorität",
               value:
@@ -35,7 +42,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = React.memo(({ caseData, w
                   ? "Hoch"
                   : caseData.priority === "medium"
                     ? "Mittel"
-                    : "Niedrig",
+                    : caseData.priority === "low"
+                      ? "Niedrig"
+                      : caseData.priority ?? "-",
             },
             {
               label: "Risiko",
@@ -44,9 +53,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = React.memo(({ caseData, w
                   ? "Gering"
                   : caseData.risk === "mittel"
                     ? "Mittel"
-                    : "Hoch",
+                    : caseData.risk === "hoch"
+                      ? "Hoch"
+                      : caseData.risk ?? "-",
             },
-            { label: "Fälligkeit", value: caseData.deadline },
+            { label: "Fälligkeit", value: caseData.deadline ?? "-" },
           ]}
         />
       </Panel>

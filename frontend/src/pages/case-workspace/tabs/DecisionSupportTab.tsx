@@ -31,7 +31,7 @@ export const DecisionSupportTab: React.FC<DecisionSupportTabProps> = React.memo(
       if (activeStream) {
         startStream();
       } else {
-        analyzeMutation.mutate();
+        analyzeMutation.mutate(question.trim());
       }
     }, [question, activeStream, analyzeMutation, startStream]);
 
@@ -50,8 +50,8 @@ export const DecisionSupportTab: React.FC<DecisionSupportTabProps> = React.memo(
     // Merge streaming partial data with existing data
     const displayData: DecisionPackage | undefined =
       streaming && partial && data
-        ? ({ ...data, ...partial } as DecisionPackage)
-        : data;
+        ? ({ ...data, ...partial } as unknown as DecisionPackage)
+        : (data as unknown as DecisionPackage | undefined);
 
     return (
       <Workspace>

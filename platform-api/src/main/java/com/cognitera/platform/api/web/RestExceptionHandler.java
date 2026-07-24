@@ -4,6 +4,8 @@ import com.cognitera.platform.api.dto.ErrorResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -97,14 +100,56 @@ public class RestExceptionHandler {
     }
 
     /**
-     * Catches all unhandled exceptions and returns a 500 response with stacktrace details.
+     * Handles optimistic locking failures (e.g. concurrent token refresh),
+     * returning 409 Conflict so the client can retry gracefully.
+     */
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ErrorResponse handleOptimisticLock(OptimisticLockingFailureException ex) {
+        log.debug("Optimistic lock conflict: {}", ex.getMessage());
+        return response(HttpStatus.CONFLICT, "Conflict",
+                "Die Ressource wurde gleichzeitig geändert. Bitte versuchen Sie es erneut.");
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ErrorResponse handleNoResourceFound(NoResourceFoundException ex) {
+        return response(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage());
+    }
+
+    /**
+     * Handles type conversion failures (e.g. malformed UUID in path variable),
+     * returning a 400 response with a clear German message.
+     */
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleTypeMismatch(
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex) {
+        return response(HttpStatus.BAD_REQUEST, "Ungültige Anfrage",
+                "Der angeforderte Wert '" + (ex.getValue() != null ? ex.getValue() : "") +
+                "' ist kein gültiger Bezeichner.");
+    }
+
+    /**
+     * Handles authorization failures, returning a 403 response.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ErrorResponse handleAccessDenied(AccessDeniedException ex) {
+        return response(HttpStatus.FORBIDDEN, "Forbidden",
+                "Zugriff verweigert. Sie haben nicht die erforderliche Berechtigung.");
+    }
+
+    /**
+     * Catches all unhandled exceptions.
+     * The full stack trace is logged server-side but never returned to the client.
      */
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ErrorResponse handleAll(Exception ex) {
         log.error("Unhandled exception", ex);
-        return responseWithStacktrace(HttpStatus.INTERNAL_SERVER_ERROR,
-                "Internal Server Error", ex);
+        return response(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error",
+                "Ein interner Fehler ist aufgetreten.");
     }
 
     private ErrorResponse response(HttpStatus status, String error, String message) {

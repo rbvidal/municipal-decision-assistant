@@ -96,7 +96,7 @@ public class GraphEnrichmentService {
         if (driver == null) return List.of();
         try (Session session = driver.session()) {
             var result = session.run(
-                    "MATCH (d:Document {id: $docId})-[*1.." + maxDepth + "]-(other:Document) " +
+                    "MATCH (d:DOCUMENT {id: $docId})-[*1.." + maxDepth + "]-(other:DOCUMENT) " +
                     "RETURN DISTINCT other.id AS id",
                     Map.of("docId", documentId));
             return result.stream().map(r -> r.get("id").asString()).toList();
@@ -104,6 +104,67 @@ public class GraphEnrichmentService {
             log.debug("Related documents query failed: {}", e.getMessage());
             return List.of();
         }
+    }
+
+    /** Searches for Document nodes whose label, title, or category match any of the given keywords. */
+    public List<GraphNode> searchDocumentsByKeywords(List<String> keywords, int maxResults) {
+        Driver driver = driverProvider.getIfAvailable();
+        if (driver == null || keywords.isEmpty()) return List.of();
+        try (Session session = driver.session()) {
+            StringBuilder where = new StringBuilder();
+            for (int i = 0; i < keywords.size(); i++) {
+                if (i > 0) where.append(" OR ");
+                String k = "$kw" + i;
+                where.append("toLower(d.label) CONTAINS toLower(").append(k).append(")");
+                where.append(" OR toLower(d.title) CONTAINS toLower(").append(k).append(")");
+                where.append(" OR toLower(d.category) CONTAINS toLower(").append(k).append(")");
+                where.append(" OR toLower(d.tags) CONTAINS toLower(").append(k).append(")");
+            }
+            var result = session.run(
+                    "MATCH (d:DOCUMENT) WHERE " + where +
+                    " RETURN d.id AS id, labels(d) AS labels, properties(d) AS props" +
+                    " LIMIT " + maxResults,
+                    buildKeywordParams(keywords));
+            return result.stream()
+                    .map(r -> new GraphNode(
+                            r.get("id").asString(),
+                            GraphNode.NodeType.DOCUMENT,
+                            r.get("props").get("label", "?").toString(),
+                            r.get("props").asMap()))
+                    .toList();
+        } catch (Exception e) {
+            log.debug("Keyword document search failed: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    /** Deletes all nodes and relationships related to a document. */
+    public void deleteDocumentNodes(String documentId) {
+        Driver driver = driverProvider.getIfAvailable();
+        if (driver == null) return;
+        try (Session session = driver.session()) {
+            session.run(
+                    "MATCH (n {docId: $docId}) DETACH DELETE n",
+                    Map.of("docId", documentId));
+            session.run(
+                    "MATCH (n {id: $docId})-[r]-(related) " +
+                    "WHERE related:CHUNK OR related:REGULATION OR related:ORGANIZATION " +
+                    "DETACH DELETE r, related",
+                    Map.of("docId", documentId));
+            session.run(
+                    "MATCH (n {id: $docId}) DETACH DELETE n",
+                    Map.of("docId", documentId));
+        } catch (Exception e) {
+            log.debug("Failed to delete graph nodes for document {}: {}", documentId, e.getMessage());
+        }
+    }
+
+    private Map<String, Object> buildKeywordParams(List<String> keywords) {
+        Map<String, Object> params = new java.util.LinkedHashMap<>();
+        for (int i = 0; i < keywords.size(); i++) {
+            params.put("kw" + i, keywords.get(i));
+        }
+        return params;
     }
 
     private void upsertNode(Session session, GraphNode node) {

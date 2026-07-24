@@ -1,1 +1,0 @@
-export { PrecedentCard } from "./PrecedentCard";

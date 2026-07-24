@@ -19,7 +19,7 @@ import java.util.*;
  * Shows structured knowledge tables, corpus statistics, and quality metrics.
  */
 @Controller
-@RequestMapping("/dev/knowledge")
+@RequestMapping("/api/dev/knowledge")
 public class KnowledgeDashboardController {
 
     private final KnowledgeRegistry registry;

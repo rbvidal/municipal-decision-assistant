@@ -70,7 +70,7 @@ class DecisionRouterTest {
         brkg.addEntry(8, 24.0, 6.0, "domestic", false, "Abwesenheit über 8 Stunden");
         registry.register(brkg);
 
-        router = new DecisionRouter(registry, new DomainClassifier());
+        router = new DecisionRouter(registry, new DomainClassifier(), null);
     }
 
     // ── IT procurement → RULE_ENGINE ──

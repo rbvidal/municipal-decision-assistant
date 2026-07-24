@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from "react";
 import { AppShell } from "../../layouts/AppShell";
-import { TopNavigation, type NavModule } from "../../components/navigation";
+import { AppTopNavigation, type NavModule } from "../../components/navigation";
 import {
   SearchBar,
   FilterPanel,
@@ -8,10 +8,14 @@ import {
   PreviewPane,
   SearchSummary,
 } from "../../components/search";
-import { EmptyState } from "../../components/common";
-import { initialDocuments } from "../../mocks/knowledge";
-import { categories, fachbereichOptions, bundeslandOptions } from "../../mocks/knowledge";
+import { EmptyState, Button } from "../../components/common";
+import { useKnowledgeSearch } from "../../hooks/useKnowledge";
+import type { KnowledgeDocument } from "../../types/domain";
 import styles from "./KnowledgePage.module.css";
+
+const categories = ["Alle", "Vergaberecht", "Bauplanungsrecht", "Umweltrecht", "Kommunalrecht"] as const;
+const fachbereichOptions = ["Alle", "Bauamt", "Ordnungsamt", "Umweltamt", "Rechtsamt"] as const;
+const bundeslandOptions = ["Alle", "Baden-Württemberg", "Bayern", "Berlin", "Brandenburg"] as const;
 
 const NAV_MODULES: NavModule[] = [
   { id: "home", label: "Startseite", href: "/home" },
@@ -22,182 +26,124 @@ const NAV_MODULES: NavModule[] = [
 ];
 
 const FILTER_GROUPS = [
-  {
-    id: "type",
-    label: "Dokumenttyp",
-    options: categories.map((c) => ({ value: c.id, label: c.label, count: c.count })),
-  },
-  {
-    id: "fachbereich",
-    label: "Fachbereich",
-    options: fachbereichOptions.map((o) => ({ value: o.value, label: o.label })),
-  },
-  {
-    id: "bundesland",
-    label: "Bundesland",
-    options: bundeslandOptions.map((o) => ({ value: o.value, label: o.label })),
-  },
-  {
-    id: "zeitraum",
-    label: "Zeitraum",
-    options: [
-      { value: "Alle", label: "Alle" },
-      { value: "Aktuell", label: "Aktuell" },
-      { value: "Archiv", label: "Archiv" },
-    ],
-  },
+  { id: "category", label: "Kategorie", options: categories.map((c) => ({ value: c, label: c })) },
+  { id: "fachbereich", label: "Fachbereich", options: fachbereichOptions.map((o) => ({ value: o, label: o })) },
+  { id: "bundesland", label: "Bundesland", options: bundeslandOptions.map((o) => ({ value: o, label: o })) },
+  { id: "zeitraum", label: "Zeitraum", options: [
+    { value: "Alle", label: "Alle" }, { value: "Aktuell", label: "Aktuell" }, { value: "Archiv", label: "Archiv" },
+  ]},
 ];
 
 export const KnowledgePage: React.FC = React.memo(() => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<Record<string, string>>({
-    type: "Alle",
-    fachbereich: "Alle",
-    bundesland: "Alle",
-    zeitraum: "Alle",
+    category: "Alle", fachbereich: "Alle", bundesland: "Alle", zeitraum: "Alle",
   });
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [favorites, setFavorites] = useState<Set<string>>(
-    new Set(initialDocuments.filter((d) => d.isFavorite).map((d) => d.id)),
-  );
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+
+  const { data: documents = [], isLoading, isError } = useKnowledgeSearch(searchQuery, filters);
 
   const handleFilterChange = useCallback((groupId: string, value: string) => {
     setFilters((prev) => ({ ...prev, [groupId]: value }));
   }, []);
 
   const handleClearFilters = useCallback(() => {
-    setFilters({ type: "Alle", fachbereich: "Alle", bundesland: "Alle", zeitraum: "Alle" });
+    setFilters({ category: "Alle", fachbereich: "Alle", bundesland: "Alle", zeitraum: "Alle" });
     setSearchQuery("");
   }, []);
 
   const handleToggleFavorite = useCallback((id: string) => {
     setFavorites((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   }, []);
 
-  const filteredDocuments = useMemo(() => {
-    const query = searchQuery.toLowerCase().trim();
-
-    return initialDocuments
-      .filter((doc) => {
-        if (filters.type !== "Alle" && doc.type !== filters.type) return false;
-        if (filters.fachbereich !== "Alle" && doc.fachbereich !== filters.fachbereich) return false;
-        if (filters.bundesland !== "Alle" && doc.bundesland !== filters.bundesland) return false;
-        if (filters.zeitraum !== "Alle" && doc.zeitraum !== filters.zeitraum) return false;
-        return true;
-      })
-      .filter((doc) => {
-        if (!query) return true;
-        return (
-          doc.title.toLowerCase().includes(query) ||
-          doc.snippet.toLowerCase().includes(query) ||
-          doc.fullText.toLowerCase().includes(query) ||
-          doc.authority.toLowerCase().includes(query) ||
-          doc.legalArea.toLowerCase().includes(query) ||
-          doc.referencedLaws.some((l) => l.toLowerCase().includes(query))
-        );
-      })
-      .sort((a, b) => b.relevance - a.relevance);
-  }, [searchQuery, filters]);
-
   const selectedDoc = useMemo(
-    () => initialDocuments.find((d) => d.id === selectedId) ?? null,
-    [selectedId],
+    () => documents.find((d) => d.id === selectedId) ?? null,
+    [selectedId, documents],
   );
 
   const hasActiveFilters =
-    filters.type !== "Alle" ||
-    filters.fachbereich !== "Alle" ||
-    filters.bundesland !== "Alle" ||
-    filters.zeitraum !== "Alle" ||
+    filters.category !== "Alle" || filters.fachbereich !== "Alle" ||
+    filters.bundesland !== "Alle" || filters.zeitraum !== "Alle" ||
     searchQuery.trim() !== "";
 
   const isPreviewVisible = selectedDoc !== null;
 
   return (
-    <AppShell
-      topNavigation={
-        <TopNavigation
-          modules={NAV_MODULES}
-          activeModule="knowledge"
-          onNavigate={() => {}}
-          userName="Sabine Müller"
-          userEmail="s.mueller@verwaltung.de"
-          userDepartment="Bauamt"
-          userInitials="SM"
-          userActions={[
-            { id: "profile", label: "Profil", onClick: () => {} },
-            { id: "logout", label: "Abmelden", onClick: () => {} },
-          ]}
-          notifications={[]}
-          onNotificationClick={() => {}}
-          onMarkAllNotificationsRead={() => {}}
-          onViewAllNotifications={() => {}}
-        />
-      }
-    >
+    <AppShell topNavigation={<AppTopNavigation modules={NAV_MODULES} activeModule="knowledge" />}>
       <div className={styles.page}>
-        <div className={styles.toolbar}>
-          <div className={styles.searchBar}>
+        <div className={styles.aiSearchHero}>
+          <h2 className={styles.aiSearchTitle}>Wissensdatenbank</h2>
+          <p className={styles.aiSearchSubtitle}>
+            Durchsuchen Sie Vorschriften, Verfahren und Vorlagen mit KI-gestützter semantischer Suche
+          </p>
+          <div className={styles.aiSearchBar}>
             <SearchBar
               value={searchQuery}
               onChange={setSearchQuery}
-              placeholder="Vorschriften, Verfahren, Vorlagen durchsuchen..."
+              placeholder="Stellen Sie eine Frage zu Vorschriften, Verfahren oder Vorlagen..."
             />
           </div>
-          <SearchSummary
-            total={initialDocuments.length}
-            filtered={filteredDocuments.length}
-            query={searchQuery || undefined}
-          />
-          {hasActiveFilters && (
-            <button type="button" className={styles.clearFiltersBtn} onClick={handleClearFilters}>
-              Filter zurücksetzen
-            </button>
-          )}
+          <div className={styles.toolbar}>
+            <SearchSummary
+              total={documents.length}
+              filtered={documents.length}
+              query={searchQuery || undefined}
+            />
+            {hasActiveFilters && (
+              <button type="button" className={styles.clearFiltersBtn} onClick={handleClearFilters}>
+                Filter zurücksetzen
+              </button>
+            )}
+          </div>
         </div>
 
-        <div
-          className={`${styles.layout} ${isPreviewVisible ? styles.layoutThreeCol : styles.layoutTwoCol}`}
-        >
+        <div className={`${styles.layout} ${isPreviewVisible ? styles.layoutThreeCol : styles.layoutTwoCol}`}>
           <div className={styles.filterColumn}>
-            <FilterPanel
-              groups={FILTER_GROUPS}
-              activeFilters={filters}
-              onFilterChange={handleFilterChange}
-            />
+            <FilterPanel groups={FILTER_GROUPS} activeFilters={filters} onFilterChange={handleFilterChange} />
           </div>
 
           <div className={styles.resultsColumn}>
-            {filteredDocuments.length === 0 ? (
+            {isLoading ? (
+              <div className={styles.emptyResults}>
+                <p>Dokumente werden geladen...</p>
+              </div>
+            ) : isError ? (
+              <div className={styles.emptyResults}>
+                <EmptyState
+                  title="Fehler beim Laden"
+                  description="Die Wissensdatenbank ist derzeit nicht verfügbar."
+                />
+              </div>
+            ) : documents.length === 0 ? (
               <div className={styles.emptyResults}>
                 <EmptyState
                   title="Keine Ergebnisse gefunden"
                   description={
                     hasActiveFilters
-                      ? "Keine Dokumente entsprechen den gewählten Filtern. Versuchen Sie, die Filter anzupassen."
+                      ? "Keine Dokumente entsprechen den gewählten Filtern."
                       : "Es sind keine Dokumente in der Wissensdatenbank vorhanden."
                   }
                 />
               </div>
             ) : (
               <div className={styles.resultsList} role="list" aria-label="Suchergebnisse">
-                {filteredDocuments.map((doc) => (
+                {documents.map((doc) => (
                   <ResultCard
                     key={doc.id}
                     id={doc.id}
                     title={doc.title}
                     type={doc.type}
-                    relevance={doc.relevance}
+                    relevance={0}
                     isFavorite={favorites.has(doc.id)}
-                    authority={doc.authority}
-                    date={doc.date}
-                    legalArea={doc.legalArea}
-                    snippet={doc.snippet}
+                    authority={doc.fachbereich}
+                    date={doc.lastUpdated}
+                    legalArea={doc.category}
+                    snippet={doc.excerpt}
                     searchQuery={searchQuery}
                     isSelected={doc.id === selectedId}
                     onClick={setSelectedId}
@@ -208,21 +154,21 @@ export const KnowledgePage: React.FC = React.memo(() => {
             )}
           </div>
 
-          {isPreviewVisible && (
+          {isPreviewVisible && selectedDoc && (
             <div className={styles.previewColumn}>
               <PreviewPane
                 title={selectedDoc.title}
                 type={selectedDoc.type}
-                authority={selectedDoc.authority}
-                date={selectedDoc.date}
-                legalArea={selectedDoc.legalArea}
+                authority={selectedDoc.fachbereich}
+                date={selectedDoc.lastUpdated}
+                legalArea={selectedDoc.category}
                 fachbereich={selectedDoc.fachbereich}
                 bundesland={selectedDoc.bundesland}
-                fullText={selectedDoc.fullText}
-                toc={selectedDoc.toc}
-                relatedProcedures={selectedDoc.relatedProcedures}
-                downloads={selectedDoc.downloads}
-                referencedLaws={selectedDoc.referencedLaws}
+                fullText={selectedDoc.fullText || selectedDoc.excerpt}
+                toc={selectedDoc.toc ?? []}
+                relatedProcedures={selectedDoc.relatedProcedures ?? []}
+                downloads={selectedDoc.downloads ?? []}
+                referencedLaws={[]}
                 isFavorite={favorites.has(selectedDoc.id)}
                 searchQuery={searchQuery}
                 onToggleFavorite={() => handleToggleFavorite(selectedDoc.id)}

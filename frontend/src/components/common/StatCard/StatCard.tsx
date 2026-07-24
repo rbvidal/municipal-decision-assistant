@@ -13,7 +13,7 @@ const STATUS_COLORS: Record<Status, string> = {
 
 interface StatCardProps {
   label: string;
-  value: number;
+  value: number | string;
   status?: Status;
   percentage?: number;
   icon?: React.ReactNode;

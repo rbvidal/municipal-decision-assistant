@@ -5,6 +5,10 @@ import com.cognitera.platform.document.infrastructure.persistence.DocumentVersio
 import com.cognitera.platform.document.infrastructure.persistence.JpaDocumentEntityRepository;
 import com.cognitera.platform.document.model.DocumentStatus;
 import com.cognitera.platform.document.model.DocumentType;
+import com.cognitera.platform.neo4j.model.EnrichmentResult;
+import com.cognitera.platform.neo4j.model.GraphNode;
+import com.cognitera.platform.neo4j.model.GraphRelationship;
+import com.cognitera.platform.neo4j.service.GraphEnrichmentService;
 import com.cognitera.platform.search.api.IndexingOrchestrationService;
 import com.cognitera.platform.search.infrastructure.persistence.DocumentChunkEntity;
 import com.cognitera.platform.search.infrastructure.persistence.JpaDocumentChunkRepository;
@@ -50,17 +54,20 @@ public class DemoDataInitializer implements ApplicationRunner {
     private final JpaWorkspaceRepository workspaceRepo;
     private final JpaWorkspaceDocumentLinkRepository linkRepo;
     private final ObjectProvider<IndexingOrchestrationService> indexingOrchestrationProvider;
+    private final ObjectProvider<GraphEnrichmentService> graphEnrichmentProvider;
 
     public DemoDataInitializer(JpaDocumentEntityRepository documentRepo,
                                JpaDocumentChunkRepository chunkRepo,
                                JpaWorkspaceRepository workspaceRepo,
                                JpaWorkspaceDocumentLinkRepository linkRepo,
-                               ObjectProvider<IndexingOrchestrationService> indexingOrchestrationProvider) {
+                               ObjectProvider<IndexingOrchestrationService> indexingOrchestrationProvider,
+                               ObjectProvider<GraphEnrichmentService> graphEnrichmentProvider) {
         this.documentRepo = documentRepo;
         this.chunkRepo = chunkRepo;
         this.workspaceRepo = workspaceRepo;
         this.linkRepo = linkRepo;
         this.indexingOrchestrationProvider = indexingOrchestrationProvider;
+        this.graphEnrichmentProvider = graphEnrichmentProvider;
     }
 
     @Override
@@ -70,6 +77,7 @@ public class DemoDataInitializer implements ApplicationRunner {
             if (isDemoDataIntact()) {
                 log.info("Demo data intact — {} workspaces, {} documents. Skipping seed.",
                         workspaceRepo.count(), countDemoDocuments());
+                populateGraphIfEmpty();
                 return;
             }
             log.info("Demo data corrupted — deleting and recreating.");
@@ -84,6 +92,27 @@ public class DemoDataInitializer implements ApplicationRunner {
         log.info("Demo corpus seeded: 3 workspaces, {} documents, {} chunks.",
                 documentRepo.count(), chunkRepo.count());
         indexAllDocuments();
+        populateGraph(workspaces);
+    }
+
+    /** Ensures the graph is populated even when demo data is intact from a previous run. */
+    private void populateGraphIfEmpty() {
+        GraphEnrichmentService graph = graphEnrichmentProvider.getIfAvailable();
+        if (graph == null || !graph.isAvailable()) return;
+        // Check if graph already has document nodes
+        var existing = graph.searchDocumentsByKeywords(List.of("berlin", "procurement", "building"), 1);
+        if (!existing.isEmpty()) {
+            log.info("Graph already populated — {} document nodes found.", existing.size());
+            return;
+        }
+        log.info("Demo data intact but graph empty — populating graph now.");
+        Map<String, WorkspaceEntity> wsMap = new LinkedHashMap<>();
+        for (var ws : workspaceRepo.findAll()) {
+            if (ACTOR.equals(ws.getOwnerId())) {
+                wsMap.put(ws.getWorkspaceCode().replace("WS-", "").toLowerCase(), ws);
+            }
+        }
+        populateGraph(wsMap);
     }
 
     /** Returns true if every demo document has exactly one version whose storage_key file exists on disk. */
@@ -130,7 +159,7 @@ public class DemoDataInitializer implements ApplicationRunner {
 
         // 2. Delete workspace-document links
         for (WorkspaceEntity ws : demoWorkspaces) {
-            linkRepo.deleteAll(linkRepo.findByWorkspaceId(ws.getId()));
+            linkRepo.deleteAll(linkRepo.findByWorkspaceId(ws.getUuid()));
         }
 
         // 3. Delete documents (cascades to document_versions and document_tags)
@@ -152,6 +181,19 @@ public class DemoDataInitializer implements ApplicationRunner {
             }
         }
 
+        // 6. Clean Neo4j graph nodes for demo documents
+        GraphEnrichmentService graph = graphEnrichmentProvider.getIfAvailable();
+        if (graph != null && graph.isAvailable()) {
+            try {
+                for (DocumentEntity doc : demoDocs) {
+                    graph.deleteDocumentNodes(doc.getId().toString());
+                }
+                log.info("Cleaned Neo4j graph nodes for {} demo documents.", demoDocs.size());
+            } catch (Exception e) {
+                log.warn("Failed to clean Neo4j graph nodes: {}", e.getMessage());
+            }
+        }
+
         log.info("Deleted {} demo documents, {} workspaces, and stale files from {}.",
                 demoDocs.size(), demoWorkspaces.size(), demoDir);
     }
@@ -164,6 +206,147 @@ public class DemoDataInitializer implements ApplicationRunner {
 
     private int countDemoDocuments() {
         return findDemoDocuments().size();
+    }
+
+    /** Populates Neo4j with Document, Chunk, and Regulation nodes with cross-references. */
+    private void populateGraph(Map<String, WorkspaceEntity> workspaces) {
+        GraphEnrichmentService graph = graphEnrichmentProvider.getIfAvailable();
+        if (graph == null || !graph.isAvailable()) {
+            log.info("Neo4j not available — skipping graph population.");
+            return;
+        }
+        log.info("Populating Neo4j graph from demo corpus...");
+        List<DocumentEntity> docs = documentRepo.findAll();
+        Map<UUID, List<DocumentChunkEntity>> chunksByDoc = new java.util.LinkedHashMap<>();
+        for (var chunk : chunkRepo.findAll()) {
+            chunksByDoc.computeIfAbsent(chunk.getDocumentId(), k -> new ArrayList<>()).add(chunk);
+        }
+
+        int nodeCount = 0;
+        int relCount = 0;
+
+        for (var doc : docs) {
+            EnrichmentResult result = new EnrichmentResult(doc.getId().toString());
+            String docId = doc.getId().toString();
+
+            // Document node
+            Map<String, Object> docProps = new java.util.LinkedHashMap<>();
+            docProps.put("id", docId);
+            docProps.put("label", doc.getTitle());
+            docProps.put("docId", docId);
+            docProps.put("title", doc.getTitle());
+            docProps.put("type", doc.getType().name());
+            docProps.put("category", doc.getCategory() != null ? doc.getCategory() : "");
+            docProps.put("tags", String.join(",", doc.getTags()));
+            result.addNode(new GraphNode(docId, GraphNode.NodeType.DOCUMENT,
+                    doc.getTitle(), docProps));
+            nodeCount++;
+
+            // Regulation node for regulatory documents
+            if (doc.getCategory() != null && (doc.getCategory().contains("regulation")
+                    || doc.getCategory().contains("procedure") || doc.getCategory().contains("manual"))) {
+                String regId = "regulation/" + doc.getId();
+                Map<String, Object> regProps = new java.util.LinkedHashMap<>();
+                regProps.put("id", regId);
+                regProps.put("label", doc.getTitle());
+                regProps.put("docId", docId);
+                regProps.put("category", doc.getCategory());
+                result.addNode(new GraphNode(regId, GraphNode.NodeType.REGULATION,
+                        doc.getTitle(), regProps));
+                result.addRelationship(new GraphRelationship(docId, regId,
+                        GraphRelationship.RelationshipType.IMPLEMENTS, Map.of()));
+                nodeCount++;
+                relCount++;
+            }
+
+            // Chunk nodes
+            List<DocumentChunkEntity> chunks = chunksByDoc.getOrDefault(doc.getId(), List.of());
+            for (var chunk : chunks) {
+                String chunkId = chunk.getId().toString();
+                Map<String, Object> chunkProps = new java.util.LinkedHashMap<>();
+                chunkProps.put("id", chunkId);
+                chunkProps.put("label", chunk.getTitle());
+                chunkProps.put("docId", docId);
+                chunkProps.put("chunkIndex", chunk.getChunkIndex());
+                chunkProps.put("text", chunk.getText().length() > 300
+                        ? chunk.getText().substring(0, 300) : chunk.getText());
+                result.addNode(new GraphNode(chunkId, GraphNode.NodeType.CHUNK,
+                        chunk.getTitle(), chunkProps));
+                result.addRelationship(new GraphRelationship(chunkId, docId,
+                        GraphRelationship.RelationshipType.PART_OF, Map.of()));
+                nodeCount++;
+                relCount++;
+            }
+
+            // Authority node based on source metadata
+            if (doc.getCategory() != null) {
+                String authorityId = "authority/" + doc.getCategory();
+                Map<String, Object> authProps = new java.util.LinkedHashMap<>();
+                authProps.put("id", authorityId);
+                authProps.put("label", doc.getCategory());
+                authProps.put("category", doc.getCategory());
+                result.addNode(new GraphNode(authorityId, GraphNode.NodeType.ORGANIZATION,
+                        doc.getCategory(), authProps));
+                result.addRelationship(new GraphRelationship(docId, authorityId,
+                        GraphRelationship.RelationshipType.BELONGS_TO, Map.of("category", doc.getCategory())));
+                nodeCount++;
+                relCount++;
+            }
+
+            graph.persist(result);
+        }
+
+        // Workspace relationships
+        for (var ws : workspaces.values()) {
+            String wsId = ws.getUuid().toString();
+            Map<String, Object> wsProps = Map.of("id", wsId, "label", ws.getName(), "code", ws.getWorkspaceCode());
+            graph.persist(createSingleNode(wsId, GraphNode.NodeType.PROJECT, ws.getName(), wsProps));
+            nodeCount++;
+
+            for (var link : linkRepo.findByWorkspaceId(ws.getUuid())) {
+                String docId = link.getDocumentId();
+                GraphRelationship rel = new GraphRelationship(docId, wsId,
+                        GraphRelationship.RelationshipType.PART_OF, Map.of("workspace", ws.getName()));
+                graph.persist(createSingleRel(docId, wsId,
+                        GraphRelationship.RelationshipType.PART_OF, Map.of("workspace", ws.getName())));
+                relCount++;
+            }
+        }
+
+        // Cross-reference documents within same workspace
+        for (var ws : workspaces.values()) {
+            var links = linkRepo.findByWorkspaceId(ws.getUuid());
+            for (int i = 0; i < links.size(); i++) {
+                for (int j = i + 1; j < links.size(); j++) {
+                    GraphRelationship ref = new GraphRelationship(
+                            links.get(i).getDocumentId(), links.get(j).getDocumentId(),
+                            GraphRelationship.RelationshipType.REFERENCES,
+                            Map.of("workspace", ws.getName()));
+                    graph.persist(createSingleRel(
+                            links.get(i).getDocumentId(), links.get(j).getDocumentId(),
+                            GraphRelationship.RelationshipType.REFERENCES,
+                            Map.of("workspace", ws.getName())));
+                    relCount++;
+                }
+            }
+        }
+
+        log.info("Graph population complete: {} nodes, {} relationships", nodeCount, relCount);
+    }
+
+    private EnrichmentResult createSingleNode(String id, GraphNode.NodeType type, String label,
+                                               Map<String, Object> props) {
+        EnrichmentResult r = new EnrichmentResult(id);
+        r.addNode(new GraphNode(id, type, label, props));
+        return r;
+    }
+
+    private EnrichmentResult createSingleRel(String sourceId, String targetId,
+                                              GraphRelationship.RelationshipType type,
+                                              Map<String, Object> props) {
+        EnrichmentResult r = new EnrichmentResult(sourceId);
+        r.addRelationship(new GraphRelationship(sourceId, targetId, type, props));
+        return r;
     }
 
     /** Indexes all newly created demo documents into Qdrant. */
@@ -190,7 +373,7 @@ public class DemoDataInitializer implements ApplicationRunner {
     private Map<String, WorkspaceEntity> createWorkspaces(Instant now) {
         Map<String, WorkspaceEntity> map = new LinkedHashMap<>();
 
-        WorkspaceEntity b = new WorkspaceEntity(null,
+        WorkspaceEntity b = new WorkspaceEntity("WS-BUILDING",
                 "Building & Urban Planning",
                 "Berlin building regulations, permits, zoning, and citizen information — BauO Bln, BauGB, BauNVO, BauVorlV 2025",
                 WorkspaceType.RESEARCH.name(), ACTOR);
@@ -198,7 +381,7 @@ public class DemoDataInitializer implements ApplicationRunner {
         b.setPhase(WorkspacePhase.COMPLETE);
         map.put("building", workspaceRepo.save(b));
 
-        WorkspaceEntity p = new WorkspaceEntity(null,
+        WorkspaceEntity p = new WorkspaceEntity("WS-PROCURE",
                 "Public Procurement",
                 "German and Berlin procurement law — GWB, VgV, UVgO, VOB/A, BerlAVG, EU thresholds, sustainable procurement",
                 WorkspaceType.RESEARCH.name(), ACTOR);
@@ -206,7 +389,7 @@ public class DemoDataInitializer implements ApplicationRunner {
         p.setPhase(WorkspacePhase.COMPLETE);
         map.put("procurement", workspaceRepo.save(p));
 
-        WorkspaceEntity h = new WorkspaceEntity(null,
+        WorkspaceEntity h = new WorkspaceEntity("WS-HR",
                 "Human Resources",
                 "Berlin public service HR — TV-L 2025, travel expenses, vacation, home office, working time, IT security",
                 WorkspaceType.RESEARCH.name(), ACTOR);

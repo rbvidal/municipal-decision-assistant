@@ -42,7 +42,12 @@ public class QdrantCollectionManager {
         } catch (Exception e) {
             log.info("Qdrant collection '{}' not found, creating...", properties.collection());
         }
-        createCollection();
+        try {
+            createCollection();
+        } catch (Exception e) {
+            log.warn("Qdrant collection '{}' could not be initialized at {}. Vector search remains unavailable until Qdrant is reachable.",
+                    properties.collection(), properties.baseUrl(), e);
+        }
     }
 
     private void createCollection() {

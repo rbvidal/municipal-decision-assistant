@@ -1,118 +1,118 @@
-# Municipal Decision Assistant — SCCON Demonstration Edition
+# Release Notes — v1.0.0-RC1
 
-**Version 1.1.0** · July 2026
+**Release Candidate 1 | 2026-07-23**
 
----
-
-## What's New in the Demonstration Edition
-
-This release transforms the Municipal Decision Assistant into a polished, ready-to-present demonstration application for Smart Country Convention (SCCON) 2026.
-
-### Redesigned Landing Page
-The landing page now immediately communicates the application's purpose: an AI-powered knowledge assistant for public administration. Three domain cards — Building & Urban Planning, Public Procurement, and Human Resources — provide one-click entry into each demonstration workspace.
-
-### Three Pre-Loaded Demo Workspaces
-The application starts with three fully indexed workspaces:
-- **Building & Urban Planning** — 8 documents covering BauO Bln, BauGB, BauNVO, BauVorlV 2025, Schneller-Bauen-Gesetz
-- **Public Procurement** — 6 documents covering GWB, VgV, UVgO, BerlAVG, AV §55 LHO, eVergabe
-- **Human Resources** — 10 documents covering TV-L 2025, BRKG, LRKG, Urlaubsverordnung, mobile work, IT security, working time
-
-### Example Questions — "Try These Questions"
-Each workspace provides 10 ready-to-click example questions. Visitors never need to think about what to ask — one click executes the query and displays a fully grounded answer. Questions range from simple lookups to complex cross-domain legal reasoning.
-
-### Enhanced Answer Presentation
-Every answer now displays:
-- **Answer** — The AI-generated response with proper paragraph formatting
-- **Confidence score** — Color-coded (green/yellow/red) with percentage
-- **Retrieval strategy** — How the system found the answer (keyword, semantic, hybrid)
-- **Source count** — How many documents were searched and used
-- **Processing time** — In milliseconds, showing real-time performance
-- **Retrieved sources** — Click any source to open the original document with highlighted passage
-
-### Document Preview with Highlighting
-Clicking a source citation opens the original document viewer. The relevant passage is highlighted and scrolled into view. Document metadata (type, authority, version, status) is displayed alongside the text.
-
-### Related Documents
-The sidebar displays related regulations, procedures, forms, and manuals that complement the current answer — providing a complete picture of the administrative context.
-
-### Visual Polish
-Complete CSS redesign with professional typography (Inter), Berlin-inspired color palette, card-based layouts, animated loading states, empty-state screens, and responsive design. The application looks like enterprise software.
-
-### Five-Minute Demo Script
-A complete demonstration guide (`DEMO_GUIDE.md`) provides a timed, minute-by-minute script for presenters, including backup demos and troubleshooting.
-
-### Self-Contained Demo Data
-Demo data seeds automatically on first startup — no manual upload or indexing required. Three workspaces with 20 documents and pre-computed search chunks. Idempotent: subsequent startups detect existing data and skip seeding.
+The first public release candidate of the Municipal Decision Assistant — an AI-powered decision support platform for German municipal administrations.
 
 ---
 
-## Architecture (Unchanged)
+## Highlights
 
-The underlying Enterprise AI Platform architecture is preserved:
-- 9 Maven modules with compile-time dependency boundaries
-- Multi-provider AI orchestration (Ollama + OpenAI-compatible)
-- Hybrid retrieval: keyword + vector (Qdrant) + graph (Neo4j)
-- GraphRAG with relationship-aware discovery
-- Automated evaluation on every answer
-- Immutable audit log
-- Graceful degradation — every external dependency optional
+### Hybrid Search
+Semantic + keyword + graph retrieval with relevance ranking, citations, and pagination. Searches across all indexed municipal document corpora.
+
+### Evidence-Grounded AI
+Dual-path AI reasoning: structured rule engine for deterministic decisions (procurement thresholds, salary tables, travel allowances) and hybrid retrieval for evidence-based reasoning over document corpora.
+
+### Rule Engine
+Deterministic evaluation of procurement procedures, salary grades, travel allowances, and administrative fees. Pre-loaded with Berlin procurement thresholds (AV §55 LHO), TV-L 2025 salary tables, and BRKG travel regulations.
+
+### Document Ingestion
+Full document lifecycle: upload, chunking, embedding generation, Qdrant vector indexing. Supports PDF, DOCX, TXT, HTML. Versioning and archival.
+
+### Knowledge Search
+Search and browse the municipal knowledge base. Backed by the production hybrid retrieval pipeline with document metadata enrichment.
+
+### Audit
+All platform operations (search, document, authentication, AI inference) are persisted to an audit log. Queryable via admin interface with role-based access control.
+
+### Workspace
+Case workspace management with workflow phases, document attachment, checklist, timeline, notes, and AI decision support tab.
+
+### Administration
+System health monitoring, ingestion job tracking, corpus health dashboard, audit log viewer. All administrative endpoints require ADMIN role.
 
 ---
 
-## Build & Run
+## Known Limitations
 
+| Limitation | Impact | Target |
+|-----------|--------|--------|
+| **Dashboard** | Home page shows "Dashboard nicht verfügbar" error state. Real aggregation service deferred. | Future release |
+| **Search Sorting** | Results ordered by retrieval ranking. No user-configurable sort by date, title, or relevance. | Future release |
+| **Document Type Semantics** | Knowledge page uses file-based labels ("Dokument (PDF)") rather than semantic types ("Vorschrift", "Gesetz"). Document model lacks semantic classification. | Future release |
+| **Workspace Draft/Send Tabs** | Placeholder content ("wird in einer späteren Phase implementiert"). | Future release |
+| **CPU/Session Metrics** | Admin health endpoint reports hardcoded `cpuUsage: 0` and `activeSessions: 1`. JVM does not expose these natively. | Future release (via external monitoring) |
+
+---
+
+## System Requirements
+
+| Component | Minimum | Recommended |
+|-----------|---------|-------------|
+| Java | JDK 21 | JDK 21 |
+| Maven | 3.9+ | 3.9+ |
+| Node.js | 18+ | 22+ |
+| PostgreSQL | 16 with pgvector | 16 with pgvector |
+| Qdrant | Latest | Latest |
+| Ollama | Latest (optional) | Latest with embedding + chat models |
+| Neo4j | 5 Community | 5 Community (optional, for graph search) |
+
+---
+
+## Installation
+
+### Docker (Recommended for Production)
 ```bash
-git clone https://github.com/cognitera/municipal-decision-assistant
-cd municipal-decision-assistant
-
-docker compose up -d
-docker compose --profile graph up -d
-
-mvn spring-boot:run -pl platform-api
+cp .env.example .env
+# Edit .env with your credentials
+docker compose -f docker-compose-prod.yml build
+docker compose -f docker-compose-prod.yml up -d
 ```
 
-Open `http://localhost:8080`. Demo data seeds automatically on first startup.
+### Local Development
+```bash
+# Windows
+start-dev.bat
 
-**Requirements:** Java 21, Maven 3.x, Docker, Ollama (optional for semantic search)
+# The application will be available at http://localhost:5173
+# Backend API at http://localhost:8080
+```
 
----
-
-## What Was NOT Changed
-
-- All 9 Maven modules remain structurally unchanged
-- All SPI interfaces unchanged
-- All REST API endpoints unchanged  
-- Database schema unchanged
-- Prompt Registry preserved
-- Workflow Engine preserved
-- GraphRAG implementation preserved
-- Retrieval pipeline preserved
-
----
-
-## Demo-Only Features (Not for Production)
-
-- Demo data is seeded in-memory via JPA repositories (bypasses the ingestion pipeline)
-- Example questions are hardcoded in `AiPageController.java` (should come from a configuration file or database in production)
-- Workspace domain metadata uses a static map (should use a workspace metadata service)
-- Document chunks are created without vector embeddings (keyword-only search). For full semantic search, run Ollama and use the standard upload + ingestion flow.
+### Production Demo (Single Server)
+```bash
+start-prod.bat
+# Opens http://localhost:8080
+# React frontend served from the Spring Boot JAR
+```
 
 ---
 
-## Files Changed
+## Configuration
 
-| File | Change |
-|------|--------|
-| `platform.css` | Complete redesign — enterprise visual language |
-| `dashboard.html` | Redesigned as municipal landing page with domain cards |
-| `fragments/layout.html` | Updated navigation with simplified links |
-| `ai/index.html` | Major redesign — example questions panel, enhanced answer display, explainability bar |
-| `AiPageController.java` | Enhanced with workspace context, example questions, enhanced answer formatting, related documents |
-| `DashboardController.java` | Added workspace count to dashboard |
-| `DemoDataInitializer.java` | **NEW** — Seeds 3 workspaces with 20 pre-indexed documents on first startup |
-| `DEMO_GUIDE.md` | **NEW** — Complete 5-minute SCCON presentation script |
-| `RELEASE_NOTES.md` | Updated for SCCON Demonstration Edition |
+All secrets are externalized via environment variables. See `.env.example` for the complete list.
+
+Production deployment requires the `prod` Spring profile, which enables:
+- Flyway database migrations
+- `ddl-auto: validate` (no automatic schema changes)
+- SSL/TLS (requires keystore)
+- Restricted health endpoint details
+- INFO-level logging
+
+The Docker Compose production file activates this profile automatically. The `start-prod.bat` script passes `--spring.profiles.active=prod`.
 
 ---
 
-**Municipal Decision Assistant v1.1.0** — SCCON Demonstration Edition
+## Documentation
+
+- [Architecture Handbook](docs/Architecture-Handbook.md)
+- [Developer Guide](docs/Developer-Guide.md)
+- [API Reference](docs/API_REFERENCE.md)
+- [Operations Manual](docs/OPERATIONS_MANUAL.md)
+- [Incident Playbook](docs/INCIDENT_PLAYBOOK.md)
+
+---
+
+## Support
+
+This is a Release Candidate. For issues, bug reports, or feedback, contact the development team.

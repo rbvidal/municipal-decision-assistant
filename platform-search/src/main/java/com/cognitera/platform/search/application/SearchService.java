@@ -4,6 +4,7 @@ import com.cognitera.platform.audit.api.AuditEventType;
 import com.cognitera.platform.audit.api.AuditRequestContext;
 import com.cognitera.platform.search.api.ChunkManagementService;
 import com.cognitera.platform.search.api.ChunkRepository;
+import com.cognitera.platform.search.api.GraphSearchProvider;
 import com.cognitera.platform.search.api.HybridRetrievalService;
 import com.cognitera.platform.search.api.IndexChunkCommand;
 import com.cognitera.platform.search.api.QueryIntentClassifier;
@@ -40,13 +41,16 @@ public class SearchService implements SearchFacade, ChunkManagementService {
     private final ChunkRepository chunks;
     private final SearchAuditPublisher auditPublisher;
     private final QueryIntentClassifier intentClassifier;
+    private final GraphSearchProvider graphSearchProvider;
 
     public SearchService(HybridRetrievalService retrievalService, ChunkRepository chunks,
-                         SearchAuditPublisher auditPublisher, QueryIntentClassifier intentClassifier) {
+                         SearchAuditPublisher auditPublisher, QueryIntentClassifier intentClassifier,
+                         GraphSearchProvider graphSearchProvider) {
         this.retrievalService = retrievalService;
         this.chunks = chunks;
         this.auditPublisher = auditPublisher;
         this.intentClassifier = intentClassifier;
+        this.graphSearchProvider = graphSearchProvider;
     }
 
     @Override
@@ -85,7 +89,12 @@ public class SearchService implements SearchFacade, ChunkManagementService {
                         "queryLength", Integer.toString(normalized.query().length()),
                         "resultCount", Integer.toString(results.size()),
                         "intent", intent.intent()));
-        return new SearchResultPage(results, normalized.page(), normalized.size(), candidates.size(), totalPages, normalized.mode().name());
+        String effectiveStrategy = normalized.mode().name();
+        if (normalized.mode() == SearchMode.HYBRID
+                && graphSearchProvider != null && graphSearchProvider.isAvailable()) {
+            effectiveStrategy = "HYBRID_GRAPH";
+        }
+        return new SearchResultPage(results, normalized.page(), normalized.size(), candidates.size(), totalPages, effectiveStrategy);
     }
 
     @Override

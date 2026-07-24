@@ -69,3 +69,17 @@
 .link:hover {
   text-decoration: underline;
 }
+
+.inputError {
+  border-color: var(--color-error, #e54545);
+}
+
+.inputError:focus {
+  border-color: var(--color-error, #e54545);
+  box-shadow: 0 0 0 3px rgba(229, 69, 69, 0.1);
+}
+
+.hintError {
+  font-size: var(--text-caption-size);
+  color: var(--color-error, #e54545);
+}

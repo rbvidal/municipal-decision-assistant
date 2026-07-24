@@ -9,10 +9,10 @@ import java.util.Objects;
 @Embeddable
 public class MetadataAttributeEmbeddable {
 
-    @Column(name = "metadata_key", nullable = false)
+    @Column(name = "key", nullable = false)
     private String key;
 
-    @Column(name = "metadata_value", nullable = false)
+    @Column(name = "value")
     private String value;
 
     protected MetadataAttributeEmbeddable() {

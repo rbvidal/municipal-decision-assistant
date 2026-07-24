@@ -6,12 +6,14 @@ import com.cognitera.platform.document.infrastructure.persistence.JpaDocumentEnt
 import com.cognitera.platform.document.infrastructure.persistence.JpaIngestionJobEntityRepository;
 import com.cognitera.platform.document.model.DocumentStatus;
 import com.cognitera.platform.workspace.infrastructure.persistence.JpaWorkspaceRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
 /** Renders the main dashboard with document counts, ingestion job status, and recent audit events. */
 @Controller
+@Profile("thymeleaf-legacy")
 public class DashboardController {
 
     private final JpaDocumentEntityRepository documentRepository;

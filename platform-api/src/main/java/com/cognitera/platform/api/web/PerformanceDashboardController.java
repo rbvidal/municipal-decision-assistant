@@ -21,7 +21,7 @@ import java.util.*;
  * and retrieval metrics for debugging and optimization.
  */
 @Controller
-@RequestMapping("/dev")
+@RequestMapping("/api/dev")
 public class PerformanceDashboardController {
 
     private static final Logger log = LoggerFactory.getLogger(PerformanceDashboardController.class);

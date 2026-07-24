@@ -55,16 +55,18 @@ public class WorkspaceService {
         this.orchestrator = new WorkspaceOrchestrator();
     }
 
-    /** Creates a new workspace from the given command, defaulting the name if blank. */
+    /** Creates a new workspace from the given command. */
     public WorkspaceEntity createWorkspace(CreateWorkspaceCommand cmd) {
+        String workspaceCode = "WS-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         String name = cmd.name() != null && !cmd.name().isBlank()
                 ? cmd.name()
-                : "WS-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+                : workspaceCode;
         WorkspaceEntity entity = new WorkspaceEntity(
-                null, name, cmd.description(), cmd.workspaceType(), cmd.createdBy());
+                workspaceCode, name, cmd.description(), cmd.workspaceType(), cmd.createdBy());
         WorkspaceEntity saved = workspaceRepo.save(entity);
         recordStep(saved.getId(), WorkspacePhase.SETUP, "Workspace setup completed");
-        log.info("Created workspace {} (name: {})", saved.getId(), saved.getName());
+        log.info("Created workspace {} (code: {}, name: {})", saved.getId(),
+                saved.getWorkspaceCode(), saved.getName());
         return saved;
     }
 
@@ -77,7 +79,7 @@ public class WorkspaceService {
     /** Finds a workspace by its ID. */
     @Transactional(readOnly = true)
     public Optional<WorkspaceEntity> findById(String workspaceId) {
-        return workspaceRepo.findById(workspaceId);
+        return workspaceRepo.findById(UUID.fromString(workspaceId));
     }
 
     /** Finds workspaces owned by a given user. */
@@ -94,7 +96,7 @@ public class WorkspaceService {
 
     /** Sets the workspace phase explicitly to the given value. */
     public WorkspaceEntity setPhase(String workspaceId, WorkspacePhase phase) {
-        WorkspaceEntity entity = workspaceRepo.findById(workspaceId)
+        WorkspaceEntity entity = workspaceRepo.findById(UUID.fromString(workspaceId))
                 .orElseThrow(() -> new IllegalArgumentException("Workspace not found: " + workspaceId));
         entity.setPhase(phase);
         entity.setUpdatedAt(Instant.now());
@@ -104,7 +106,7 @@ public class WorkspaceService {
 
     /** Advances the workspace to the next sequential phase. */
     public WorkspaceEntity advancePhase(String workspaceId) {
-        WorkspaceEntity entity = workspaceRepo.findById(workspaceId)
+        WorkspaceEntity entity = workspaceRepo.findById(UUID.fromString(workspaceId))
                 .orElseThrow(() -> new IllegalArgumentException("Workspace not found: " + workspaceId));
         WorkspacePhase current = entity.getPhase() != null ? entity.getPhase() : WorkspacePhase.SETUP;
         WorkspacePhase next = switch (current) {
@@ -122,7 +124,7 @@ public class WorkspaceService {
 
     /** Moves the workspace back to the previous phase. */
     public WorkspaceEntity previousPhase(String workspaceId) {
-        WorkspaceEntity entity = workspaceRepo.findById(workspaceId)
+        WorkspaceEntity entity = workspaceRepo.findById(UUID.fromString(workspaceId))
                 .orElseThrow(() -> new IllegalArgumentException("Workspace not found: " + workspaceId));
         WorkspacePhase current = entity.getPhase() != null ? entity.getPhase() : WorkspacePhase.SETUP;
         WorkspacePhase prev = switch (current) {
@@ -140,7 +142,7 @@ public class WorkspaceService {
 
     /** Merges the given data map into the workspace's phase data JSON. */
     public void updatePhaseData(String workspaceId, Map<String, Object> data) {
-        WorkspaceEntity entity = workspaceRepo.findById(workspaceId)
+        WorkspaceEntity entity = workspaceRepo.findById(UUID.fromString(workspaceId))
                 .orElseThrow(() -> new IllegalArgumentException("Workspace not found: " + workspaceId));
         Map<String, Object> existing = parsePhaseData(entity.getPhaseData());
         existing.putAll(data);
@@ -155,7 +157,7 @@ public class WorkspaceService {
 
     /** Attaches a document to a workspace. */
     public WorkspaceDocumentLinkEntity attachDocument(AttachDocumentCommand cmd) {
-        WorkspaceEntity entity = workspaceRepo.findById(cmd.workspaceId())
+        WorkspaceEntity entity = workspaceRepo.findById(UUID.fromString(cmd.workspaceId()))
                 .orElseThrow(() -> new IllegalArgumentException("Workspace not found: " + cmd.workspaceId()));
         String category = cmd.documentCategory() != null ? cmd.documentCategory() : "general";
         WorkspaceDocumentLinkEntity link = new WorkspaceDocumentLinkEntity(
@@ -170,7 +172,7 @@ public class WorkspaceService {
     /** Returns all document links for a workspace. */
     @Transactional(readOnly = true)
     public List<WorkspaceDocumentLinkEntity> getWorkspaceDocuments(String workspaceId) {
-        return docLinkRepo.findByWorkspaceId(workspaceId);
+        return docLinkRepo.findByWorkspaceId(UUID.fromString(workspaceId));
     }
 
     /** Adds a single timeline event to a workspace. */
@@ -184,7 +186,7 @@ public class WorkspaceService {
 
     /** Deletes existing timeline events and saves the given replacement list. */
     public void replaceTimeline(String workspaceId, List<TimelineEventEntity> events) {
-        timelineRepo.deleteByWorkspaceId(workspaceId);
+        timelineRepo.deleteByWorkspaceId(UUID.fromString(workspaceId));
         events.forEach(e -> {
             e.setId(null);
             e.setWorkspaceId(workspaceId);
@@ -195,19 +197,19 @@ public class WorkspaceService {
     /** Returns timeline events for a workspace ordered by event date. */
     @Transactional(readOnly = true)
     public List<TimelineEventEntity> getTimeline(String workspaceId) {
-        return timelineRepo.findByWorkspaceIdOrderByEventDate(workspaceId);
+        return timelineRepo.findByWorkspaceIdOrderByEventDate(UUID.fromString(workspaceId));
     }
 
     /** Returns completed steps for a workspace ordered by completion time. */
     @Transactional(readOnly = true)
     public List<WorkspaceStepEntity> getCompletedSteps(String workspaceId) {
-        return stepRepo.findByWorkspaceIdOrderByCompletedAt(workspaceId);
+        return stepRepo.findByWorkspaceIdOrderByCompletedAt(UUID.fromString(workspaceId));
     }
 
     /** Analyzes all documents in a workspace, extracting timeline events via {@link TimelineExtractionService}. */
     @Transactional
     public AnalysisResult analyzeDocuments(String workspaceId) {
-        List<WorkspaceDocumentLinkEntity> docLinks = docLinkRepo.findByWorkspaceId(workspaceId);
+        List<WorkspaceDocumentLinkEntity> docLinks = docLinkRepo.findByWorkspaceId(UUID.fromString(workspaceId));
         if (docLinks.isEmpty()) {
             return new AnalysisResult("NO_DOCUMENTS", 0, 0, 0, new ArrayList<>());
         }
@@ -254,7 +256,7 @@ public class WorkspaceService {
         }
 
         // Remove previous AI-generated events before re-extracting
-        List<TimelineEventEntity> existing = timelineRepo.findByWorkspaceIdOrderByEventDate(workspaceId);
+        List<TimelineEventEntity> existing = timelineRepo.findByWorkspaceIdOrderByEventDate(UUID.fromString(workspaceId));
         existing.stream().filter(TimelineEventEntity::isAiGenerated).forEach(e -> timelineRepo.delete(e));
 
         TimelineExtractionService.ExtractionResult result = timelineExtractor.extractFromDocuments(docInfos);
@@ -290,11 +292,12 @@ public class WorkspaceService {
     /** Converts a workspace entity to its full DTO representation including documents and timeline. */
     @Transactional(readOnly = true)
     public WorkspaceDto toDto(WorkspaceEntity entity) {
-        List<WorkspaceDocumentLinkEntity> docLinks = docLinkRepo.findByWorkspaceId(entity.getId());
-        List<TimelineEventEntity> timeline = timelineRepo.findByWorkspaceIdOrderByEventDate(entity.getId());
+        List<WorkspaceDocumentLinkEntity> docLinks = docLinkRepo.findByWorkspaceId(entity.getUuid());
+        List<TimelineEventEntity> timeline = timelineRepo.findByWorkspaceIdOrderByEventDate(entity.getUuid());
 
         return new WorkspaceDto(
-                entity.getId(), entity.getName(), entity.getDescription(),
+                entity.getId(), entity.getWorkspaceCode(),
+                entity.getName(), entity.getDescription(),
                 entity.getWorkspaceType(), entity.getStatus(), entity.getPhase(),
                 entity.getOwnerId(), parsePhaseData(entity.getPhaseData()),
                 docLinks.stream().map(this::toDocDto).collect(Collectors.toList()),

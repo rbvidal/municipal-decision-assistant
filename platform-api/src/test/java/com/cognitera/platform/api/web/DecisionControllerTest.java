@@ -78,7 +78,7 @@ class DecisionControllerTest {
         brkg.addEntry(11, 24.0, 12.0, "domestic", false, "Über 11 Stunden");
         registry.register(brkg);
 
-        DecisionRouter router = new DecisionRouter(registry, new DomainClassifier());
+        DecisionRouter router = new DecisionRouter(registry, new DomainClassifier(), null);
 
         // Stub AiService — returns a fixed response
         AiService aiService = new StubAiService();

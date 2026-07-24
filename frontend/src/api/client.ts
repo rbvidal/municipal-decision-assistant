@@ -46,7 +46,7 @@ export function getAuthToken(): string | null {
 function mapSpringError(status: number, body: Record<string, unknown>): ApiError {
   const message = (body.message as string) ?? (body.error as string) ?? `HTTP ${status}`;
   const code = body.code as string | undefined;
-  const errors = body.errors as Record<string, string> | undefined;
+  const errors = (body.fieldErrors ?? body.errors) as Record<string, string> | undefined;
 
   switch (status) {
     case 401:
@@ -303,33 +303,49 @@ export function onUnauthorized(callback: () => void): void {
   apiClient.onUnauthorized = callback;
 }
 
-/** Attempts a silent token refresh. Returns true if successful. */
+/** Attempts a silent token refresh. Retries on 409 Conflict (concurrent refresh). Returns true if successful. */
 export async function trySilentRefresh(): Promise<boolean> {
   const refreshToken = localStorage.getItem("refreshToken");
   if (!refreshToken) return false;
 
-  try {
-    const base = import.meta.env.VITE_API_BASE_URL || window.location.origin;
-    const response = await fetch(`${base}/api/auth/refresh`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken }),
-      },
-    );
+  // Retry up to 3 times on 409 Conflict (concurrent refresh from another tab)
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const base = import.meta.env.VITE_API_BASE_URL || window.location.origin;
+      const response = await fetch(`${base}/api/auth/refresh`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken }),
+        },
+      );
 
-    if (!response.ok) {
+      if (response.ok) {
+        const data = await response.json();
+        setAuthToken(data.accessToken);
+        if (data.refreshToken) {
+          localStorage.setItem("refreshToken", data.refreshToken);
+        }
+        return true;
+      }
+
+      if (response.status === 409 && attempt < 2) {
+        // Concurrent refresh conflict — wait and retry
+        await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
+        continue;
+      }
+
       localStorage.removeItem("refreshToken");
       return false;
+    } catch {
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
+        continue;
+      }
+      return false;
     }
-
-    const data = await response.json();
-    setAuthToken(data.accessToken);
-    if (data.refreshToken) {
-      localStorage.setItem("refreshToken", data.refreshToken);
-    }
-    return true;
-  } catch {
-    return false;
   }
+
+  localStorage.removeItem("refreshToken");
+  return false;
 }

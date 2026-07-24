@@ -39,7 +39,11 @@ export const RegisterPage: React.FC = React.memo(() => {
       setError("");
 
       if (!canSubmit) {
-        if (!passwordsMatch) {
+        if (!displayName.trim()) {
+          setError("Bitte geben Sie Ihren Namen ein.");
+        } else if (!email.trim()) {
+          setError("Bitte geben Sie Ihre E-Mail-Adresse ein.");
+        } else if (!passwordsMatch) {
           setError("Die Passwörter stimmen nicht überein.");
         } else if (password.length < 8) {
           setError("Das Passwort muss mindestens 8 Zeichen lang sein.");

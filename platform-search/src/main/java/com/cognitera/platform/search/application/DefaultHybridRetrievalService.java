@@ -85,9 +85,17 @@ public class DefaultHybridRetrievalService implements HybridRetrievalService {
                 : List.of();
         log.info("RETRIEVAL Keyword hits: {}", keywordResults.size());
 
-        List<RetrievalCandidate> vectorResults = shouldRunVector(query.mode())
-                ? vectorSearchProvider.search(query)
-                : List.of();
+        List<RetrievalCandidate> vectorResults;
+        if (shouldRunVector(query.mode())) {
+            try {
+                vectorResults = vectorSearchProvider.search(query);
+            } catch (Exception e) {
+                log.warn("RETRIEVAL Vector search unavailable: {}", e.getMessage());
+                vectorResults = List.of();
+            }
+        } else {
+            vectorResults = List.of();
+        }
         log.info("RETRIEVAL Vector hits: {}", vectorResults.size());
 
         List<RetrievalCandidate> graphResults = shouldRunGraph(query.mode())
@@ -141,7 +149,8 @@ public class DefaultHybridRetrievalService implements HybridRetrievalService {
     }
 
     private boolean shouldRunGraph(SearchMode mode) {
-        return (mode == SearchMode.GRAPH || mode == SearchMode.HYBRID_GRAPH)
+        return (mode == SearchMode.GRAPH || mode == SearchMode.HYBRID_GRAPH
+                || mode == SearchMode.HYBRID)
                 && graphSearchProvider.isAvailable();
     }
 

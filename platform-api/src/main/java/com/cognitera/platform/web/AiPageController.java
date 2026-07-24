@@ -10,6 +10,7 @@ import com.cognitera.platform.document.api.DocumentFilter;
 import com.cognitera.platform.document.model.Document;
 import com.cognitera.platform.document.model.DocumentStatus;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,6 +23,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
+@Profile("thymeleaf-legacy")
 public class AiPageController {
 
     private final ObjectProvider<AiFacade> aiFacadeProvider;

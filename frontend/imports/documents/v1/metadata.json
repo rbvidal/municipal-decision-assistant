@@ -1,8 +1,0 @@
-{
-  "name": "Kommunale Entscheidungsplattform",
-  "description": "Plattform für kommunale Dokumentenverwaltung und Vorgangsbearbeitung",
-  "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
-}

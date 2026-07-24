@@ -8,15 +8,15 @@ const USER = 'gaga@mailinator.com';
 const PASS = 'gaga';
 
 const PAGES = [
-  { name: '01-dashboard', label: 'Dashboard', path: '/dashboard' },
-  { name: '02-decision-assistant', label: 'Decision Assistant', path: '/decision-assistant?workspace=building' },
-  { name: '02b-decision-result', label: 'Decision Result', path: '/decision-assistant', action: 'query' },
-  { name: '03-knowledge-base', label: 'Knowledge Base', path: '/knowledge' },
-  { name: '04-knowledge-graph', label: 'Knowledge Graph', path: '/graph' },
-  { name: '05-analytics', label: 'Analytics', path: '/analytics' },
-  { name: '06-administration', label: 'Administration', path: '/admin' },
-  { name: '07-workspaces', label: 'Workspaces', path: '/workspaces' },
-  { name: '08-document-upload', label: 'Document Upload', path: '/documents/upload' },
+  { name: '01-home', label: 'Home', path: '/home' },
+  { name: '02-my-work', label: 'My Work', path: '/work' },
+  { name: '03-knowledge', label: 'Knowledge Base', path: '/knowledge' },
+  { name: '04-documents', label: 'Documents', path: '/documents' },
+  { name: '05-search', label: 'Search', path: '/search' },
+  { name: '06-admin', label: 'Administration', path: '/admin' },
+  { name: '07-admin-corpus', label: 'Corpus', path: '/admin/corpus' },
+  { name: '08-admin-audit', label: 'Audit Log', path: '/admin/audit' },
+  { name: '09-new-case', label: 'New Case', path: '/work/new' },
 ];
 
 async function screenshot(page, name) {

@@ -1,6 +1,0 @@
-{
-  "name": "Kommunale Entscheidungsplattform",
-  "description": "Eine Wissensdatenbank und Entscheidungsplattform für kommunale Vorschriften, Verfahren und Vorlagen.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

@@ -34,12 +34,13 @@ public final class BenchmarkRunner {
 
         // ── Decision routing (real) ──
         DomainClassifier domainClassifier = new DomainClassifier();
-        DecisionRouter decisionRouter = new DecisionRouter(registry, domainClassifier);
+        DecisionRouter decisionRouter = new DecisionRouter(registry, domainClassifier, null);
 
         // ── Pipeline services (real) ──
         PipelineProfiler profiler = new PipelineProfiler();
         DefaultQueryIntentClassifier intentClassifier = new DefaultQueryIntentClassifier();
-        AiAuditPublisher auditPublisher = new AiAuditPublisher();
+        AiAuditPublisher auditPublisher = new AiAuditPublisher(
+                (eventType, subject, metadata) -> { /* no-op: benchmarks do not persist audit events */ });
         GroundingService grounding = new DefaultGroundingService();
 
         // ── Stubs (LLM + retrieval path only) ──

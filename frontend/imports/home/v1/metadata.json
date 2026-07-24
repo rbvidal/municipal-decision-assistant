@@ -1,6 +1,0 @@
-{
-  "name": "VerwaltungsPortal",
-  "description": "Dashboard for public administration processes, task management, suggestions, and file statistics.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

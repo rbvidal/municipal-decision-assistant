@@ -3,6 +3,7 @@ package com.cognitera.platform.web;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.boot.web.servlet.error.ErrorController;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
  * Custom error page controller that extracts servlet error attributes and renders the error view.
  */
 @Controller
+@Profile("thymeleaf-legacy")
 public class ErrorPageController implements ErrorController {
 
     /**

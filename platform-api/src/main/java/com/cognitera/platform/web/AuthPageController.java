@@ -2,6 +2,7 @@ package com.cognitera.platform.web;
 
 import com.cognitera.platform.auth.api.AuthFacade;
 import com.cognitera.platform.auth.api.RegisterUserCommand;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  * Thymeleaf page controller for login, registration form, and registration submission.
  */
 @Controller
+@Profile("thymeleaf-legacy")
 public class AuthPageController {
 
     private final AuthFacade authFacade;

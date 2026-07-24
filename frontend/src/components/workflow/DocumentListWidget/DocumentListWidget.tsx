@@ -19,6 +19,7 @@ interface DocumentListWidgetProps {
   documents: DocumentItem[];
   documentTypes: readonly string[];
   onUploadDocument: (name: string, type: string) => void;
+  onRowClick?: (doc: DocumentItem) => void;
   className?: string;
 }
 
@@ -28,6 +29,7 @@ export const DocumentListWidget: React.FC<DocumentListWidgetProps> = React.memo(
     documents,
     documentTypes,
     onUploadDocument,
+    onRowClick,
     className,
   }) => {
     const [showUpload, setShowUpload] = useState(false);
@@ -121,6 +123,7 @@ export const DocumentListWidget: React.FC<DocumentListWidgetProps> = React.memo(
           data={documents}
           keyField="id"
           emptyState="Keine Dokumente vorhanden"
+          onRowClick={onRowClick}
         />
       </Panel>
     );

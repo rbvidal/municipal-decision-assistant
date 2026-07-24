@@ -2,19 +2,17 @@ export {
   caseService,
   knowledgeService,
   documentService,
-  userService,
-  supervisorService,
   corpusService,
   adminService,
   decisionService,
-  isMockMode,
 } from "./serviceFactory";
-export type { CaseService } from "./CaseService";
-export type { KnowledgeService } from "./KnowledgeService";
-export type { DocumentService } from "./DocumentService";
-export type { UserService } from "./UserService";
-export type { SupervisorService } from "./SupervisorService";
-export type { CorpusService, CorpusHealthResponse, CorpusHealthSummary, ManifestSummary }
-  from "./CorpusService";
-export type { AdminService } from "./AdminService";
-export type { DecisionService } from "./DecisionService";
+
+export { default as dashboardService } from "./RestDashboardService";
+export type { DashboardData, DashboardStat, DashboardCase, DashboardNextTask, DashboardSuggestion } from "./RestDashboardService";
+
+export type { CaseService, TimelineEntryData } from "./RestCaseService";
+export type { KnowledgeService } from "./RestKnowledgeService";
+export type { DocumentService, DocumentUploadResult } from "./RestDocumentService";
+export type { CorpusService, CorpusHealthResponse, CorpusHealthSummary, ManifestSummary } from "./RestCorpusService";
+export type { AdminService, SystemHealth } from "./RestAdminService";
+export type { DecisionService } from "./RestDecisionService";

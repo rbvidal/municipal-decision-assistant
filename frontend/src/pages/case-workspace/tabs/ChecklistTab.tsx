@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { Workspace } from "../../../components/layout";
 import { ChecklistWidget } from "../../../components/workflow";
 import { Badge } from "../../../components/common";
-import type { ChecklistItemData } from "../../../mocks/case-workspace";
+import type { ChecklistItemData } from "../../../types/domain";
 
 interface ChecklistTabProps {
   items: ChecklistItemData[];
@@ -22,7 +22,7 @@ export const ChecklistTab: React.FC<ChecklistTabProps> = React.memo(
           <Badge status="success">{completed} Erledigt</Badge>
           {openCount > 0 && <Badge status="warning">{openCount} Offen</Badge>}
         </div>
-        <ChecklistWidget items={items} onToggleItem={onToggleItem} onAddItem={onAddItem} />
+        <ChecklistWidget items={items as any} onToggleItem={onToggleItem} onAddItem={onAddItem} />
       </Workspace>
     );
   },

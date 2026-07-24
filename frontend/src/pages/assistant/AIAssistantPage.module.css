@@ -1,0 +1,162 @@
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--space-6);
+}
+
+.header {
+  margin-bottom: var(--space-6);
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 var(--space-2) 0;
+}
+
+.subtitle {
+  color: var(--color-gray-500);
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.questionArea {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.questionInput {
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  background: var(--color-white);
+  color: var(--color-gray-900);
+}
+
+.questionInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-alpha);
+}
+
+.questionInput:disabled {
+  background: var(--color-gray-50);
+  color: var(--color-gray-400);
+}
+
+.questionActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.loadingArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+  gap: var(--space-4);
+}
+
+.loadingText {
+  color: var(--color-gray-500);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.errorText {
+  color: var(--color-error);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.strategyRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.explanation {
+  color: var(--color-gray-600);
+  font-size: 0.85rem;
+}
+
+.answer {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--color-gray-800);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.excerpt {
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--color-gray-700);
+  margin: 0 0 var(--space-2) 0;
+}
+
+.metaRow {
+  display: flex;
+  gap: var(--space-4);
+  font-size: 0.75rem;
+  color: var(--color-gray-400);
+  margin-bottom: var(--space-2);
+}
+
+.citationRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-gray-100);
+  font-size: 0.85rem;
+}
+
+.citationLaw {
+  font-weight: 600;
+  color: var(--color-gray-800);
+}
+
+.citationExcerpt {
+  color: var(--color-gray-500);
+  font-size: 0.8rem;
+}
+
+.confidenceGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.confLabel {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-gray-700);
+  margin-bottom: var(--space-1);
+}
+
+.warningLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-warning);
+}
+
+.warningText {
+  font-size: 0.85rem;
+  color: var(--color-warning);
+  margin: var(--space-1) 0;
+}
+
+.mt2 {
+  margin-top: var(--space-2);
+}

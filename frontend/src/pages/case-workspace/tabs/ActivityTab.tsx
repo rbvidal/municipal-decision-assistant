@@ -3,7 +3,20 @@ import { Workspace, WorkspaceSection } from "../../../components/layout";
 import { Panel, ActivityTimeline, type TimelineEvent } from "../../../components/common";
 
 interface ActivityTabProps {
-  events: TimelineEvent[];
+  events: RawTimelineEvent[];
+}
+
+/** The shape that actually arrives from useCaseWorkspace / API / demo data. */
+interface RawTimelineEvent {
+  id: string;
+  timestamp?: string;
+  actor?: string;
+  action?: string;
+  description?: string;
+  type?: string;
+  time?: string;
+  author?: string;
+  content?: string;
 }
 
 interface DateGroup {
@@ -11,18 +24,30 @@ interface DateGroup {
   events: TimelineEvent[];
 }
 
-function groupByDate(events: TimelineEvent[]): DateGroup[] {
-  const groups = new Map<string, TimelineEvent[]>();
-  const today = new Date().toLocaleDateString("de-DE");
+/** Normalise any incoming event shape into the TimelineEvent the component expects. */
+function normalise(raw: RawTimelineEvent): TimelineEvent {
+  const time = raw.time ?? raw.timestamp ?? "";
+  return {
+    id: raw.id,
+    author: raw.author ?? raw.actor ?? "System",
+    time,
+    content: raw.content ?? raw.description ?? raw.action ?? "",
+    type: (raw.type === "edit" || raw.type === "system" ? raw.type : "edit") as "edit" | "system",
+  };
+}
 
-  for (const event of events) {
+function groupByDate(events: RawTimelineEvent[]): DateGroup[] {
+  const groups = new Map<string, TimelineEvent[]>();
+
+  for (const raw of events) {
+    const event = normalise(raw);
     let key: string;
     if (event.time.startsWith("Heute")) {
       key = "Heute";
     } else if (event.time.startsWith("Gestern")) {
       key = "Gestern";
     } else {
-      key = event.time.split(",")[0] ?? event.time;
+      key = event.time.split(",")[0] || event.time || "Unbekannt";
     }
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(event);

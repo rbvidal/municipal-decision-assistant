@@ -5,8 +5,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -27,17 +32,42 @@ class PlatformApiApplicationTests {
     private MockMvc mockMvc;
 
     @Test
-    void loginPageLoads() throws Exception {
+    void rootAndLoginServeSpaShell() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("id=\"root\"")));
+
         mockMvc.perform(get("/login"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Anmelden")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("id=\"root\"")));
     }
 
     @Test
-    void registerPageLoads() throws Exception {
+    void registerPageServesSpaShell() throws Exception {
         mockMvc.perform(get("/register"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Registrieren")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("id=\"root\"")));
+    }
+
+    @Test
+    void hashedSpaScriptIsPublic() throws Exception {
+        MvcResult result = mockMvc.perform(get("/login"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Matcher matcher = Pattern.compile("src=\"([^\"]+\\.js)\"")
+                .matcher(result.getResponse().getContentAsString());
+        assertTrue(matcher.find(), "index.html must reference a hashed JavaScript asset");
+
+        mockMvc.perform(get(matcher.group(1)))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", org.hamcrest.Matchers.containsString("javascript")));
+    }
+
+    @Test
+    void missingAssetDoesNotFallBackToHtml() throws Exception {
+        mockMvc.perform(get("/assets/missing-production-asset.js"))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -47,9 +77,10 @@ class PlatformApiApplicationTests {
     }
 
     @Test
-    void dashboardRequiresAuthentication() throws Exception {
+    void clientSideRouteServesSpaShell() throws Exception {
         mockMvc.perform(get("/dashboard"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("id=\"root\"")));
     }
 
     @Test

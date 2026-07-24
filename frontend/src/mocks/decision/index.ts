@@ -1,1 +1,0 @@
-export { mockDecisionPackage } from "./data";

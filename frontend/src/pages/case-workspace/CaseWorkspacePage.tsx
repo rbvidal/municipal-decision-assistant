@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { CaseWorkspaceLayout } from "../../layouts/CaseWorkspaceLayout";
 import {
   AppTopNavigation,
@@ -18,7 +18,7 @@ import {
 } from "../../components/common";
 import { useCaseWorkspace } from "../../hooks/useCaseWorkspace";
 import { VORGANG_STATUS_LABELS } from "../../types";
-import type { ChecklistItemData, DocumentItemData, CaseNoteData } from "../../mocks/case-workspace";
+import type { ChecklistItemData, DocumentItemData, CaseNoteData } from "../../types/domain";
 import {
   OverviewTab,
   ChecklistTab,
@@ -57,6 +57,7 @@ const DOCUMENT_TYPES = [
 
 export const CaseWorkspacePage: React.FC = React.memo(() => {
   const { caseId } = useParams<{ caseId: string }>();
+  const navigate = useNavigate();
   const {
     caseData,
     workflowSteps,
@@ -81,7 +82,7 @@ export const CaseWorkspacePage: React.FC = React.memo(() => {
   ], [caseData, caseId]);
 
   const statusLabel = useMemo(
-    () => (caseData ? VORGANG_STATUS_LABELS[caseData.status] : ""),
+    () => (caseData ? (VORGANG_STATUS_LABELS as Record<string, string>)[caseData.status] : ""),
     [caseData],
   );
 
@@ -96,9 +97,9 @@ export const CaseWorkspacePage: React.FC = React.memo(() => {
       case "notes":
         return <InternalNotesTab notes={caseNotes} onAddNote={addNote} />;
       case "activity":
-        return <ActivityTab events={timelineEvents.map((e) => ({ ...e }))} />;
+        return <ActivityTab events={timelineEvents as any} />;
       case "decision-support":
-        return <DecisionSupportTab regulations={regulations} caseId={caseId ?? "unknown"} />;
+        return <DecisionSupportTab regulations={regulations as any} caseId={caseId ?? "unknown"} />;
       case "draft":
         return <DraftTab />;
       case "send":
@@ -112,7 +113,7 @@ export const CaseWorkspacePage: React.FC = React.memo(() => {
     return (
       <CaseWorkspaceLayout
         topNavigation={<AppTopNavigation modules={NAV_MODULES} activeModule="work" />}
-        breadcrumb={<Breadcrumb items={[{ label: "Startseite", href: "/home" }, { label: "Lädt...", href: "#" }]} onNavigate={() => {}} />}
+        breadcrumb={<Breadcrumb items={[{ label: "Startseite", href: "/home" }, { label: "Lädt...", href: "#" }]} onNavigate={(href) => navigate(href)} />}
         caseHeader={<div />}
         tabBar={<TabBar tabs={WORKSPACE_TABS} activeTab="overview" onTabChange={() => {}} />}
       >
@@ -125,7 +126,7 @@ export const CaseWorkspacePage: React.FC = React.memo(() => {
     return (
       <CaseWorkspaceLayout
         topNavigation={<AppTopNavigation modules={NAV_MODULES} activeModule="work" />}
-        breadcrumb={<Breadcrumb items={breadcrumbItems} onNavigate={() => {}} />}
+        breadcrumb={<Breadcrumb items={breadcrumbItems} onNavigate={(href) => navigate(href)} />}
         caseHeader={<div />}
         tabBar={<TabBar tabs={WORKSPACE_TABS} activeTab="overview" onTabChange={() => {}} />}
       >
@@ -137,7 +138,7 @@ export const CaseWorkspacePage: React.FC = React.memo(() => {
   return (
     <CaseWorkspaceLayout
       topNavigation={<AppTopNavigation modules={NAV_MODULES} activeModule="work" />}
-      breadcrumb={<Breadcrumb items={breadcrumbItems} onNavigate={() => {}} />}
+      breadcrumb={<Breadcrumb items={breadcrumbItems} onNavigate={(href) => navigate(href)} />}
       caseHeader={
         <CaseHeader
           caseId={caseData.id}
@@ -145,10 +146,10 @@ export const CaseWorkspacePage: React.FC = React.memo(() => {
           applicant={caseData.applicant}
           department={caseData.department}
           assignee={caseData.assignee}
-          priority={caseData.priority}
-          risk={caseData.risk}
+          priority={(caseData.priority as any) ?? "medium"}
+          risk={(caseData.risk as any) ?? "mittel"}
           statusLabel={statusLabel}
-          deadline={caseData.deadline}
+          deadline={caseData.deadline ?? "-"}
         />
       }
       tabBar={<TabBar tabs={WORKSPACE_TABS} activeTab={activeTab} onTabChange={setActiveTab} />}
@@ -164,7 +165,7 @@ export const CaseWorkspacePage: React.FC = React.memo(() => {
           {regulations.length > 0 && (
             <Panel title="Anwendbare Vorschriften">
               {regulations.map((reg) => (
-                <CitationCard key={reg.id} code={reg.code} title={reg.title} />
+                <CitationCard key={reg.id} code={reg.code ?? ""} title={reg.title} />
               ))}
             </Panel>
           )}

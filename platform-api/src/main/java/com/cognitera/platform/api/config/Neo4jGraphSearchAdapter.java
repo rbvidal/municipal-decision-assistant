@@ -37,41 +37,58 @@ public class Neo4jGraphSearchAdapter implements GraphSearchProvider {
     public List<RetrievalCandidate> search(SearchQuery query) {
         if (!isAvailable() || query.query() == null || query.query().isBlank()) return List.of();
         try {
-            List<String> seedIds = extractEntityIds(query.query());
-            if (seedIds.isEmpty()) return List.of();
+            // Phase 1: Find document nodes matching query keywords
+            List<String> keywords = extractKeywords(query.query());
+            if (keywords.isEmpty()) return List.of();
 
+            List<GraphNode> docNodes = graphService.searchDocumentsByKeywords(keywords, 10);
+            if (docNodes.isEmpty()) return List.of();
+
+            // Phase 2: Traverse from matching documents to find related chunks and documents
+            List<String> seedIds = docNodes.stream().map(GraphNode::getId).toList();
             List<GraphNode> relatedNodes = graphService.traverse(seedIds, 2);
-            if (relatedNodes.isEmpty()) return List.of();
 
-            Instant now = Instant.now();
+            // Phase 3: Merge document nodes with traversal results
+            Set<String> seenIds = new HashSet<>();
+            List<GraphNode> allNodes = new ArrayList<>();
+            for (GraphNode n : docNodes) {
+                if (seenIds.add(n.getId())) allNodes.add(n);
+            }
+            for (GraphNode n : relatedNodes) {
+                if (seenIds.add(n.getId())) allNodes.add(n);
+            }
+
+            // Phase 4: Build retrieval candidates
             List<RetrievalCandidate> candidates = new ArrayList<>();
-            for (int i = 0; i < relatedNodes.size(); i++) {
-                GraphNode node = relatedNodes.get(i);
-                String label = node.getLabel();
-                String docId = node.getProvenance() != null
-                        ? node.getProvenance().sourceDocumentId() : "graph";
+            for (int i = 0; i < allNodes.size(); i++) {
+                GraphNode node = allNodes.get(i);
+                String label = node.getLabel() != null ? node.getLabel() : "";
+                String docIdStr = (String) node.getProperties().getOrDefault("docId",
+                        node.getId());
                 UUID chunkId = UUID.nameUUIDFromBytes((node.getId() + i).getBytes());
-                UUID docUuid = safeUuid(docId);
+                UUID docUuid = safeUuid(docIdStr);
 
                 ChunkReference chunkRef = new ChunkReference(chunkId, docUuid, 1,
                         label, new ChunkPosition(null, null, i, null, null));
 
+                String excerpt = label.length() > 200 ? label.substring(0, 200) : label;
                 CitationReference citation = new CitationReference(
                         docUuid, chunkId, 1, label,
-                        null, null, null,
-                        label.length() > 200 ? label.substring(0, 200) : label);
+                        null, null, null, excerpt);
 
-                double graphScore = 0.5 + (node.getProvenance() != null
-                        ? node.getProvenance().extractionConfidence() * 0.3 : 0.0);
+                double graphScore = node.getType() == GraphNode.NodeType.DOCUMENT
+                        ? 0.6 : 0.5;
 
                 candidates.add(new RetrievalCandidate(chunkRef, label,
                         0.0, 0.0, Math.min(1.0, graphScore),
                         0.3, "graph", citation));
             }
-            log.debug("GraphRAG: {} candidates from {} seed IDs", candidates.size(), seedIds.size());
+            log.info("GraphRAG: {} document hits + {} related = {} candidates (keywords: {})",
+                    docNodes.size(), relatedNodes.size(), candidates.size(),
+                    keywords.size());
             return candidates;
         } catch (Exception e) {
-            log.debug("Graph search failed: {}", e.getMessage());
+            log.warn("Graph search failed: {}", e.getMessage());
             return List.of();
         }
     }
@@ -82,10 +99,10 @@ public class Neo4jGraphSearchAdapter implements GraphSearchProvider {
         return graphService.findRelatedDocuments(documentId, maxDepth);
     }
 
-    private List<String> extractEntityIds(String query) {
+    private List<String> extractKeywords(String query) {
         return Arrays.stream(query.toLowerCase().split("\\W+"))
                 .filter(w -> w.length() > 3)
-                .map(w -> "entity/" + w)
+                .distinct()
                 .limit(10)
                 .toList();
     }

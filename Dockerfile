@@ -5,6 +5,7 @@
 
 # ── Build stage ──
 FROM eclipse-temurin:21-jdk-alpine AS build
+RUN apk add --no-cache nodejs npm maven
 WORKDIR /app
 
 # Layer 1: POM files (cache dependencies)

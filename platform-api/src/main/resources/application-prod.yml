@@ -9,15 +9,16 @@ spring:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
+    validate-on-migrate: false
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
 
 server:
   ssl:
-    enabled: true
+    enabled: ${SERVER_SSL_ENABLED:true}
     key-store: ${SERVER_SSL_KEY_STORE:classpath:keystore.p12}
-    key-store-password: ${SERVER_SSL_KEY_STORE_PASSWORD}
+    key-store-password: ${SERVER_SSL_KEY_STORE_PASSWORD:}
     key-alias: ${SERVER_SSL_KEY_ALIAS:mda}
     key-store-type: PKCS12
 

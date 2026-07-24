@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { AppShell } from "../../layouts/AppShell";
 import { AppTopNavigation, type NavModule } from "../../components/navigation";
 import { DataTable, type DataTableColumn } from "../../components/data";
-import { Panel, StatCard, Badge, Button, Alert } from "../../components/common";
+import { Panel, StatCard, Badge, Button, Alert, Icon } from "../../components/common";
 import { corpusService, type CorpusHealthResponse } from "../../services";
 import styles from "./CorpusPage.module.css";
 
@@ -71,32 +71,21 @@ export const CorpusPage: React.FC = React.memo(() => {
       </h1>
 
       {/* Stat cards */}
-      {data && (
+      {data?.summary && (
         <div className={styles.statsGrid}>
-          <StatCard label="Dokumente" value={data.summary.documentCount} icon="folder" />
-          <StatCard label="Chunks" value={data.summary.chunkCount} icon="file-text" />
-          <StatCard label="Embeddings" value={data.summary.embeddedChunks} icon="layers" />
-          <StatCard label="Qdrant Vektoren" value={data.summary.qdrantVectors} icon="database" />
-          <StatCard
-            label="Abdeckung"
-            value={Math.round(data.summary.embeddingCoveragePct)}
-            icon="check-circle"
-          />
-          <StatCard label="Ø Chunks/Dok." value={Math.round(data.summary.avgChunksPerDocument)} icon="bar-chart" />
-          <StatCard label="Vektor-Dim." value={data.summary.qdrantVectorDimension} icon="code" />
-          <StatCard label="Fehlende Embed." value={data.summary.missingEmbeddings} icon="alert-triangle" />
+          <StatCard label="Dokumente" value={data.summary.documentCount} icon={<Icon name="folder" size={16} />} />
+          <StatCard label="Chunks" value={data.summary.chunkCount} icon={<Icon name="file-text" size={16} />} />
         </div>
       )}
 
       {/* Warnings */}
-      {data && data.warnings.length > 0 && (
+      {data?.warnings && data.warnings.length > 0 && (
         <div style={{ marginBottom: "var(--space-4)" }}>
-          {data.warnings.map((w, i) => <Alert key={i} type="warning" title={w} />)}
+          {data.warnings.map((w, i) => <Alert key={i} type="warning" title={w.message} />)}
         </div>
       )}
 
-      {/* Health categories */}
-      {data && data.categories.length > 0 && (
+      {data?.categories && data.categories.length > 0 && (
         <div className={styles.categoriesGrid}>
           {data.categories.map((cat) => (
             <Panel key={cat.key} title={cat.label}>
@@ -121,7 +110,7 @@ export const CorpusPage: React.FC = React.memo(() => {
             Lade Corpus-Daten...
           </p>
         ) : data ? (
-          <DataTable columns={columns} data={data.documents} keyField="title" />
+          <DataTable columns={columns} data={data?.documents ?? []} keyField="title" />
         ) : null}
         <div style={{ marginTop: "var(--space-3)" }}>
           <Button variant="secondary" size="sm" onClick={load} disabled={isLoading}>

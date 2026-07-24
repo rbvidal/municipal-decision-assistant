@@ -27,7 +27,7 @@ public class DomainClassifier {
     private static final Map<String, Double> TRAVEL_TERMS = new LinkedHashMap<>();
 
     static {
-        // Procurement — highest-weight terms
+        // Procurement — highest-weight terms (German + English)
         putAll(PROCUREMENT_TERMS,
                 10.0, "beschaffung", "vergabeverfahren", "direktauftrag",
                 "direktaufträge", "ausschreibung", "beschränkte ausschreibung",
@@ -37,11 +37,19 @@ public class DomainClassifier {
                 8.0, "vergabe", "vergab", "beschaffen", "rahmenvertrag",
                 "lieferung", "einkauf", "lieferant", "auftragswert",
                 "schwellenwert", "wertgrenzen", "gwb", "vgv", "uvgo", "vob", "berlavg",
-                "lho");
+                "lho",
+                // English procurement terms
+                "procurement", "tender", "direct award", "direct procurement",
+                "supplier", "contract award");
         putAll(PROCUREMENT_TERMS,
                 5.0, "auftrag", "freihändig", "angebot", "vertrag",
                 "ausschreiben", "vergabestelle", "beschaffungs",
-                "it-auftrag", "rahmenvereinbarung", "bieter");
+                "it-auftrag", "rahmenvereinbarung", "bieter",
+                // English general terms
+                "buy", "purchase", "procure", "purchasing",
+                "computer", "laptop", "printer", "monitor",
+                "software", "hardware", "license", "licence",
+                "euro", "€", "amount", "value");
 
         // Building
         putAll(BUILDING_TERMS,

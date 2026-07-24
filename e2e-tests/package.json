@@ -1,0 +1,26 @@
+{
+  "name": "mda-e2e-tests",
+  "private": true,
+  "scripts": {
+    "test": "npx playwright test",
+    "test:headed": "npx playwright test --headed",
+    "test:debug": "npx playwright test --debug",
+    "test:report": "npx playwright show-report",
+    "screenshots": "node playwright/screenshots.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@types/node": "^22.0.0"
+  },
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "playwright": "^1.61.1",
+    "playwright-core": "^1.61.1",
+    "undici-types": "^6.21.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

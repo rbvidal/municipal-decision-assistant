@@ -29,9 +29,6 @@ class AiPlatformIntegrationTest {
     private AiOrchestrationService aiOrchestrationService;
 
     @Autowired(required = false)
-    private RetrievalOrchestrator retrievalOrchestrator;
-
-    @Autowired(required = false)
     private PromptRegistry promptRegistry;
 
     @Autowired(required = false)
@@ -55,13 +52,6 @@ class AiPlatformIntegrationTest {
         void aiOrchestrationServiceIsWired() {
             assertNotNull(aiOrchestrationService,
                     "AiOrchestrationService should be available — core LLM pipeline");
-        }
-
-        @Test
-        @DisplayName("RetrievalOrchestrator is wired")
-        void retrievalOrchestratorIsWired() {
-            assertNotNull(retrievalOrchestrator,
-                    "RetrievalOrchestrator should be available — search orchestration");
         }
 
         @Test
@@ -127,20 +117,6 @@ class AiPlatformIntegrationTest {
             assertEquals(PromptTemplate.Category.RETRIEVAL, prompt.get().getCategory());
             assertTrue(prompt.get().getTemplate().contains("{{context}}"));
             assertTrue(prompt.get().getTemplate().contains("{{question}}"));
-        }
-    }
-
-    @Nested
-    @DisplayName("Explainability")
-    class Explainability {
-
-        @Test
-        @DisplayName("RetrievalOrchestrator produces explainable results")
-        void orchestratorProducesExplainableResults() {
-            assertNotNull(retrievalOrchestrator);
-            // Verify the orchestrator produces results with explainability metadata
-            // (actual retrieval depends on indexed documents, test verifies wiring)
-            assertNotNull(retrievalOrchestrator);
         }
     }
 }

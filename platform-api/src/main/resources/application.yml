@@ -3,8 +3,13 @@ logging:
     com.cognitera.platform: DEBUG
 
 spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration
   application:
     name: municipal-decision-assistant
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   messages:
     basename: messages
     encoding: UTF-8
@@ -41,6 +46,7 @@ management:
 
 server:
   port: ${SERVER_PORT:8080}
+  shutdown: graceful
   error:
     whitelabel:
       enabled: false
@@ -77,8 +83,8 @@ platform:
       max-mismatched-documents: ${AI_MAX_MISMATCHED_DOCS:0}
   neo4j:
     uri: ${NEO4J_URI:bolt://localhost:7687}
-    username: ${NEO4J_USERNAME}
-    password: ${NEO4J_PASSWORD}
+    username: ${NEO4J_USERNAME:neo4j}
+    password: ${NEO4J_PASSWORD:password}
 
 #   openai:
 #     api-key: ${OPENAI_API_KEY}
@@ -87,6 +93,7 @@ platform:
 #     embedding-model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
   search:
     qdrant:
+      enabled: ${QDRANT_ENABLED:false}
       host: ${QDRANT_HOST:localhost}
       rest-port: ${QDRANT_REST_PORT:6333}
       collection: ${QDRANT_COLLECTION:mda_chunks}

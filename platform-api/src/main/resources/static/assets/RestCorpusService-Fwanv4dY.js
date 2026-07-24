@@ -1,0 +1,1 @@
+import{a as e}from"./index-BUIM4LHV.js";const a={getPackages:()=>e.get("/api/corpus/packages"),getMetrics:()=>e.get("/api/corpus/metrics"),getJobs:()=>e.get("/api/corpus/jobs"),getAuditLogs:()=>e.get("/api/corpus/audit"),getHealth:()=>e.get("/api/admin/corpus/health"),getManifestSummary:()=>e.get("/api/admin/corpus/manifest-summary")};export{a as r};

@@ -1,20 +1,28 @@
 package com.cognitera.platform.ai.application;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cognitera.platform.audit.api.AiAuditEvents;
+import com.cognitera.platform.audit.api.AuditEventType;
+import com.cognitera.platform.audit.api.AuditMetadata;
+import com.cognitera.platform.audit.api.AuditSubject;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
-/** Publishes AI operations to the platform audit log via structured logging. */
+/** Publishes AI audit events through the platform audit module. */
 @Component
 public class AiAuditPublisher {
 
-    private static final Logger log = LoggerFactory.getLogger(AiAuditPublisher.class);
+    private final AiAuditEvents auditEvents;
 
-    /** Emits an auditable event for an AI operation. */
-    public void emit(String actorId, String tenantId, String eventType, String requestId, Map<String, String> metadata) {
-        log.info("AI_AUDIT eventType={} actorId={} requestId={} metadata={}",
-                eventType, actorId != null ? actorId : "system", requestId, metadata);
+    public AiAuditPublisher(AiAuditEvents auditEvents) {
+        this.auditEvents = auditEvents;
+    }
+
+    /** Emits an AI audit event with actor, tenant, event type, entity ID, and metadata. */
+    public void emit(String actorId, String tenantId, AuditEventType eventType, String entityId, Map<String, String> metadata) {
+        auditEvents.emit(
+                eventType,
+                new AuditSubject(actorId, tenantId, "AI_INFERENCE", entityId),
+                AuditMetadata.from(metadata));
     }
 }

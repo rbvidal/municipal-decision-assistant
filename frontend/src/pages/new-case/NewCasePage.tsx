@@ -1,16 +1,65 @@
 import React, { useState, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppShell } from "../../layouts/AppShell";
 import {
-  TopNavigation,
+  AppTopNavigation,
   Breadcrumb,
   type NavModule,
   type BreadcrumbItem,
 } from "../../components/navigation";
 import { Wizard } from "../../components/interaction";
 import { Panel, Icon, PropertyGrid } from "../../components/common";
-import { CASE_TYPES, DEPARTMENTS, DOCUMENT_OPTIONS, initialFormData } from "../../mocks/new-case";
-import type { CaseFormData } from "../../mocks/new-case";
 import styles from "./NewCasePage.module.css";
+
+const CASE_TYPES = [
+  { id: "bauantrag", label: "Bauantrag" },
+  { id: "nutzungsaenderung", label: "Nutzungsänderung" },
+  { id: "gewerbeanmeldung", label: "Gewerbeanmeldung" },
+  { id: "wohngeld", label: "Wohngeldantrag" },
+  { id: "ordnungswidrigkeit", label: "Ordnungswidrigkeit" },
+  { id: "sonstiges", label: "Sonstiges" },
+];
+const DEPARTMENTS = [
+  { id: "bauamt", label: "Bauamt" },
+  { id: "ordnungsamt", label: "Ordnungsamt" },
+  { id: "sozialamt", label: "Sozialamt" },
+  { id: "rechtsamt", label: "Rechtsamt" },
+];
+const DOCUMENT_OPTIONS = [
+  "Baupläne", "Lageplan", "Statikberechnung", "Brandschutznachweis",
+  "Lärmgutachten", "Bodengutachten", "Energieausweis", "Fotodokumentation",
+  "Formblatt A", "Formblatt B",
+];
+interface CaseFormData {
+  caseType: string;
+  department: string;
+  description: string;
+  applicant: string;
+  applicantName: string;
+  applicantEmail: string;
+  applicantAddress: string;
+  address: string;
+  parcelNumber: string;
+  budget: string;
+  priority: string;
+  risk: string;
+  documents: string[];
+}
+const initialFormData: CaseFormData = {
+  caseType: "",
+  department: "",
+  description: "",
+  applicant: "",
+  applicantName: "",
+  applicantEmail: "",
+  applicantAddress: "",
+  address: "",
+  parcelNumber: "",
+  budget: "",
+  priority: "",
+  risk: "",
+  documents: [],
+};
 
 const NAV_MODULES: NavModule[] = [
   { id: "home", label: "Startseite", href: "/home" },
@@ -27,6 +76,7 @@ const BREADCRUMBS: BreadcrumbItem[] = [
 ];
 
 export const NewCasePage: React.FC = React.memo(() => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<CaseFormData>(initialFormData);
   const [completed, setCompleted] = useState(false);
 
@@ -43,7 +93,7 @@ export const NewCasePage: React.FC = React.memo(() => {
     }));
   }, []);
 
-  const handleFinish = useCallback(() => setCompleted(true), []);
+  const handleFinish = useCallback(() => { setCompleted(true); navigate("/work"); }, [navigate]);
 
   const steps = useMemo(
     () => [
@@ -68,8 +118,8 @@ export const NewCasePage: React.FC = React.memo(() => {
                 >
                   <option value="">— Bitte wählen —</option>
                   {CASE_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
+                    <option key={t.id} value={t.id}>
+                      {t.label}
                     </option>
                   ))}
                 </select>
@@ -84,8 +134,8 @@ export const NewCasePage: React.FC = React.memo(() => {
                 >
                   <option value="">— Bitte wählen —</option>
                   {DEPARTMENTS.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
+                    <option key={d.id} value={d.id}>
+                      {d.label}
                     </option>
                   ))}
                 </select>
@@ -319,32 +369,16 @@ export const NewCasePage: React.FC = React.memo(() => {
   return (
     <AppShell
       topNavigation={
-        <TopNavigation
-          modules={NAV_MODULES}
-          activeModule="work"
-          onNavigate={() => {}}
-          userName="Sabine Müller"
-          userEmail="s.mueller@verwaltung.de"
-          userDepartment="Bauaufsicht"
-          userInitials="SM"
-          userActions={[
-            { id: "profile", label: "Profil", onClick: () => {} },
-            { id: "logout", label: "Abmelden", onClick: () => {} },
-          ]}
-          notifications={[]}
-          onNotificationClick={() => {}}
-          onMarkAllNotificationsRead={() => {}}
-          onViewAllNotifications={() => {}}
-        />
+        <AppTopNavigation modules={NAV_MODULES} activeModule="work" />
       }
-      breadcrumb={<Breadcrumb items={BREADCRUMBS} onNavigate={() => {}} />}
+      breadcrumb={<Breadcrumb items={BREADCRUMBS} onNavigate={(href) => navigate(href)} />}
     >
       <div className={styles.page}>
         <div className={styles.wizardWrap}>
           <Wizard
             steps={steps}
             onFinish={handleFinish}
-            onCancel={() => {}}
+            onCancel={() => navigate("/work")}
             finishLabel="Vorgang anlegen"
           />
         </div>

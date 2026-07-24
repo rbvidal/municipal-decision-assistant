@@ -15,10 +15,10 @@ public class WorkspaceStepEntity {
 
     @Id
     @Column(name = "id")
-    private String id;
+    private UUID id;
 
     @Column(name = "workspace_id", nullable = false)
-    private String workspaceId;
+    private UUID workspaceId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "phase", nullable = false)
@@ -40,8 +40,8 @@ public class WorkspaceStepEntity {
     public WorkspaceStepEntity() {}
 
     public WorkspaceStepEntity(String id, String workspaceId, WorkspacePhase phase, String stepName, String status) {
-        this.id = id != null ? id : UUID.randomUUID().toString();
-        this.workspaceId = workspaceId;
+        this.id = id != null ? UUID.fromString(id) : UUID.randomUUID();
+        this.workspaceId = UUID.fromString(workspaceId);
         this.phase = phase;
         this.stepName = stepName;
         this.status = status;
@@ -49,10 +49,14 @@ public class WorkspaceStepEntity {
         this.data = "{}";
     }
 
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
-    public String getWorkspaceId() { return workspaceId; }
-    public void setWorkspaceId(String workspaceId) { this.workspaceId = workspaceId; }
+    public UUID getUuid() { return id; }
+    public String getId() { return id != null ? id.toString() : null; }
+    public void setId(String id) { this.id = id != null ? UUID.fromString(id) : null; }
+
+    public UUID getWorkspaceUuid() { return workspaceId; }
+    public String getWorkspaceId() { return workspaceId != null ? workspaceId.toString() : null; }
+    public void setWorkspaceId(String workspaceId) { this.workspaceId = UUID.fromString(workspaceId); }
+
     public WorkspacePhase getPhase() { return phase; }
     public void setPhase(WorkspacePhase phase) { this.phase = phase; }
     public String getStepName() { return stepName; }

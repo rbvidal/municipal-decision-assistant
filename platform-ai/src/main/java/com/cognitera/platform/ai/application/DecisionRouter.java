@@ -3,6 +3,7 @@ package com.cognitera.platform.ai.application;
 import com.cognitera.platform.ai.knowledge.*;
 import com.cognitera.platform.ai.model.DecisionResult;
 import com.cognitera.platform.ai.model.DecisionStrategy;
+import com.cognitera.platform.search.api.GraphSearchProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -13,8 +14,9 @@ import java.util.*;
  * Routes every question to exactly one execution strategy.
  *
  * <p>Rule-first: if the question can be answered by the RuleEngine,
- * retrieval is SKIPPED entirely. Only pure legal reasoning questions
- * proceed to the full hybrid retrieval pipeline.
+ * retrieval is SKIPPED entirely. For retrieval-bound questions,
+ * graph reasoning is preferred when Neo4j is available and the
+ * query suggests entity or procedural relationships.
  */
 @Component
 public class DecisionRouter {
@@ -23,10 +25,13 @@ public class DecisionRouter {
 
     private final KnowledgeRegistry registry;
     private final DomainClassifier domainClassifier;
+    private final GraphSearchProvider graphSearchProvider;
 
-    public DecisionRouter(KnowledgeRegistry registry, DomainClassifier domainClassifier) {
+    public DecisionRouter(KnowledgeRegistry registry, DomainClassifier domainClassifier,
+                          GraphSearchProvider graphSearchProvider) {
         this.registry = registry;
         this.domainClassifier = domainClassifier;
+        this.graphSearchProvider = graphSearchProvider;
     }
 
     /** Result of routing — either a rule-engine decision or a strategy for retrieval. */
@@ -109,10 +114,17 @@ public class DecisionRouter {
             }
         }
 
-        // ── Fallback: retrieval ──
-        log.info("DecisionRouter → HYBRID_RETRIEVAL (domain={})", domain.primary());
-        return new RoutingResult(DecisionStrategy.HYBRID_RETRIEVAL, null,
-                "No deterministic rule matches — full retrieval required");
+        // ── Fallback: retrieval (graph-aware) ──
+        boolean graphAvailable = graphSearchProvider != null && graphSearchProvider.isAvailable();
+        DecisionStrategy retrievalStrategy = graphAvailable
+                ? DecisionStrategy.GRAPH_REASONING
+                : DecisionStrategy.HYBRID_RETRIEVAL;
+        log.info("DecisionRouter → {} (domain={}, graphAvailable={})",
+                retrievalStrategy, domain.primary(), graphAvailable);
+        return new RoutingResult(retrievalStrategy, null,
+                graphAvailable
+                        ? "No deterministic rule match — graph-enhanced retrieval"
+                        : "No deterministic rule matches — full retrieval required");
     }
 
     // ── Classification ──
@@ -124,16 +136,23 @@ public class DecisionRouter {
     }
 
     private boolean isTravelQuery(String q) {
-        return hasAny(q, "dienstreise", "reisekosten", "tagegeld", "verpflegung",
+        boolean hasTravelKeyword = hasAny(q, "dienstreise", "reisekosten", "tagegeld", "verpflegung",
                 "verpflegungspauschale", "übernachtungspauschale",
-                "kilometerpauschale", "brkg", "lrkg")
-                && containsPattern(q, "\\d+[\\s-]*(stündig|stündigen|stunden|stündige|stündiger)");
+                "kilometerpauschale", "brkg", "lrkg",
+                "meal allowance", "business trip", "travel", "per diem", "mileage");
+        boolean hasTimePattern = containsPattern(q, "\\d+[\\s-]*(stündig|stündigen|stunden|stündige|stündiger"
+                + "|stuendig|stuendigen|stuendige|stuendiger"
+                + "|hour|hours|h)");
+        boolean hasDistancePattern = containsPattern(q, "\\d+[\\s-]*(km|kilometer|mile|meile)");
+        return hasTravelKeyword && (hasTimePattern || hasDistancePattern);
     }
 
     private boolean isProcurementQuery(String q) {
         return hasAny(q, "beschaffung", "vergabe", "direktauftrag", "ausschreibung",
-                "freihändig", "auftrag", "einkauf")
-                && containsPattern(q, "\\d{1,3}(?:\\.\\d{3})*(?:,\\d{2})?\\s*(€|euro|eur)");
+                "freihändig", "auftrag", "einkauf",
+                "buy", "purchase", "procure", "procurement", "tender", "direct award",
+                "directly", "contract", "bid", "awarding", "supplies")
+                && containsPattern(q, "(\\d{1,3}(?:\\.\\d{3})*(?:,\\d{2})?|\\d{4,})\\s*(€|euro|eur|euros)");
     }
 
     /** Threshold inquiries without a specific Euro amount — e.g. "Welche Wertgrenzen gelten?" */
@@ -173,13 +192,34 @@ public class DecisionRouter {
 
     private DecisionResult tryTravelLookup(String q,
             DomainClassifier.DomainResult domain) {
+        var table = registry.findTravelTable("BRKG");
+        if (table.isEmpty()) return null;
+
+        // ── Mileage / kilometer reimbursement ──
+        if (hasAny(q, "km", "kilometer", "mileage", "mile", "fahrkosten",
+                "kilometerpauschale", "meile")) {
+            var rate = table.get().mileageRate();
+            if (rate.isPresent()) {
+                double km = extractDistance(q).orElse(0.0);
+                return new DecisionResult.TravelDecision(
+                        "Kilometerpauschale: " + String.format(java.util.Locale.US, "%.2f", rate.get())
+                                + " €/km" + (km > 0 ? " (" + String.format(java.util.Locale.US, "%.0f", km)
+                                + " km)" : ""),
+                        "BRKG Kilometerpauschale, gültig ab 01.01.2024",
+                        table.get().sourceDocument(),
+                        0.99, km, rate.get(), "mileage",
+                        "Kilometerpauschale PKW",
+                        table.get().effectiveFrom().toString(),
+                        "Bundesministerium des Innern");
+            }
+            return null;
+        }
+
+        // ── Meal allowance (hour-based) ──
         var hours = extractHours(q);
         if (hours.isEmpty()) return null;
         double h = hours.get();
         boolean overnight = q.contains("übernachtung") || q.contains("übernacht");
-
-        var table = registry.findTravelTable("BRKG");
-        if (table.isEmpty()) return null;
 
         var entry = table.get().lookup(h, overnight, "domestic");
         if (entry.isPresent()) {
@@ -263,9 +303,18 @@ public class DecisionRouter {
         return results;
     }
 
+    private Optional<Double> extractDistance(String text) {
+        var m = java.util.regex.Pattern.compile(
+                "(\\d+)[\\s-]*(km|kilometer|mile|meile)",
+                java.util.regex.Pattern.CASE_INSENSITIVE).matcher(text);
+        return m.find() ? Optional.of(Double.parseDouble(m.group(1))) : Optional.empty();
+    }
+
     private Optional<Double> extractHours(String text) {
         var m = java.util.regex.Pattern.compile(
-                "(\\d+)[\\s-]*(stündig|stunden|stündige|stündiger|h)",
+                "(\\d+)[\\s-]*(stündig|stündigen|stunden|stündige|stündiger"
+                        + "|stuendig|stuendigen|stuendige|stuendiger"
+                        + "|h|hour|hours)",
                 java.util.regex.Pattern.CASE_INSENSITIVE).matcher(text);
         return m.find() ? Optional.of(Double.parseDouble(m.group(1))) : Optional.empty();
     }
@@ -273,7 +322,7 @@ public class DecisionRouter {
     private List<Double> extractAmounts(String text) {
         List<Double> amounts = new ArrayList<>();
         var m = java.util.regex.Pattern.compile(
-                "(\\d{1,3}(?:\\.\\d{3})*(?:,\\d{2})?)\\s*(€|Euro|EUR)",
+                "(\\d{1,3}(?:\\.\\d{3})*(?:,\\d{2})?|\\d{4,})\\s*(€|euro|eur|euros)",
                 java.util.regex.Pattern.CASE_INSENSITIVE).matcher(text);
         while (m.find()) {
             try {

@@ -1,6 +1,0 @@
-{
-  "name": "Kommunale Entscheidungsplattform",
-  "description": "Plattform für kommunale Entscheidungsverfahren und Bauantragsbearbeitung.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

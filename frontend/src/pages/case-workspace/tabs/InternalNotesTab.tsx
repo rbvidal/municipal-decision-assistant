@@ -1,7 +1,7 @@
 import React from "react";
 import { Workspace } from "../../../components/layout";
 import { NotesWidget } from "../../../components/workflow";
-import type { CaseNoteData } from "../../../mocks/case-workspace";
+import type { CaseNoteData } from "../../../types/domain";
 
 interface InternalNotesTabProps {
   notes: CaseNoteData[];
@@ -29,12 +29,12 @@ export const InternalNotesTab: React.FC<InternalNotesTabProps> = React.memo(
   ({ notes, onAddNote }) => {
     const formattedNotes = notes.map((n) => ({
       ...n,
-      time: n.time === "Jetzt" ? new Date().toLocaleString("de-DE") : formatTimestamp(n.time),
+      time: n.time === "Jetzt" ? new Date().toLocaleString("de-DE") : formatTimestamp(n.time ?? ""),
     }));
 
     return (
       <Workspace>
-        <NotesWidget notes={formattedNotes} onAddNote={onAddNote} />
+        <NotesWidget notes={formattedNotes as any} onAddNote={onAddNote} />
       </Workspace>
     );
   },

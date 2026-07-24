@@ -14,10 +14,10 @@ public class TimelineEventEntity {
 
     @Id
     @Column(name = "id")
-    private String id;
+    private UUID id;
 
     @Column(name = "workspace_id", nullable = false)
-    private String workspaceId;
+    private UUID workspaceId;
 
     @Column(name = "event_date", nullable = false)
     private LocalDate eventDate;
@@ -33,7 +33,7 @@ public class TimelineEventEntity {
     private TimelineEventType eventType;
 
     @Column(name = "source_document_id")
-    private String sourceDocumentId;
+    private UUID sourceDocumentId;
 
     @Column(name = "confidence", nullable = false)
     private double confidence;
@@ -48,22 +48,26 @@ public class TimelineEventEntity {
 
     public TimelineEventEntity(String id, String workspaceId, LocalDate eventDate, String title, String description,
                                TimelineEventType eventType, String sourceDocumentId, double confidence, boolean aiGenerated) {
-        this.id = id != null ? id : UUID.randomUUID().toString();
-        this.workspaceId = workspaceId;
+        this.id = id != null ? UUID.fromString(id) : UUID.randomUUID();
+        this.workspaceId = UUID.fromString(workspaceId);
         this.eventDate = eventDate;
         this.title = title;
         this.description = description;
         this.eventType = eventType;
-        this.sourceDocumentId = sourceDocumentId;
+        this.sourceDocumentId = sourceDocumentId != null ? UUID.fromString(sourceDocumentId) : null;
         this.confidence = confidence;
         this.aiGenerated = aiGenerated;
         this.createdAt = Instant.now();
     }
 
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
-    public String getWorkspaceId() { return workspaceId; }
-    public void setWorkspaceId(String workspaceId) { this.workspaceId = workspaceId; }
+    public UUID getUuid() { return id; }
+    public String getId() { return id != null ? id.toString() : null; }
+    public void setId(String id) { this.id = id != null ? UUID.fromString(id) : null; }
+
+    public UUID getWorkspaceUuid() { return workspaceId; }
+    public String getWorkspaceId() { return workspaceId != null ? workspaceId.toString() : null; }
+    public void setWorkspaceId(String workspaceId) { this.workspaceId = UUID.fromString(workspaceId); }
+
     public LocalDate getEventDate() { return eventDate; }
     public void setEventDate(LocalDate eventDate) { this.eventDate = eventDate; }
     public String getTitle() { return title; }
@@ -72,8 +76,11 @@ public class TimelineEventEntity {
     public void setDescription(String description) { this.description = description; }
     public TimelineEventType getEventType() { return eventType; }
     public void setEventType(TimelineEventType eventType) { this.eventType = eventType; }
-    public String getSourceDocumentId() { return sourceDocumentId; }
-    public void setSourceDocumentId(String sourceDocumentId) { this.sourceDocumentId = sourceDocumentId; }
+
+    public UUID getSourceDocumentUuid() { return sourceDocumentId; }
+    public String getSourceDocumentId() { return sourceDocumentId != null ? sourceDocumentId.toString() : null; }
+    public void setSourceDocumentId(String sourceDocumentId) { this.sourceDocumentId = sourceDocumentId != null ? UUID.fromString(sourceDocumentId) : null; }
+
     public double getConfidence() { return confidence; }
     public void setConfidence(double confidence) { this.confidence = confidence; }
     public boolean isAiGenerated() { return aiGenerated; }

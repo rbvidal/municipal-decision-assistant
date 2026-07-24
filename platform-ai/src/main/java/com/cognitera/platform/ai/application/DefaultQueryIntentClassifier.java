@@ -28,8 +28,8 @@ public class DefaultQueryIntentClassifier implements QueryIntentClassifier {
             QueryIntent.CORPUS_DISCOVERY, Set.of(
                     "what do you know about", "what can you tell me about",
                     "what areas of", "what topics are covered",
-                    "what references", "which documents",
-                    "show me all documents",
+                    "what references", "which documents are available",
+                    "what documents are in the", "show me all documents",
                     // German: corpus discovery
                     "was wissen sie über", "was können sie mir",
                     "welche bereiche", "welche themen",
@@ -67,6 +67,8 @@ public class DefaultQueryIntentClassifier implements QueryIntentClassifier {
                     "am i allowed", "can i",
                     "how to proceed", "next steps", "procedure",
                     "what happens if", "is it legal",
+                    "how do", "how does", "how is", "how are", "how can",
+                    "what is the", "what are the", "which documents",
                     // German: question answering — common municipal decision patterns
                     "was kann ich", "was soll ich", "was sind meine rechte",
                     "darf ich", "kann ich",
@@ -85,7 +87,7 @@ public class DefaultQueryIntentClassifier implements QueryIntentClassifier {
     public QueryIntent classify(String query) {
         String lower = query.toLowerCase().trim();
 
-        int bestScore = -1;
+        int bestScore = 0;
         QueryIntent bestIntent = QueryIntent.QUESTION_ANSWERING;
 
         for (var entry : INTENT_PATTERNS.entrySet()) {

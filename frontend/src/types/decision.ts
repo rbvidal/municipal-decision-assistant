@@ -74,9 +74,13 @@ export interface WorkflowState {
   canRegress: boolean;
 }
 
+export type DecisionStatus = "READY" | "ANSWER_READY" | "NO_EVIDENCE" | "FAILED";
+
 export interface DecisionPackage {
   caseId: string;
+  status: DecisionStatus;
   summary: string;
+  answer?: string;
   evidence: EvidenceItem[];
   reasoning: ReasoningStep[];
   citations: Citation[];
@@ -87,4 +91,6 @@ export interface DecisionPackage {
   workflow: WorkflowState;
   generatedAt: string;
   duration: string;
+  strategy?: string;
+  explanation?: string;
 }

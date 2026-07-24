@@ -5,6 +5,7 @@ import com.cognitera.platform.workspace.api.CreateWorkspaceCommand;
 import com.cognitera.platform.workspace.application.WorkspaceService;
 import com.cognitera.platform.workspace.model.WorkspacePhase;
 import com.cognitera.platform.workspace.model.WorkspaceType;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,6 +21,7 @@ import java.security.Principal;
  * Thymeleaf page controller for workspace listing, creation, viewing, wizard flow, and detail pages.
  */
 @Controller
+@Profile("thymeleaf-legacy")
 public class WorkspacePageController {
 
     private final WorkspaceService workspaceService;

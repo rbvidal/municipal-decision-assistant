@@ -10,14 +10,17 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
-/** JPA entity representing a workspace with name, type, status, phase, and phase data. */
+/** JPA entity representing a workspace with name, type, status, phase, and workspace code. */
 @Entity
 @Table(name = "workspaces")
 public class WorkspaceEntity {
 
     @Id
     @Column(name = "id")
-    private String id;
+    private UUID id;
+
+    @Column(name = "workspace_code", unique = true, length = 50)
+    private String workspaceCode;
 
     @Column(name = "name", nullable = false)
     private String name;
@@ -51,8 +54,10 @@ public class WorkspaceEntity {
 
     public WorkspaceEntity() {}
 
-    public WorkspaceEntity(String id, String name, String description, String workspaceType, String ownerId) {
-        this.id = id != null ? id : UUID.randomUUID().toString();
+    public WorkspaceEntity(String workspaceCode, String name, String description,
+                           String workspaceType, String ownerId) {
+        this.id = UUID.randomUUID();
+        this.workspaceCode = workspaceCode;
         this.name = name;
         this.description = description;
         this.workspaceType = workspaceType;
@@ -64,8 +69,13 @@ public class WorkspaceEntity {
         this.ownerId = ownerId;
     }
 
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+    public UUID getUuid() { return id; }
+
+    public String getId() { return id != null ? id.toString() : null; }
+    public void setId(String id) { this.id = id != null ? UUID.fromString(id) : null; }
+
+    public String getWorkspaceCode() { return workspaceCode; }
+    public void setWorkspaceCode(String workspaceCode) { this.workspaceCode = workspaceCode; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }

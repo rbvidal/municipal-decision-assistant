@@ -13,12 +13,14 @@ export const LoginPage: React.FC = React.memo(() => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
       setError("");
+      setFieldErrors({});
 
       if (!email.trim() || !password.trim()) {
         setError("Bitte geben Sie E-Mail und Passwort ein.");
@@ -31,7 +33,10 @@ export const LoginPage: React.FC = React.memo(() => {
         navigate("/home", { replace: true });
       } catch (err) {
         if (err instanceof ApiError) {
-          if (err.status === 401) {
+          if (err.code === "VALIDATION_ERROR" && err.fieldErrors) {
+            setFieldErrors(err.fieldErrors);
+            setError("Bitte korrigieren Sie die markierten Felder.");
+          } else if (err.status === 401) {
             setError("Ungültige E-Mail oder Passwort.");
           } else if (err.status === 0 || err.code === "NETWORK_ERROR") {
             setError("Keine Verbindung zum Server. Bitte versuchen Sie es später erneut.");
@@ -63,15 +68,18 @@ export const LoginPage: React.FC = React.memo(() => {
           </label>
           <input
             id="login-email"
-            className={styles.input}
+            className={`${styles.input} ${fieldErrors.email ? styles.inputError : ""}`}
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => { setEmail(e.target.value); setFieldErrors(prev => { const next = {...prev}; delete next.email; return next; }); }}
             placeholder="name@verwaltung.de"
             autoComplete="email"
             autoFocus
             disabled={isSubmitting}
           />
+          {fieldErrors.email && (
+            <span className={styles.hintError}>{fieldErrors.email}</span>
+          )}
         </div>
 
         <div className={styles.field}>
@@ -80,14 +88,17 @@ export const LoginPage: React.FC = React.memo(() => {
           </label>
           <input
             id="login-password"
-            className={styles.input}
+            className={`${styles.input} ${fieldErrors.password ? styles.inputError : ""}`}
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => { setPassword(e.target.value); setFieldErrors(prev => { const next = {...prev}; delete next.password; return next; }); }}
             placeholder="••••••••"
             autoComplete="current-password"
             disabled={isSubmitting}
           />
+          {fieldErrors.password && (
+            <span className={styles.hintError}>{fieldErrors.password}</span>
+          )}
         </div>
 
         <Button

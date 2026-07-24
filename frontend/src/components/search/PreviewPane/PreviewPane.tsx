@@ -5,7 +5,7 @@ import { TagList } from "../TagList";
 import { ReferenceList } from "../ReferenceList";
 import { HighlightedText } from "../HighlightedText";
 import styles from "./PreviewPane.module.css";
-import type { TocItem, RelatedProcedure, DownloadItem } from "../../../mocks/knowledge";
+import type { TocItem, RelatedProcedure, DownloadItem } from "../../../types/domain";
 
 interface PreviewPaneProps {
   title: string;
@@ -130,8 +130,8 @@ export const PreviewPane: React.FC<PreviewPaneProps> = React.memo(
               title="Verwandte Verfahren"
               items={relatedProcedures.map((rp) => ({
                 id: rp.id,
-                title: rp.name,
-                description: rp.paragraph,
+                title: rp.name ?? rp.title ?? "",
+                description: rp.paragraph ?? rp.description ?? "",
               }))}
             />
           </div>
@@ -151,14 +151,14 @@ export const PreviewPane: React.FC<PreviewPaneProps> = React.memo(
               {downloads.map((dl) => (
                 <div key={dl.id} className={styles.downloadItem}>
                   <Icon
-                    name={filetypeIcon[dl.filetype] ?? "file"}
+                    name={filetypeIcon[dl.filetype ?? ""] ?? "file"}
                     size={16}
                     className={styles.downloadIcon}
                   />
                   <div className={styles.downloadInfo}>
                     <span className={styles.downloadName}>{dl.filename}</span>
                     <span className={styles.downloadSize}>
-                      {dl.filetype.toUpperCase()} · {dl.size}
+                      {(dl.filetype ?? "").toUpperCase()} · {dl.size}
                     </span>
                   </div>
                 </div>

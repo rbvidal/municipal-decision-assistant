@@ -57,51 +57,200 @@ public class DecisionController {
 
     @GetMapping("/{caseId}")
     public ResponseEntity<Map<String, Object>> getDecisionStatus(@PathVariable String caseId) {
-        return ResponseEntity.ok(Map.of(
-                "caseId", caseId,
-                "status", "ready",
-                "message", "Stellen Sie eine Frage an die Entscheidungs-Engine via POST /api/decision/" + caseId + "/analyze"));
+        Map<String, Object> body = new java.util.LinkedHashMap<>();
+        body.put("caseId", caseId);
+        body.put("status", "READY");
+        body.put("summary", "Stellen Sie eine Frage, um eine KI-gestützte Analyse zu starten.");
+        body.put("evidence", java.util.Collections.emptyList());
+        body.put("reasoning", java.util.Collections.emptyList());
+        body.put("citations", java.util.Collections.emptyList());
+        body.put("confidence", Map.of(
+                "overall", 0.0,
+                "coverage", 0.0,
+                "ruleCompleteness", 0.0,
+                "missingEvidence", java.util.Collections.emptyList(),
+                "conflictingEvidence", java.util.Collections.emptyList()));
+        body.put("recommendation", Map.of(
+                "action", "REQUEST_INFO",
+                "summary", "",
+                "requiredActions", java.util.Collections.emptyList(),
+                "warnings", java.util.Collections.emptyList(),
+                "exceptions", java.util.Collections.emptyList(),
+                "missingDocuments", java.util.Collections.emptyList(),
+                "manualReviewRequired", false));
+        body.put("draft", Map.of(
+                "id", "",
+                "title", "",
+                "version", "",
+                "content", "",
+                "citations", java.util.Collections.emptyList(),
+                "createdAt", ""));
+        body.put("validations", java.util.Collections.emptyList());
+        body.put("workflow", Map.of(
+                "phase", "initial",
+                "step", 0,
+                "totalSteps", 5,
+                "canProceed", true,
+                "canRegress", false));
+        body.put("generatedAt", java.time.Instant.now().toString());
+        body.put("duration", "");
+        return ResponseEntity.ok(body);
     }
 
     @PostMapping("/{caseId}/analyze")
-    public ResponseEntity<DecisionResponse> analyze(
+    public ResponseEntity<Map<String, Object>> analyze(
             @PathVariable String caseId,
             @RequestBody DecisionRequest request) {
 
+        long startMs = System.currentTimeMillis();
         String question = request.question();
         if (question == null || question.isBlank()) {
             question = "Was sind die geltenden Wertgrenzen für Direktaufträge nach AV §55 LHO?";
         }
 
+        log.info("Request received: caseId={} questionLength={}", caseId, question.length());
+
         var routing = decisionRouter.route(question);
-        AiResponse aiResponse = aiService.answer(new AiRequest(
-                question,
-                request.model() != null ? request.model() : "default",
-                null,
-                new AiConversationContext(null, null, null,
-                        UUID.randomUUID().toString(), UUID.randomUUID().toString()),
-                5));
+        log.info("Routing: strategy={} explanation={}", routing.strategy(), routing.explanation());
 
-        DecisionResult decision = routing.decision();
-        String answerText = aiResponse.answer() != null ? aiResponse.answer().answer() : "";
+        String status = "ANSWER_READY";
+        String answerText;
+        double overallConf = 0.0;
+        double coverageConf = 0.0;
+        double ruleCompleteness = 0.0;
+        java.util.List<Map<String, Object>> evidence = new java.util.ArrayList<>();
+        java.util.List<Map<String, Object>> reasoning = new java.util.ArrayList<>();
+        java.util.List<Map<String, Object>> citations = new java.util.ArrayList<>();
+        java.util.List<String> missingEvidence = new java.util.ArrayList<>();
+        String recommendationAction = "REQUEST_INFO";
 
-        DecisionResponse response = new DecisionResponse(
-                caseId,
-                question,
-                routing.strategy(),
-                decision,
-                answerText.length() > 500 ? answerText.substring(0, 500) + "..." : answerText,
-                answerText,
-                decision != null ? decision.confidence()
-                        : (aiResponse.answer() != null
-                                && aiResponse.answer().confidence() != null
-                                ? aiResponse.answer().confidence().overallConfidence() : 0.0),
-                Map.of(
-                        "strategy", routing.strategy().name(),
-                        "explanation", routing.explanation()));
+        try {
+            AiResponse aiResponse = aiService.answer(new AiRequest(
+                    question,
+                    request.model() != null && !request.model().isBlank() ? request.model() : null,
+                    null,
+                    new AiConversationContext(null, null, null,
+                            UUID.randomUUID().toString(), UUID.randomUUID().toString()),
+                    5));
 
-        log.info("Decision: caseId={} strategy={} confidence={}",
-                caseId, routing.strategy(), response.confidence());
+            DecisionResult decision = routing.decision();
+            var reasonedAnswer = aiResponse.answer();
+
+            if (reasonedAnswer != null) {
+                answerText = reasonedAnswer.answer();
+
+                // ── Independent confidence dimensions ──
+                if (reasonedAnswer.confidence() != null) {
+                    var cp = reasonedAnswer.confidence();
+                    overallConf = cp.overallConfidence();
+                    coverageConf = cp.completenessConfidence();
+                    ruleCompleteness = cp.sourceConfidence();
+                } else if (decision != null) {
+                    overallConf = decision.confidence();
+                    coverageConf = decision.confidence();
+                    ruleCompleteness = decision.confidence();
+                }
+
+                // ── Evidence from source citations ──
+                for (var sc : reasonedAnswer.sourceCitations()) {
+                    evidence.add(Map.of(
+                            "id", sc.chunkId() != null ? sc.chunkId().toString() : UUID.randomUUID().toString(),
+                            "title", sc.title() != null ? sc.title() : "",
+                            "source", sc.title() != null ? sc.title() : "",
+                            "excerpt", sc.excerpt() != null ? sc.excerpt() : "",
+                            "relevanceScore", sc.confidenceScore(),
+                            "confidence", sc.confidenceScore()));
+                }
+
+                // ── Citations from authority references ──
+                for (var ar : reasonedAnswer.authorityReferences()) {
+                    String lawRef = ar.entryTitle() != null ? ar.entryTitle()
+                            : ar.referenceId() != null ? ar.referenceId() : "";
+                    citations.add(Map.of(
+                            "id", UUID.randomUUID().toString(),
+                            "law", lawRef,
+                            "paragraph", ar.entryNumber() != null ? ar.entryNumber() : "",
+                            "verificationStatus",
+                            ar.tier() == com.cognitera.platform.ai.model.AuthorityReference.ReferenceTier.PRIMARY
+                                    ? "verified" : "unverified"));
+                }
+
+                // ── Status determination ──
+                if (answerText == null || answerText.isBlank()
+                        || answerText.contains("Insufficient retrieved evidence")) {
+                    status = "NO_EVIDENCE";
+                    answerText = "Keine relevanten Nachweise gefunden. "
+                            + "Bitte formulieren Sie Ihre Frage um oder konsultieren Sie einen Fachexperten.";
+                }
+
+                // ── Recommendation ──
+                if (overallConf >= 0.7) {
+                    recommendationAction = "APPROVE";
+                } else if (evidence.isEmpty()) {
+                    recommendationAction = "REQUEST_INFO";
+                }
+            } else {
+                answerText = "Keine Antwort generiert.";
+                status = "NO_EVIDENCE";
+            }
+
+        } catch (Exception e) {
+            log.error("Reasoning failed: caseId={} cause={}", caseId, e.getMessage(), e);
+            answerText = "Reasoning failed: " + e.getMessage();
+            status = "FAILED";
+            overallConf = 0.0;
+            coverageConf = 0.0;
+            ruleCompleteness = 0.0;
+        }
+
+        long durationMs = System.currentTimeMillis() - startMs;
+        log.info("Response: caseId={} strategy={} status={} overall={} coverage={} ruleCompleteness={} evidence={} citations={} duration={}ms",
+                caseId, routing.strategy(), status,
+                String.format("%.2f", overallConf), String.format("%.2f", coverageConf),
+                String.format("%.2f", ruleCompleteness),
+                evidence.size(), citations.size(), durationMs);
+
+        Map<String, Object> response = new java.util.LinkedHashMap<>();
+        response.put("caseId", caseId);
+        response.put("status", status);
+        response.put("summary", answerText.length() > 500 ? answerText.substring(0, 500) + "..." : answerText);
+        response.put("evidence", evidence);
+        response.put("reasoning", reasoning);
+        response.put("citations", citations);
+        response.put("confidence", Map.of(
+                "overall", overallConf,
+                "coverage", coverageConf,
+                "ruleCompleteness", ruleCompleteness,
+                "missingEvidence", missingEvidence,
+                "conflictingEvidence", java.util.Collections.emptyList()));
+        response.put("recommendation", Map.of(
+                "action", recommendationAction,
+                "summary", answerText.length() > 200 ? answerText.substring(0, 200) : answerText,
+                "requiredActions", java.util.Collections.emptyList(),
+                "warnings", java.util.Collections.emptyList(),
+                "exceptions", java.util.Collections.emptyList(),
+                "missingDocuments", java.util.Collections.emptyList(),
+                "manualReviewRequired", status.equals("FAILED")));
+        response.put("draft", Map.of(
+                "id", UUID.randomUUID().toString(),
+                "title", "Entscheidungsentwurf — " + caseId,
+                "version", "v1.0-draft",
+                "content", answerText,
+                "citations", java.util.Collections.emptyList(),
+                "createdAt", java.time.Instant.now().toString()));
+        response.put("validations", java.util.Collections.emptyList());
+        response.put("workflow", Map.of(
+                "phase", "analysis",
+                "step", 1,
+                "totalSteps", 5,
+                "canProceed", true,
+                "canRegress", false));
+        response.put("generatedAt", java.time.Instant.now().toString());
+        response.put("duration", durationMs + "ms");
+        response.put("strategy", routing.strategy().name());
+        response.put("explanation", routing.explanation());
+        response.put("answer", answerText);
+
         return ResponseEntity.ok(response);
     }
 
@@ -134,7 +283,7 @@ public class DecisionController {
                 Thread.sleep(200);
 
                 AiResponse aiResponse = aiService.answer(new AiRequest(
-                        question, "default", null,
+                        question, null, null,
                         new AiConversationContext(null, null, null,
                                 UUID.randomUUID().toString(), UUID.randomUUID().toString()),
                         5));

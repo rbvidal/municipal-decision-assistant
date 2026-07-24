@@ -12,18 +12,15 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.time.Instant;
 import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/**
- * Verification tests for workspace CRUD REST endpoints.
- * Covers create, list, get, advance phase, status update, documents,
- * timeline, steps, checklist, and notes endpoints.
- */
 class WorkspaceControllerTest {
+
+    private static final String WS_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+    private static final String WS_CODE = "WS-TEST01";
 
     private MockMvc mockMvc;
     private WorkspaceService service;
@@ -34,20 +31,19 @@ class WorkspaceControllerTest {
         service = mock(WorkspaceService.class);
         mockMvc = MockMvcBuilders.standaloneSetup(new WorkspaceController(service)).build();
 
-        testWs = new WorkspaceEntity("ws-1", "Test Vorfall", "Test Beschreibung",
+        testWs = new WorkspaceEntity(WS_CODE, "Test Vorfall", "Test Beschreibung",
                 "GENERAL", "user-1");
         testWs.setPhase(WorkspacePhase.SETUP);
         testWs.setStatus(WorkspaceStatus.DRAFT);
 
-        when(service.findById("ws-1")).thenReturn(Optional.of(testWs));
+        when(service.findById(any())).thenReturn(Optional.of(testWs));
         when(service.toDto(any())).thenReturn(new WorkspaceDto(
-                testWs.getId(), testWs.getName(), testWs.getDescription(),
+                testWs.getId(), WS_CODE, testWs.getName(), testWs.getDescription(),
                 testWs.getWorkspaceType(), testWs.getStatus(), testWs.getPhase(),
-                testWs.getOwnerId(), Map.of(), List.of(), List.of(),
+                testWs.getOwnerId(), java.util.Collections.emptyMap(),
+                java.util.Collections.emptyList(), java.util.Collections.emptyList(),
                 testWs.getCreatedAt(), testWs.getUpdatedAt()));
     }
-
-    // ── Create ──
 
     @Test
     void shouldCreateWorkspace() throws Exception {
@@ -59,11 +55,9 @@ class WorkspaceControllerTest {
                             {"name":"Test","description":"desc","workspaceType":"GENERAL","createdBy":"user-1"}
                             """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value("ws-1"))
+                .andExpect(jsonPath("$.id").value(testWs.getId()))
                 .andExpect(jsonPath("$.name").value("Test Vorfall"));
     }
-
-    // ── List ──
 
     @Test
     void shouldListWorkspaces() throws Exception {
@@ -71,7 +65,7 @@ class WorkspaceControllerTest {
 
         mockMvc.perform(get("/api/workspaces"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value("ws-1"));
+                .andExpect(jsonPath("$[0].id").value(testWs.getId()));
     }
 
     @Test
@@ -80,16 +74,14 @@ class WorkspaceControllerTest {
 
         mockMvc.perform(get("/api/workspaces?ownerId=user-1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value("ws-1"));
+                .andExpect(jsonPath("$[0].id").value(testWs.getId()));
     }
-
-    // ── Get ──
 
     @Test
     void shouldGetWorkspaceById() throws Exception {
-        mockMvc.perform(get("/api/workspaces/ws-1"))
+        mockMvc.perform(get("/api/workspaces/" + testWs.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value("ws-1"))
+                .andExpect(jsonPath("$.id").value(testWs.getId()))
                 .andExpect(jsonPath("$.phase").value("SETUP"));
     }
 
@@ -101,52 +93,47 @@ class WorkspaceControllerTest {
                 .andExpect(status().isNotFound());
     }
 
-    // ── Advance phase ──
-
     @Test
     void shouldAdvancePhase() throws Exception {
-        WorkspaceEntity advanced = new WorkspaceEntity("ws-1", "Test Vorfall", "desc",
+        WorkspaceEntity advanced = new WorkspaceEntity(WS_CODE, "Test Vorfall", "desc",
                 "GENERAL", "user-1");
         advanced.setPhase(WorkspacePhase.INGESTION);
-        when(service.advancePhase("ws-1")).thenReturn(advanced);
+        when(service.advancePhase(WS_ID)).thenReturn(advanced);
         when(service.toDto(advanced)).thenReturn(new WorkspaceDto(
-                advanced.getId(), advanced.getName(), advanced.getDescription(),
+                WS_ID, WS_CODE, advanced.getName(), advanced.getDescription(),
                 advanced.getWorkspaceType(), advanced.getStatus(), advanced.getPhase(),
-                advanced.getOwnerId(), Map.of(), List.of(), List.of(),
+                advanced.getOwnerId(), java.util.Collections.emptyMap(),
+                java.util.Collections.emptyList(), java.util.Collections.emptyList(),
                 advanced.getCreatedAt(), advanced.getUpdatedAt()));
 
-        mockMvc.perform(post("/api/workspaces/ws-1/advance"))
+        mockMvc.perform(post("/api/workspaces/" + WS_ID + "/advance"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.phase").value("INGESTION"));
     }
 
-    // ── Update status ──
-
     @Test
     void shouldUpdateStatus() throws Exception {
-        mockMvc.perform(put("/api/workspaces/ws-1/status")
+        mockMvc.perform(put("/api/workspaces/" + WS_ID + "/status")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"status\":\"ACTIVE\"}"))
                 .andExpect(status().isOk());
     }
 
-    // ── Documents ──
-
     @Test
     void shouldGetDocuments() throws Exception {
-        when(service.getWorkspaceDocuments("ws-1")).thenReturn(List.of());
+        when(service.getWorkspaceDocuments(WS_ID)).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/workspaces/ws-1/documents"))
+        mockMvc.perform(get("/api/workspaces/" + WS_ID + "/documents"))
                 .andExpect(status().isOk());
     }
 
     @Test
     void shouldAttachDocument() throws Exception {
-        var link = new WorkspaceDocumentLinkEntity(null, "ws-1", "doc-1", "notes",
+        var link = new WorkspaceDocumentLinkEntity(null, WS_ID, "doc-1", "notes",
                 DocumentType.REPORT, "general");
         when(service.attachDocument(any())).thenReturn(link);
 
-        mockMvc.perform(post("/api/workspaces/ws-1/documents")
+        mockMvc.perform(post("/api/workspaces/" + WS_ID + "/documents")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                             {"documentId":"doc-1","documentType":"REPORT","documentCategory":"general"}
@@ -154,24 +141,22 @@ class WorkspaceControllerTest {
                 .andExpect(status().isOk());
     }
 
-    // ── Timeline ──
-
     @Test
     void shouldGetTimeline() throws Exception {
-        when(service.getTimeline("ws-1")).thenReturn(List.of());
+        when(service.getTimeline(WS_ID)).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/workspaces/ws-1/timeline"))
+        mockMvc.perform(get("/api/workspaces/" + WS_ID + "/timeline"))
                 .andExpect(status().isOk());
     }
 
     @Test
     void shouldAddTimelineEvent() throws Exception {
-        var event = new TimelineEventEntity(null, "ws-1", java.time.LocalDate.now(),
+        var event = new TimelineEventEntity(null, WS_ID, java.time.LocalDate.now(),
                 "Test Event", "desc", TimelineEventType.EVENT, null, 1.0, false);
         when(service.addTimelineEvent(any(), any(), any(), any(), any(), any(), anyDouble(), anyBoolean()))
                 .thenReturn(event);
 
-        mockMvc.perform(post("/api/workspaces/ws-1/timeline")
+        mockMvc.perform(post("/api/workspaces/" + WS_ID + "/timeline")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                             {"eventDate":"2025-01-15","title":"Test Event","description":"desc","eventType":"EVENT"}
@@ -179,21 +164,17 @@ class WorkspaceControllerTest {
                 .andExpect(status().isOk());
     }
 
-    // ── Steps ──
-
     @Test
     void shouldGetSteps() throws Exception {
-        when(service.getCompletedSteps("ws-1")).thenReturn(List.of());
+        when(service.getCompletedSteps(WS_ID)).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/workspaces/ws-1/steps"))
+        mockMvc.perform(get("/api/workspaces/" + WS_ID + "/steps"))
                 .andExpect(status().isOk());
     }
 
-    // ── Checklist ──
-
     @Test
     void shouldGetChecklist() throws Exception {
-        mockMvc.perform(get("/api/workspaces/ws-1/checklist"))
+        mockMvc.perform(get("/api/workspaces/" + WS_ID + "/checklist"))
                 .andExpect(status().isOk());
     }
 
@@ -207,7 +188,7 @@ class WorkspaceControllerTest {
 
     @Test
     void shouldUpdateChecklist() throws Exception {
-        mockMvc.perform(put("/api/workspaces/ws-1/checklist")
+        mockMvc.perform(put("/api/workspaces/" + WS_ID + "/checklist")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                             [{"id":"c1","title":"Item 1","checked":false}]
@@ -215,17 +196,15 @@ class WorkspaceControllerTest {
                 .andExpect(status().isOk());
     }
 
-    // ── Notes ──
-
     @Test
     void shouldGetNotes() throws Exception {
-        mockMvc.perform(get("/api/workspaces/ws-1/notes"))
+        mockMvc.perform(get("/api/workspaces/" + WS_ID + "/notes"))
                 .andExpect(status().isOk());
     }
 
     @Test
     void shouldAddNote() throws Exception {
-        mockMvc.perform(post("/api/workspaces/ws-1/notes")
+        mockMvc.perform(post("/api/workspaces/" + WS_ID + "/notes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                             {"author":"Sabine Müller","content":"Eine neue Notiz"}

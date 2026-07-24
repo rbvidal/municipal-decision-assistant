@@ -17,7 +17,8 @@ services:
     image: pgvector/pgvector:pg16
     container_name: mda-postgres
     restart: unless-stopped
-    # No external port exposure — accessible only within the Docker network
+    ports:
+      - "5432:5432"
     expose:
       - "5432"
     environment:
@@ -28,7 +29,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./backups:/backups
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME:-municipal_decision_assistant}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -48,16 +49,19 @@ services:
     image: qdrant/qdrant:latest
     container_name: mda-qdrant
     restart: unless-stopped
+    ports:
+      - "6333:6333"
     expose:
       - "6333"
     volumes:
       - qdrant_storage:/qdrant/storage
       - ./backups:/backups
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/6333; echo -e \"GET /readyz HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n\" >&3; grep -q 200 <&3'"]
       interval: 10s
-      timeout: 5s
-      retries: 3
+      timeout: 10s
+      retries: 5
+      start_period: 15s
     deploy:
       resources:
         limits:
@@ -69,11 +73,13 @@ services:
     networks:
       - mda-network
 
-  # ── Neo4j Graph Database (optional) ──
+  # ── Neo4j Graph Database ──
   neo4j:
     image: neo4j:5-community
     container_name: mda-neo4j
     restart: unless-stopped
+    ports:
+      - "7687:7687"
     expose:
       - "7687"
     environment:
@@ -96,9 +102,6 @@ services:
           memory: 256M
     networks:
       - mda-network
-    # Optional: remove this service if Neo4j is not needed
-    profiles:
-      - full
 
   # ── Municipal Decision Assistant Application ──
   app:
@@ -110,6 +113,8 @@ services:
     ports:
       - "8080:8080"
     environment:
+      SPRING_PROFILES_ACTIVE: "prod"
+      SERVER_SSL_ENABLED: "false"
       # Database
       DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-municipal_decision_assistant}
       DB_USERNAME: ${DB_USERNAME}
@@ -120,6 +125,7 @@ services:
       AUTH_ACCESS_TOKEN_TTL: ${AUTH_ACCESS_TOKEN_TTL:-15m}
       AUTH_REFRESH_TOKEN_TTL: ${AUTH_REFRESH_TOKEN_TTL:-30d}
       # Qdrant
+      QDRANT_ENABLED: "true"
       QDRANT_HOST: qdrant
       QDRANT_REST_PORT: "6333"
       QDRANT_COLLECTION: ${QDRANT_COLLECTION:-mda_chunks}

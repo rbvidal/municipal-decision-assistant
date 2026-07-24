@@ -16,14 +16,10 @@ const KnowledgePage = lazy(() =>
 const DocumentsPage = lazy(() =>
   import("../pages/documents").then((m) => ({ default: m.DocumentsPage })),
 );
-const SupervisorPage = lazy(() =>
-  import("../pages/supervisor").then((m) => ({ default: m.SupervisorPage })),
-);
 const AdministrationPage = lazy(() =>
   import("../pages/administration").then((m) => ({ default: m.AdministrationPage })),
 );
 const CorpusPage = lazy(() => import("../pages/corpus").then((m) => ({ default: m.CorpusPage })));
-const UsersPage = lazy(() => import("../pages/users").then((m) => ({ default: m.UsersPage })));
 const NewCasePage = lazy(() =>
   import("../pages/new-case").then((m) => ({ default: m.NewCasePage })),
 );
@@ -41,6 +37,9 @@ const SearchPage = lazy(() =>
 );
 const AuditPage = lazy(() =>
   import("../pages/audit").then((m) => ({ default: m.AuditPage })),
+);
+const AIAssistantPage = lazy(() =>
+  import("../pages/assistant").then((m) => ({ default: m.AIAssistantPage })),
 );
 
 const queryClient = new QueryClient({
@@ -70,12 +69,11 @@ export const AppRouter: React.FC = () => (
               <Route path="/knowledge" element={<ProtectedRoute><KnowledgePage /></ProtectedRoute>} />
               <Route path="/documents" element={<ProtectedRoute><DocumentsPage /></ProtectedRoute>} />
               <Route path="/search" element={<ProtectedRoute><SearchPage /></ProtectedRoute>} />
-              <Route path="/supervisor" element={<ProtectedRoute><SupervisorPage /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute><AdministrationPage /></ProtectedRoute>} />
               <Route path="/admin/corpus" element={<ProtectedRoute><CorpusPage /></ProtectedRoute>} />
               <Route path="/admin/audit" element={<ProtectedRoute><AuditPage /></ProtectedRoute>} />
-              <Route path="/admin/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
               <Route path="/work/new" element={<ProtectedRoute><NewCasePage /></ProtectedRoute>} />
+              <Route path="/assistant" element={<ProtectedRoute><AIAssistantPage /></ProtectedRoute>} />
 
               <Route path="*" element={<NotFoundPage />} />
             </Routes>

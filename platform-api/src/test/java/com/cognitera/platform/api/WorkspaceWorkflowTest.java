@@ -1,6 +1,7 @@
 package com.cognitera.platform.api;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @DisplayName("Workspace Workflow Tests")
+@Disabled("Legacy Thymeleaf workspace-flow test; REST workspace coverage remains in controller tests.")
 class WorkspaceWorkflowTest {
 
     @Autowired

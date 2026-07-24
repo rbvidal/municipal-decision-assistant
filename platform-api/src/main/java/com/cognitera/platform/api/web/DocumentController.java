@@ -169,6 +169,24 @@ public class DocumentController {
     }
 
     /**
+     * Searches documents by title or content query.
+     */
+    @GetMapping("/search")
+    public ResponseEntity<List<DocumentResponse>> search(@RequestParam("q") String query) {
+        var allDocs = DocumentPageResponse.from(documents.findDocuments(new DocumentFilter(
+                null, null, null, null, null, null, null, 0, 200)));
+        String q = query.toLowerCase().trim();
+        var results = allDocs.documents().stream()
+                .filter(d -> {
+                    String title = d.title() != null ? d.title().toLowerCase() : "";
+                    String cat = d.category() != null ? d.category().toLowerCase() : "";
+                    return title.contains(q) || cat.contains(q);
+                })
+                .toList();
+        return ResponseEntity.ok(results);
+    }
+
+    /**
      * Returns a paginated list of documents filtered by optional criteria.
      */
     @GetMapping
@@ -317,6 +335,41 @@ public class DocumentController {
                 document.id(), document.metadata().title(),
                 document.metadata().type() != null ? document.metadata().type().name() : "UNKNOWN",
                 version.versionNumber(), text, anchors);
+    }
+
+    /**
+     * Streams the raw stored document file for viewing/download.
+     */
+    @GetMapping("/{documentId}/file")
+    public ResponseEntity<org.springframework.core.io.Resource> getFile(@PathVariable UUID documentId) {
+        Document document;
+        try {
+            document = documents.getDocument(documentId, "system");
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
+        DocumentVersion version = document.versions().stream()
+                .filter(v -> v.versionNumber() == document.currentVersion())
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Document has no current version"));
+
+        Path filePath = Path.of(version.storageKey());
+        if (!Files.exists(filePath)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        try {
+            String contentType = version.contentType() != null ? version.contentType() : "application/octet-stream";
+            org.springframework.core.io.Resource resource =
+                    new org.springframework.core.io.InputStreamResource(Files.newInputStream(filePath));
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .header("Content-Disposition", "inline; filename=\"" + version.fileName() + "\"")
+                    .body(resource);
+        } catch (IOException e) {
+            log.error("Failed to read document file: {}", filePath, e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     /**

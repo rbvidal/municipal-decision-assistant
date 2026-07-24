@@ -1,6 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { caseService } from "../services";
 
+export function useCases() {
+  return useQuery({
+    queryKey: ["cases"],
+    queryFn: () => caseService.getAll(),
+    staleTime: 30_000,
+  });
+}
+
 export function useCase(id: string) {
   return useQuery({
     queryKey: ["case", id],

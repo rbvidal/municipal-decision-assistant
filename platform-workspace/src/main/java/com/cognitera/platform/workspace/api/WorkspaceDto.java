@@ -10,6 +10,7 @@ import java.util.Map;
 /** Full DTO for a workspace including documents, timeline events, phase, and status. */
 public record WorkspaceDto(
         String id,
+        String workspaceCode,
         String name,
         String description,
         String workspaceType,

@@ -11,7 +11,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U platform"]
+      test: ["CMD-SHELL", "pg_isready -U platform -d municipal_decision_assistant"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -41,10 +41,11 @@ services:
     volumes:
       - qdrant_storage:/qdrant/storage
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/6333; echo -e \"GET /readyz HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n\" >&3; grep -q 200 <&3'"]
       interval: 10s
-      timeout: 5s
-      retries: 3
+      timeout: 10s
+      retries: 5
+      start_period: 15s
     networks:
       - mda-network
 

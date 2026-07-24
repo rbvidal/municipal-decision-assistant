@@ -6,6 +6,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -16,31 +17,63 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
-import com.nimbusds.jose.jwk.source.ImmutableSecret;
-
-/** Configures Spring Security with JWT resource server, form login, BCrypt, and role-based authorization. */
 @Configuration
 @EnableMethodSecurity
 @EnableConfigurationProperties(AuthProperties.class)
 public class SecurityConfiguration {
 
-    /** Builds the security filter chain with CSRF disabled, stateless session, and route-based authorization. */
+    private static final RequestMatcher API_PATHS = new AntPathRequestMatcher("/api/**");
+
+    private static final String[] PUBLIC_API_PATHS = {
+            "/api/auth/register", "/api/auth/login", "/api/auth/refresh", "/api/providers/**"
+    };
+
+    /**
+     * API filter chain. Processed first. Only matches /api/** paths. JWT bearer tokens.
+     */
     @Bean
-    public SecurityFilterChain securityFilterChain(
+    @Order(0)
+    public SecurityFilterChain apiFilterChain(
             HttpSecurity http,
+            AuthProperties properties,
             Converter<Jwt, AbstractAuthenticationToken> jwtAuthenticationConverter
     ) throws Exception {
+        NimbusJwtDecoder decoder = NimbusJwtDecoder
+                .withSecretKey(jwtSecretKey(properties))
+                .macAlgorithm(MacAlgorithm.HS256).build();
         return http
+                .securityMatcher(API_PATHS)
                 .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(PUBLIC_API_PATHS).permitAll()
+                        .requestMatchers("/api/admin/**").authenticated()
+                        .anyRequest().authenticated())
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(jwt -> jwt
+                                .decoder(decoder)
+                                .jwtAuthenticationConverter(jwtAuthenticationConverter)))
+                .build();
+    }
+
+    /**
+     * Web filter chain. Processed second. Handles everything NOT matched by the API chain.
+     * Serves the React SPA shell and static assets. Authentication is enforced by JWT API calls.
+     */
+    @Bean
+    @Order(1)
+    public SecurityFilterChain webFilterChain(HttpSecurity http) throws Exception {
+        return http
+                .securityMatcher(new NegatedRequestMatcher(API_PATHS))
+                .csrf(AbstractHttpConfigurer::disable)
                 .headers(headers -> headers
                         .contentSecurityPolicy(csp -> csp
                                 .policyDirectives("default-src 'self'; "
@@ -52,70 +85,32 @@ public class SecurityConfiguration {
                                         + "frame-ancestors 'none'; "
                                         + "form-action 'self'"))
                         .frameOptions(frame -> frame.deny())
-                        .xssProtection(xss -> xss.disable()) // deprecated, CSP handles this
-                        .contentTypeOptions(contentType ->
-                                contentType.and().addHeaderWriter(
-                                        (request, response) ->
-                                                response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin")))
-                )
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/refresh").permitAll()
-                        .requestMatchers("/api/providers/**").permitAll()
-                        .requestMatchers("/login", "/register", "/css/**", "/favicon.ico").permitAll()
-                        .requestMatchers("/actuator/health").permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/audit", "/api/audit/**").authenticated()
-                        .anyRequest().authenticated())
-                .formLogin(form -> form
-                        .loginPage("/login")
-                        .defaultSuccessUrl("/dashboard", true)
-                        .permitAll())
-                .logout(logout -> logout
-                        .logoutUrl("/logout")
-                        .logoutSuccessUrl("/login?logout")
-                        .permitAll())
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))
+                        .xssProtection(xss -> xss.disable())
+                        .contentTypeOptions(ct -> ct.disable()))
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                .formLogin(AbstractHttpConfigurer::disable)
+                .logout(AbstractHttpConfigurer::disable)
                 .build();
     }
 
-    /** Provides a BCrypt password encoder with strength 12. */
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(12);
-    }
+    public PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(12); }
 
-    /** Creates a Nimbus JWT encoder using the HMAC-SHA256 secret key from configuration properties. */
-    @Bean
-    public JwtEncoder jwtEncoder(AuthProperties properties) {
-        return new NimbusJwtEncoder(new ImmutableSecret<>(jwtSecretKey(properties)));
-    }
-
-    /** Creates a Nimbus JWT decoder using HMAC-SHA256 with the secret key from configuration properties. */
-    @Bean
-    public JwtDecoder jwtDecoder(AuthProperties properties) {
-        return NimbusJwtDecoder.withSecretKey(jwtSecretKey(properties))
-                .macAlgorithm(MacAlgorithm.HS256)
-                .build();
-    }
-
-    /** Builds a JWT authentication converter that extracts roles from the {@code roles} claim. */
     @Bean
     public Converter<Jwt, AbstractAuthenticationToken> jwtAuthenticationConverter() {
-        JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        authoritiesConverter.setAuthoritiesClaimName("roles");
-        authoritiesConverter.setAuthorityPrefix("ROLE_");
-
-        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-        converter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
-        converter.setPrincipalClaimName("sub");
-        return converter;
+        JwtGrantedAuthoritiesConverter gac = new JwtGrantedAuthoritiesConverter();
+        gac.setAuthoritiesClaimName("roles");
+        gac.setAuthorityPrefix("ROLE_");
+        JwtAuthenticationConverter jac = new JwtAuthenticationConverter();
+        jac.setJwtGrantedAuthoritiesConverter(gac);
+        jac.setPrincipalClaimName("sub");
+        return jac;
     }
 
     private SecretKey jwtSecretKey(AuthProperties properties) {
         byte[] secret = properties.getJwtSecret().getBytes();
-        if (secret.length < 32) {
-            throw new IllegalStateException("platform.auth.jwt-secret must be at least 32 bytes for HS256");
-        }
+        if (secret.length < 32)
+            throw new IllegalStateException("platform.auth.jwt-secret must be at least 32 bytes");
         return new SecretKeySpec(secret, "HmacSHA256");
     }
 }

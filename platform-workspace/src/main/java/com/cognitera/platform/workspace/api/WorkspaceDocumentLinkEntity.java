@@ -15,13 +15,13 @@ public class WorkspaceDocumentLinkEntity {
 
     @Id
     @Column(name = "id")
-    private String id;
+    private UUID id;
 
     @Column(name = "workspace_id", nullable = false)
-    private String workspaceId;
+    private UUID workspaceId;
 
     @Column(name = "document_id", nullable = false)
-    private String documentId;
+    private UUID documentId;
 
     @Column(name = "document_name")
     private String documentName;
@@ -44,9 +44,9 @@ public class WorkspaceDocumentLinkEntity {
 
     public WorkspaceDocumentLinkEntity(String id, String workspaceId, String documentId, String documentName,
                                        DocumentType documentType, String documentCategory) {
-        this.id = id != null ? id : UUID.randomUUID().toString();
-        this.workspaceId = workspaceId;
-        this.documentId = documentId;
+        this.id = id != null ? UUID.fromString(id) : UUID.randomUUID();
+        this.workspaceId = UUID.fromString(workspaceId);
+        this.documentId = UUID.fromString(documentId);
         this.documentName = documentName;
         this.documentType = documentType;
         this.documentCategory = documentCategory != null ? documentCategory : "general";
@@ -54,12 +54,18 @@ public class WorkspaceDocumentLinkEntity {
         this.uploadedAt = Instant.now();
     }
 
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
-    public String getWorkspaceId() { return workspaceId; }
-    public void setWorkspaceId(String workspaceId) { this.workspaceId = workspaceId; }
-    public String getDocumentId() { return documentId; }
-    public void setDocumentId(String documentId) { this.documentId = documentId; }
+    public UUID getUuid() { return id; }
+    public String getId() { return id != null ? id.toString() : null; }
+    public void setId(String id) { this.id = id != null ? UUID.fromString(id) : null; }
+
+    public UUID getWorkspaceUuid() { return workspaceId; }
+    public String getWorkspaceId() { return workspaceId != null ? workspaceId.toString() : null; }
+    public void setWorkspaceId(String workspaceId) { this.workspaceId = UUID.fromString(workspaceId); }
+
+    public UUID getDocumentUuid() { return documentId; }
+    public String getDocumentId() { return documentId != null ? documentId.toString() : null; }
+    public void setDocumentId(String documentId) { this.documentId = UUID.fromString(documentId); }
+
     public String getDocumentName() { return documentName; }
     public void setDocumentName(String documentName) { this.documentName = documentName; }
     public DocumentType getDocumentType() { return documentType; }

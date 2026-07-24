@@ -4,6 +4,7 @@ import com.cognitera.platform.audit.api.AuditEventPage;
 import com.cognitera.platform.audit.api.AuditEventType;
 import com.cognitera.platform.audit.api.AuditQuery;
 import com.cognitera.platform.audit.api.AuditService;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  * Thymeleaf page controller for the audit event listing page.
  */
 @Controller
+@Profile("thymeleaf-legacy")
 public class AuditPageController {
 
     private final AuditService auditService;

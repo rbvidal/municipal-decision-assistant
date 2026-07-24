@@ -7,6 +7,7 @@ import com.cognitera.platform.document.model.DocumentStatus;
 import com.cognitera.platform.document.model.DocumentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,6 +39,7 @@ import java.util.UUID;
  * Thymeleaf page controller for document listing, upload, and viewing.
  */
 @Controller
+@Profile("thymeleaf-legacy")
 public class DocumentPageController {
 
     private static final Logger log = LoggerFactory.getLogger(DocumentPageController.class);

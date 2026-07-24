@@ -1,5 +1,6 @@
 package com.cognitera.platform.web;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -15,6 +16,7 @@ import java.util.List;
  * All view values are pre-computed in the controller — no enum method calls in templates.
  */
 @Controller
+@Profile("thymeleaf-legacy")
 public class CorpusHealthController {
 
     private final CorpusHealthService healthService;

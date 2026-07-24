@@ -64,10 +64,10 @@ public class SearchInfrastructureConfig {
     }
 
     /**
-     * Creates the Qdrant collection manager and ensures the collection exists when the Qdrant host property is set.
+     * Creates the Qdrant collection manager and ensures the collection exists when Qdrant is enabled.
      */
     @Bean
-    @ConditionalOnProperty(name = "platform.search.qdrant.host")
+    @ConditionalOnProperty(name = "platform.search.qdrant.enabled", havingValue = "true")
     public QdrantCollectionManager qdrantCollectionManager(QdrantProperties properties) {
         QdrantCollectionManager manager = new QdrantCollectionManager(properties);
         manager.ensureCollectionExists();
@@ -75,10 +75,10 @@ public class SearchInfrastructureConfig {
     }
 
     /**
-     * Creates the Qdrant-based vector search provider when the Qdrant host property is set.
+     * Creates the Qdrant-based vector search provider when Qdrant is enabled.
      */
     @Bean
-    @ConditionalOnProperty(name = "platform.search.qdrant.host")
+    @ConditionalOnProperty(name = "platform.search.qdrant.enabled", havingValue = "true")
     public QdrantVectorSearchProvider qdrantVectorSearchProvider(
             QdrantProperties properties,
             EmbeddingProvider embeddingProvider) {

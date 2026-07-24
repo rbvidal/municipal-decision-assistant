@@ -1,13 +1,26 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { AppShell } from "../../layouts/AppShell";
-import { TopNavigation, TabBar, type NavModule, type TabItem } from "../../components/navigation";
+import { AppTopNavigation, TabBar, type NavModule, type TabItem } from "../../components/navigation";
 import { SearchBar, FilterPanel } from "../../components/search";
 import { DataTable, type DataTableColumn } from "../../components/data";
 import { DocumentVersionHistory } from "../../components/documents";
 import { Badge, Icon, PropertyGrid, ActionToolbar, Button } from "../../components/common";
 import { documentService } from "../../services/serviceFactory";
-import type { DocumentItem } from "../../mocks/documents";
-import { DOCUMENT_CATEGORIES, DOCUMENT_STATUS_COLORS } from "../../mocks/documents";
+import type { DocumentItem } from "../../types/domain";
+
+const DOCUMENT_CATEGORIES: { key: string; label: string; count: number }[] = [
+  { key: "vorgangsdokumente", label: "Vorgangsdokumente", count: 0 },
+  { key: "vorlagen", label: "Vorlagen", count: 0 },
+  { key: "bescheide", label: "Bescheide", count: 0 },
+  { key: "rechtsgrundlagen", label: "Rechtsgrundlagen", count: 0 },
+];
+const toDocStatus = (s: string): "success" | "warning" | "error" | "neutral" | "info" => {
+  if (s === "Bereit" || s === "Aktiv") return "success";
+  if (s === "In_Bearbeitung" || s === "In Prüfung") return "warning";
+  if (s === "Fehler" || s === "Fehlend") return "error";
+  if (s === "Archiviert") return "neutral";
+  return "info";
+};
 import styles from "./DocumentsPage.module.css";
 
 const NAV_MODULES: NavModule[] = [
@@ -42,7 +55,7 @@ const FILTER_GROUPS = [
     id: "category",
     label: "Kategorien",
     options: DOCUMENT_CATEGORIES.map((c) => ({
-      value: c.id,
+      value: c.key,
       label: c.label,
       count: c.count,
     })),
@@ -57,6 +70,8 @@ export const DocumentsPage: React.FC = React.memo(() => {
   const [activeCategory, setActiveCategory] = useState("vorgangsdokumente");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [fullText, setFullText] = useState<string | null>(null);
+  const [fullTextLoading, setFullTextLoading] = useState(false);
 
   // Upload state
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -77,7 +92,9 @@ export const DocumentsPage: React.FC = React.memo(() => {
     setLoadError(null);
     try {
       const data = await documentService.getAll();
-      setDocuments(data);
+      // Backend returns {documents:[...], page, size, totalElements, totalPages}
+      const list = Array.isArray(data) ? data : (data as any).documents ?? [];
+      setDocuments(list);
     } catch (err) {
       setLoadError((err as Error).message ?? "Fehler beim Laden der Dokumente");
     } finally {
@@ -88,6 +105,18 @@ export const DocumentsPage: React.FC = React.memo(() => {
   useEffect(() => {
     loadDocuments();
   }, [loadDocuments]);
+
+  useEffect(() => {
+    if (!selectedId) { setFullText(null); return; }
+    let cancelled = false;
+    setFullTextLoading(true);
+    setFullText(null);
+    documentService.getContent(selectedId)
+      .then((data) => { if (!cancelled) setFullText(data.text); })
+      .catch(() => { if (!cancelled) setFullText(null); })
+      .finally(() => { if (!cancelled) setFullTextLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedId]);
 
   const handleUpload = useCallback(async () => {
     if (!uploadFile) return;
@@ -125,10 +154,10 @@ export const DocumentsPage: React.FC = React.memo(() => {
       if (statusFilter !== "Status: Alle" && doc.status !== statusFilter) return false;
       if (query) {
         return (
-          doc.name.toLowerCase().includes(query) ||
-          doc.vorgangId.toLowerCase().includes(query) ||
-          doc.buerger.toLowerCase().includes(query) ||
-          doc.typ.toLowerCase().includes(query)
+          (doc.name ?? "").toLowerCase().includes(query) ||
+          (doc.vorgangId ?? "").toLowerCase().includes(query) ||
+          (doc.buerger ?? "").toLowerCase().includes(query) ||
+          (doc.typ ?? "").toLowerCase().includes(query)
         );
       }
       return true;
@@ -167,12 +196,12 @@ export const DocumentsPage: React.FC = React.memo(() => {
       {
         key: "vorgangId",
         header: "Vorgang",
-        render: (doc) => <span className={styles.monoCell}>{doc.vorgangId}</span>,
+        render: (doc) => <span className={styles.monoCell}>{doc.vorgangId ?? "-"}</span>,
       },
       {
         key: "buerger",
         header: "Bürger",
-        render: (doc) => <span className={styles.monoCell}>{doc.buerger}</span>,
+        render: (doc) => <span className={styles.monoCell}>{doc.buerger ?? "-"}</span>,
       },
       {
         key: "typ",
@@ -188,7 +217,7 @@ export const DocumentsPage: React.FC = React.memo(() => {
         key: "status",
         header: "Status",
         render: (doc) => (
-          <Badge status={DOCUMENT_STATUS_COLORS[doc.status]} variant="pill">
+          <Badge status={toDocStatus(doc.status)} variant="pill">
             {doc.status}
           </Badge>
         ),
@@ -207,23 +236,7 @@ export const DocumentsPage: React.FC = React.memo(() => {
   return (
     <AppShell
       topNavigation={
-        <TopNavigation
-          modules={NAV_MODULES}
-          activeModule="documents"
-          onNavigate={() => {}}
-          userName="Sabine Müller"
-          userEmail="s.mueller@verwaltung.de"
-          userDepartment="Bauamt"
-          userInitials="SM"
-          userActions={[
-            { id: "profile", label: "Profil", onClick: () => {} },
-            { id: "logout", label: "Abmelden", onClick: () => {} },
-          ]}
-          notifications={[]}
-          onNotificationClick={() => {}}
-          onMarkAllNotificationsRead={() => {}}
-          onViewAllNotifications={() => {}}
-        />
+        <AppTopNavigation modules={NAV_MODULES} activeModule="documents" />
       }
     >
       <div className={styles.page}>
@@ -344,9 +357,9 @@ export const DocumentsPage: React.FC = React.memo(() => {
             <span className={styles.bulkCount}>{bulkCount} ausgewählt</span>
             <ActionToolbar
               actions={[
-                { id: "compare", label: "Vergleichen", onClick: () => {}, variant: "secondary" },
-                { id: "export", label: "Exportieren", onClick: () => {}, variant: "secondary" },
-                { id: "archive", label: "Archivieren", onClick: () => {}, variant: "secondary" },
+                { id: "compare", label: "Vergleichen", onClick: () => window.alert("Vergleichsfunktion in Entwicklung."), variant: "secondary" },
+                { id: "export", label: "Exportieren", onClick: () => window.print(), variant: "secondary" },
+                { id: "archive", label: "Archivieren", onClick: () => window.alert("Archivierungsfunktion in Entwicklung."), variant: "secondary" },
               ]}
             />
           </div>
@@ -386,17 +399,18 @@ export const DocumentsPage: React.FC = React.memo(() => {
                 <span className={styles.previewCaption}>Vorschau</span>
                 <h2 className={styles.previewTitle}>{selectedDoc.name}</h2>
                 <div className={styles.previewActions}>
-                  <Badge status={DOCUMENT_STATUS_COLORS[selectedDoc.status]} variant="pill">
-                    {selectedDoc.status}
+                  <Badge status={toDocStatus(selectedDoc.status)} variant="pill">
+                    {selectedDoc.status ?? "-"}
                   </Badge>
                   <button
                     type="button"
                     className={styles.previewActionBtn}
                     aria-label="Herunterladen"
+                    onClick={() => window.print()}
                   >
                     <Icon name="download" size={16} />
                   </button>
-                  <button type="button" className={styles.previewActionBtn} aria-label="Drucken">
+                  <button type="button" className={styles.previewActionBtn} aria-label="Drucken" onClick={() => window.print()}>
                     <Icon name="printer" size={16} />
                   </button>
                   <button
@@ -415,13 +429,26 @@ export const DocumentsPage: React.FC = React.memo(() => {
                   <h3 className={styles.previewSectionTitle}>Metadaten</h3>
                   <PropertyGrid
                     items={[
-                      { label: "Dokumenten-ID", value: selectedDoc.dokumentId, valueMono: true },
-                      { label: "Typ", value: selectedDoc.detailedTyp },
-                      { label: "Dateigröße", value: selectedDoc.dateigroesse },
-                      { label: "Hochgeladen", value: selectedDoc.hochgeladenAm },
+                      { label: "Dokumenten-ID", value: selectedDoc.dokumentId ?? "-", valueMono: true },
+                      { label: "Typ", value: selectedDoc.detailedTyp ?? "-" },
+                      { label: "Dateigröße", value: selectedDoc.dateigroesse ?? "-" },
+                      { label: "Hochgeladen", value: selectedDoc.hochgeladenAm ?? "-" },
                     ]}
                   />
                 </div>
+
+                {(fullText || fullTextLoading) && (
+                  <div className={styles.previewSection}>
+                    <h3 className={styles.previewSectionTitle}>Volltext</h3>
+                    {fullTextLoading ? (
+                      <p style={{ color: "var(--color-gray-400)", fontSize: "0.85rem" }}>Lade Volltext...</p>
+                    ) : fullText ? (
+                      <p style={{ fontSize: "0.85rem", lineHeight: 1.6, whiteSpace: "pre-wrap", color: "var(--color-gray-800)", maxHeight: 400, overflowY: "auto" }}>
+                        {fullText.length > 2000 ? fullText.substring(0, 2000) + "..." : fullText}
+                      </p>
+                    ) : null}
+                  </div>
+                )}
 
                 <div className={styles.previewSection}>
                   <h3 className={styles.previewSectionTitle}>Vorgangskontext</h3>
@@ -443,13 +470,13 @@ export const DocumentsPage: React.FC = React.memo(() => {
 
                 <div className={styles.previewSection}>
                   <h3 className={styles.previewSectionTitle}>Versionen</h3>
-                  <DocumentVersionHistory versions={selectedDoc.versions} />
+                  <DocumentVersionHistory versions={selectedDoc.versions ?? []} />
                 </div>
 
-                {selectedDoc.references.length > 0 && (
+                {(selectedDoc.references ?? []).length > 0 && (
                   <div className={styles.previewSection}>
                     <h3 className={styles.previewSectionTitle}>Referenzen & Rechtsgrundlagen</h3>
-                    {selectedDoc.references.map((ref) => (
+                    {(selectedDoc.references ?? []).map((ref) => (
                       <div key={ref.id} className={styles.referenceItem}>
                         <Icon name={ref.type === "gavel" ? "scale" : "file-text"} size={14} />
                         <span>{ref.title}</span>
@@ -458,10 +485,10 @@ export const DocumentsPage: React.FC = React.memo(() => {
                   </div>
                 )}
 
-                {selectedDoc.history.length > 0 && (
+                {(selectedDoc.history ?? []).length > 0 && (
                   <div className={styles.previewSection}>
                     <h3 className={styles.previewSectionTitle}>Historie</h3>
-                    {selectedDoc.history.map((event) => (
+                    {(selectedDoc.history ?? []).map((event) => (
                       <div key={event.id} className={styles.referenceItem}>
                         <Icon
                           name={

@@ -3,6 +3,7 @@ package com.cognitera.platform.web;
 import com.cognitera.platform.document.model.DocumentType;
 import com.cognitera.platform.search.api.ChunkManagementService;
 import com.cognitera.platform.search.model.SearchFilter;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,6 +16,7 @@ import java.util.UUID;
  * Thymeleaf page controller for the search and chunk listing pages.
  */
 @Controller
+@Profile("thymeleaf-legacy")
 public class SearchPageController {
 
     private final ChunkManagementService chunkManagementService;

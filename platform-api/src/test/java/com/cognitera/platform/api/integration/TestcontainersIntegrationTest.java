@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tagged as "integration" so it can be run separately from unit tests.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 @Tag("integration")
 class TestcontainersIntegrationTest {
 

@@ -3,6 +3,7 @@ package com.cognitera.platform.api.web;
 import com.cognitera.platform.web.CorpusHealthService;
 import com.cognitera.platform.web.CorpusManifestService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -14,6 +15,7 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/admin/corpus")
+@PreAuthorize("hasRole('ADMIN')")
 public class CorpusHealthRestController {
 
     private final CorpusHealthService healthService;

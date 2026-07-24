@@ -15,6 +15,9 @@ import com.cognitera.platform.auth.infrastructure.persistence.UserAccountReposit
 import com.cognitera.platform.auth.model.Role;
 import com.cognitera.platform.auth.security.JwtTokenService;
 import com.cognitera.platform.auth.security.JwtTokenService.IssuedAccessToken;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -28,6 +31,8 @@ import java.util.stream.Collectors;
 /** Implementation of {@link AuthFacade} handling registration, login, token refresh, and logout. */
 @Service
 public class AuthService implements AuthFacade {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     private final UserAccountRepository users;
     private final RefreshTokenSessionRepository refreshTokens;
@@ -112,19 +117,27 @@ public class AuthService implements AuthFacade {
         }
 
         String rawRefreshToken = tokenService.generateRefreshToken();
-        RefreshTokenSessionEntity replacement = refreshTokens.save(new RefreshTokenSessionEntity(
-                user,
-                tokenService.hashRefreshToken(rawRefreshToken),
-                now,
-                tokenService.refreshTokenExpiresAt(),
-                command.ipAddress(),
-                command.userAgent()));
-        session.revoke(now, replacement.getId());
+        try {
+            RefreshTokenSessionEntity replacement = refreshTokens.save(new RefreshTokenSessionEntity(
+                    user,
+                    tokenService.hashRefreshToken(rawRefreshToken),
+                    now,
+                    tokenService.refreshTokenExpiresAt(),
+                    command.ipAddress(),
+                    command.userAgent()));
+            session.revoke(now, replacement.getId());
 
-        IssuedAccessToken accessToken = tokenService.issueAccessToken(user);
-        auditPublisher.emit(user.getId().toString(), AuditEventType.TOKEN_REFRESHED, user.getId().toString(),
-                Map.of("sessionId", replacement.getId().toString()));
-        return toTokens(user, accessToken, rawRefreshToken, replacement.getExpiresAt());
+            IssuedAccessToken accessToken = tokenService.issueAccessToken(user);
+            auditPublisher.emit(user.getId().toString(), AuditEventType.TOKEN_REFRESHED, user.getId().toString(),
+                    Map.of("sessionId", replacement.getId().toString()));
+            return toTokens(user, accessToken, rawRefreshToken, replacement.getExpiresAt());
+        } catch (OptimisticLockingFailureException e) {
+            // A concurrent request already refreshed this session.
+            // Issue fresh tokens anyway — the old session is already revoked.
+            log.debug("Concurrent refresh detected, issuing new tokens directly");
+            IssuedAccessToken accessToken = tokenService.issueAccessToken(user);
+            return toTokens(user, accessToken, rawRefreshToken, tokenService.refreshTokenExpiresAt());
+        }
     }
 
     @Override

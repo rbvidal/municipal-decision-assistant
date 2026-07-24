@@ -4,11 +4,11 @@ import type {
   CaseDetails,
   ChecklistItemData,
   DocumentItemData,
-  TimelineEntryData,
   CaseNoteData,
   WorkflowStep,
   RegulationItemData,
-} from "../mocks/case-workspace";
+} from "../types/domain";
+import type { TimelineEntryData } from "../services/RestCaseService";
 
 interface UseCaseWorkspaceResult {
   caseData: CaseDetails | null;
@@ -52,11 +52,14 @@ export function useCaseWorkspace(caseId: string): UseCaseWorkspaceResult {
         setCaseData(c);
         setWorkflowSteps(w);
         setChecklistItems(cl);
-        setDocuments(d);
+        setDocuments(d as DocumentItemData[]);
         setTimelineEvents(t);
         setCaseNotes(n);
       } catch {
-        if (!cancelled) setCaseData(null);
+        // API call failed — component handles null state via existing error/empty UI
+        if (!cancelled) {
+          setCaseData(null);
+        }
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -67,21 +70,21 @@ export function useCaseWorkspace(caseId: string): UseCaseWorkspaceResult {
 
   const toggleChecklistItem = useCallback((id: string) => {
     setChecklistItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, checked: !item.checked } : item)),
+      prev.map((item) => (item.id === id ? { ...item, checked: !item.checked, completed: !item.completed } : item)),
     );
   }, []);
 
   const addChecklistItem = useCallback((title: string, description?: string) => {
     setChecklistItems((prev) => [
       ...prev,
-      { id: `c${Date.now()}`, title, description: description ?? "", checked: false, statusLabel: "Offen" },
+      { id: `c${Date.now()}`, title, description: description ?? "", checked: false, completed: false, required: false, statusLabel: "Offen" },
     ]);
   }, []);
 
   const uploadDocument = useCallback((name: string, type: string) => {
     setDocuments((prev) => [
       ...prev,
-      { id: `d${Date.now()}`, name, type, date: new Date().toLocaleDateString("de-DE"), status: "Offen" as const },
+      { id: `d${Date.now()}`, name, type, date: new Date().toLocaleDateString("de-DE"), status: "Bereit" },
     ]);
   }, []);
 

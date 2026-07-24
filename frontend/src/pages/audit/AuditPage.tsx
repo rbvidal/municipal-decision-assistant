@@ -4,7 +4,7 @@ import { AppTopNavigation, type NavModule } from "../../components/navigation";
 import { DataTable, type DataTableColumn } from "../../components/data";
 import { Panel, Badge, Button, Icon, EmptyState } from "../../components/common";
 import { corpusService } from "../../services";
-import type { AuditLog } from "../../mocks/corpus";
+import type { AuditLog } from "../../types/domain";
 import styles from "./AuditPage.module.css";
 
 const NAV_MODULES: NavModule[] = [
@@ -39,7 +39,7 @@ export const AuditPage: React.FC = React.memo(() => {
   const filtered = useMemo(() => {
     let result = logs;
     if (activeFilter !== "all") {
-      result = result.filter((l) => l.action.toUpperCase().includes(activeFilter));
+      result = result.filter((l) => (l.action ?? "").toUpperCase().includes(activeFilter));
     }
     if (userFilter.trim()) {
       result = result.filter((l) =>
@@ -61,7 +61,7 @@ export const AuditPage: React.FC = React.memo(() => {
     { key: "user", header: "Benutzer", render: (l) => <span>{l.user}</span> },
     {
       key: "action", header: "Aktion",
-      render: (l) => <Badge status={badgeForAction(l.action)}>{l.action}</Badge>,
+      render: (l) => <Badge status={badgeForAction(l.action ?? "")}>{l.action ?? ""}</Badge>,
     },
     { key: "target", header: "Ziel", render: (l) => <span>{l.target}</span> },
     {
@@ -127,7 +127,7 @@ export const AuditPage: React.FC = React.memo(() => {
             <span className={styles.detailLabel}>Ziel:</span>
             <span>{selectedLog.target}</span>
             <span className={styles.detailLabel}>Typ:</span>
-            <Badge status={badgeForAction(selectedLog.action)}>{selectedLog.action}</Badge>
+            <Badge status={badgeForAction(selectedLog.action ?? "")}>{selectedLog.action ?? ""}</Badge>
           </div>
           <Button variant="secondary" size="sm" onClick={() => setSelectedLog(null)}>Schließen</Button>
         </Panel>

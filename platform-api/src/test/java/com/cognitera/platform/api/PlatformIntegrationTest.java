@@ -1,6 +1,7 @@
 package com.cognitera.platform.api;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @DisplayName("Platform Integration Tests")
+@Disabled("Legacy Thymeleaf workflow test; default app routes through the React SPA and REST API.")
 class PlatformIntegrationTest {
 
     @Autowired

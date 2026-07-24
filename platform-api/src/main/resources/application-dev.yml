@@ -4,16 +4,25 @@
 # Activate with: --spring.profiles.active=dev
 # ──────────────────────────────────────────────────────────
 
+logging:
+  level:
+    org.springframework.security: TRACE
+
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5433/municipal_decision_assistant
     username: platform
     password: platform
 
+management:
+  tracing:
+    sampling:
+      probability: 0
+
 platform:
   auth:
     jwt-secret: dev-secret-change-in-production-use-at-least-32-bytes
-  neo4j:
-    uri: bolt://localhost:7687
-    username: neo4j
-    password: password
+  search:
+    qdrant:
+      enabled: true
+  # Neo4j defaults from application.yml (neo4j/password@localhost:7687)

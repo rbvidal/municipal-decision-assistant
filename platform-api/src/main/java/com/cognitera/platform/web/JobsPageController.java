@@ -3,6 +3,7 @@ package com.cognitera.platform.web;
 import com.cognitera.platform.document.api.DocumentIngestionService;
 import com.cognitera.platform.document.api.IngestionJobFilter;
 import com.cognitera.platform.document.model.IngestionStatus;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  * Thymeleaf page controller for the ingestion jobs listing page.
  */
 @Controller
+@Profile("thymeleaf-legacy")
 public class JobsPageController {
 
     private final DocumentIngestionService ingestionService;
